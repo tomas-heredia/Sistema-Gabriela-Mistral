@@ -11,6 +11,7 @@ use App\Cobranzas\Models\Arancel;
 use App\Cobranzas\Services\GeneradorDeCuotas;
 use App\Core\Models\PeriodoLectivo;
 use App\Core\Models\User;
+use App\Sueldos\Models\ReciboSueldo;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 
@@ -81,6 +82,19 @@ class DatabaseSeeder extends Seeder
 
                 $generadorDeCuotas->generar($alumno, $periodo);
                 $creadorDeBoletines->crear($alumno, $periodo);
+            });
+
+        $administrador = User::first();
+
+        User::factory(3)
+            ->create()
+            ->each(function (User $profesor) use ($administrador) {
+                $profesor->assignRole('profesor');
+
+                ReciboSueldo::factory()->create([
+                    'profesor_id' => $profesor->id,
+                    'cargado_por_id' => $administrador->id,
+                ]);
             });
     }
 }
