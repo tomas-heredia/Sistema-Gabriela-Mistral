@@ -31,7 +31,7 @@ El proyecto NO usa la estructura por defecto de Laravel (`app/Models`, `app/Http
 
 ```
 app/
-├── Core/            # User, Controller base, autenticación (Breeze), infraestructura compartida entre módulos
+├── Core/            # User, PeriodoLectivo, Controller base, autenticación (Breeze), infraestructura compartida
 ├── Alumnos/         # Alumnos y tutores/apoderados
 ├── Cobranzas/       # Matrícula, cuotas, promociones por hermano/beca
 ├── Mora/            # Control de cuotas vencidas y tabla outbox de avisos
@@ -46,6 +46,10 @@ No hace falta configurar autoload especial en `composer.json`: como el mapeo PSR
 **Qué queda fuera de los módulos, y por qué:** `app/Providers` y `app/View/Components` se mantienen en la ubicación estándar de Laravel. Los service providers se registran por ruta fija en `bootstrap/providers.php`, y los componentes Blade de clase (`AppLayout`, `GuestLayout`) se autodescubren por convención solo si viven en `App\View\Components` — moverlos exigiría registro manual sin ganar nada a cambio. Lo mismo aplica a `database/seeders` y `database/factories`, que Laravel espera en esa ubicación fija.
 
 **Nota sobre factories fuera de `App\Models`:** como `User` vive en `App\Core\Models` y no en `App\Models`, Laravel no puede adivinar la relación modelo↔factory por convención de namespace. Por eso `User` declara `newFactory()` explícito y `UserFactory` declara `protected $model = User::class;`. Cualquier modelo nuevo dentro de un módulo (`App\Alumnos\Models\Alumno`, etc.) va a necesitar el mismo patrón.
+
+**Enums de dominio:** vivien en una subcarpeta `Enums/` dentro de `Models/` del módulo correspondiente (ej. `App\Alumnos\Models\Enums\Nivel`), casteados en el modelo vía `casts()` — mismo patrón que ya usa `User::casts()`. Se suma a la subestructura estándar de módulo (`Models/`, `Http/Controllers/`, `Livewire/`, `Policies/`) donde el módulo lo necesite.
+
+**`Core` también tiene `Policies/`:** además de `Models/`, `Http/` y `Livewire/`, `App\Core\Policies` guarda las Policies de los modelos compartidos que viven en Core (ej. `PeriodoLectivoPolicy` para `App\Core\Models\PeriodoLectivo`). La resolución automática de Policies de Laravel encuentra estas clases sola porque sigue el mismo patrón `...\Models\X` → `...\Policies\XPolicy` dentro del mismo namespace de módulo — no hace falta registrarlas a mano en un service provider.
 
 ## Comandos habituales
 
@@ -74,6 +78,7 @@ Los tres roles se crean vía `database/seeders/RoleSeeder.php` (nombres: `admini
 - **Validación**: Form Requests para toda entrada de usuario, especialmente en cobranzas y boletines.
 - **Montos monetarios**: se almacenan como enteros (centavos), nunca como `float`, para evitar errores de redondeo.
 - **Cálculos de mora y cuotas**: siempre en el backend. Nunca confiar en montos o fechas calculados en el cliente.
+- **`$table` explícito en todo modelo.** La pluralización automática de Eloquent asume inglés y se rompe con nombres en español: `Tutor` adivinaría `tutors` (no `tutores`), `PeriodoLectivo` adivinaría `periodo_lectivos` (no `periodos_lectivos`, porque solo pluraliza la última palabra). Para no depender de cuándo la adivinanza coincide "por suerte" (`Alumno`→`alumnos`, `Contrato`→`contratos` sí coinciden) y cuándo no, todo modelo del proyecto declara `protected $table` a mano.
 
 ## Reglas del proyecto
 

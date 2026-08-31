@@ -2,6 +2,10 @@
 
 namespace Database\Seeders;
 
+use App\Alumnos\Models\Alumno;
+use App\Alumnos\Models\Contrato;
+use App\Alumnos\Models\Tutor;
+use App\Core\Models\PeriodoLectivo;
 use App\Core\Models\User;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
@@ -23,5 +27,39 @@ class DatabaseSeeder extends Seeder
             'name' => 'Test User',
             'email' => 'test@example.com',
         ])->assignRole('administrador');
+
+        $periodo = PeriodoLectivo::factory()->activo()->create([
+            'nombre' => '2026',
+            'fecha_inicio' => '2026-03-01',
+            'fecha_fin' => '2026-12-15',
+        ]);
+
+        Alumno::factory(10)
+            ->primario()
+            ->create()
+            ->each(function (Alumno $alumno) use ($periodo) {
+                $tutor = Tutor::factory()->create();
+                $alumno->tutores()->attach($tutor, ['vinculo' => 'madre', 'responsable_pago' => true]);
+
+                Contrato::factory()->create([
+                    'alumno_id' => $alumno->id,
+                    'periodo_lectivo_id' => $periodo->id,
+                    'cargado_por_id' => User::first()->id,
+                ]);
+            });
+
+        Alumno::factory(10)
+            ->secundario()
+            ->create()
+            ->each(function (Alumno $alumno) use ($periodo) {
+                $tutor = Tutor::factory()->create();
+                $alumno->tutores()->attach($tutor, ['vinculo' => 'padre', 'responsable_pago' => true]);
+
+                Contrato::factory()->create([
+                    'alumno_id' => $alumno->id,
+                    'periodo_lectivo_id' => $periodo->id,
+                    'cargado_por_id' => User::first()->id,
+                ]);
+            });
     }
 }
