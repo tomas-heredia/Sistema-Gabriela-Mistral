@@ -6,6 +6,7 @@ use App\Alumnos\Models\Alumno;
 use App\Alumnos\Models\Contrato;
 use App\Alumnos\Models\Enums\Nivel;
 use App\Alumnos\Models\Tutor;
+use App\Boletines\Services\CreadorDeBoletines;
 use App\Cobranzas\Models\Arancel;
 use App\Cobranzas\Services\GeneradorDeCuotas;
 use App\Core\Models\PeriodoLectivo;
@@ -43,12 +44,15 @@ class DatabaseSeeder extends Seeder
             Arancel::factory()->mensualidad()->create(['periodo_lectivo_id' => $periodo->id, 'nivel' => $nivel]);
         }
 
+        $this->call(PlantillaBoletinSeeder::class);
+
         $generadorDeCuotas = app(GeneradorDeCuotas::class);
+        $creadorDeBoletines = app(CreadorDeBoletines::class);
 
         Alumno::factory(10)
             ->primario()
             ->create()
-            ->each(function (Alumno $alumno) use ($periodo, $generadorDeCuotas) {
+            ->each(function (Alumno $alumno) use ($periodo, $generadorDeCuotas, $creadorDeBoletines) {
                 $tutor = Tutor::factory()->create();
                 $alumno->tutores()->attach($tutor, ['vinculo' => 'madre', 'responsable_pago' => true]);
 
@@ -59,12 +63,13 @@ class DatabaseSeeder extends Seeder
                 ]);
 
                 $generadorDeCuotas->generar($alumno, $periodo);
+                $creadorDeBoletines->crear($alumno, $periodo);
             });
 
         Alumno::factory(10)
             ->secundario()
             ->create()
-            ->each(function (Alumno $alumno) use ($periodo, $generadorDeCuotas) {
+            ->each(function (Alumno $alumno) use ($periodo, $generadorDeCuotas, $creadorDeBoletines) {
                 $tutor = Tutor::factory()->create();
                 $alumno->tutores()->attach($tutor, ['vinculo' => 'padre', 'responsable_pago' => true]);
 
@@ -75,6 +80,7 @@ class DatabaseSeeder extends Seeder
                 ]);
 
                 $generadorDeCuotas->generar($alumno, $periodo);
+                $creadorDeBoletines->crear($alumno, $periodo);
             });
     }
 }
