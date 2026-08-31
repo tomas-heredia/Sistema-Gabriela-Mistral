@@ -1,0 +1,120 @@
+{
+  "_fuente": "storage/app/private/boletines/Boletín modificado 2026.pdf",
+  "_excluido_del_json": "Los bloques de firma (Director/Docente/Tutor por trimestre en 'Consideraciones Conceptuales') no se modelan como datos: son líneas para firma física, no campos que carga el cobrador.",
+  "_nota_etapa_apoyo": "'Etapa de Apoyo' (momento: trimestre_4) es un 4to boletin_trimestre, no una columna más del trimestre 3. A diferencia de los trimestres 1/2/3, esta fila NO se crea automáticamente al matricular al alumno — se crea manualmente solo si el alumno la necesita, y solo existe en primaria (las plantillas de secundaria no tienen esta columna).",
+  "secciones": [
+    {
+      "id": "espacios_curriculares",
+      "titulo": "Espacios Curriculares",
+      "tipo": "tabla_materias",
+      "escala": { "tipo": "numerica", "min": 1, "max": 10 },
+      "columnas": [
+        { "id": "trimestre_1", "nombre": "Primer Trimestre", "momento": "trimestre_1" },
+        { "id": "trimestre_2", "nombre": "Segundo Trimestre", "momento": "trimestre_2" },
+        { "id": "trimestre_3", "nombre": "Tercer Trimestre", "momento": "trimestre_3" },
+        { "id": "etapa_apoyo", "nombre": "Etapa de Apoyo", "momento": "trimestre_4", "opcional": true },
+        { "id": "calificacion_final", "nombre": "Calificación Final", "momento": "trimestre_3" },
+        { "id": "fecha", "nombre": "Fecha", "tipo": "fecha", "momento": "trimestre_3" }
+      ],
+      "filas": [
+        { "id": "lengua", "nombre": "Lengua" },
+        { "id": "matematica", "nombre": "Matemática" },
+        { "id": "ciencias_naturales", "nombre": "Ciencias Naturales" },
+        { "id": "ciencias_sociales", "nombre": "Ciencias Sociales" },
+        { "id": "formacion_etica_ciudadana", "nombre": "Formación Ética y Ciudadana" },
+        { "id": "educacion_tecnologica", "nombre": "Educación Tecnológica" },
+        { "id": "lenguas_extranjeras", "nombre": "Lenguas Extranjeras" },
+        { "id": "educacion_fisica", "nombre": "Educación Física" },
+        {
+          "id": "lenguajes_artisticos",
+          "nombre": "Lenguajes Artísticos",
+          "subfilas": [
+            { "id": "musica", "nombre": "Música" },
+            { "id": "artes_visuales", "nombre": "Artes Visuales" },
+            { "id": "danza", "nombre": "Danza" },
+            { "id": "teatro", "nombre": "Teatro" }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "talleres",
+      "titulo": "Talleres",
+      "tipo": "tabla_materias_libre",
+      "nota": "Solo escuelas de Jornada Extendida o Completa. Las filas las define el cobrador según los talleres que dicte la escuela ese ciclo — no es una lista fija.",
+      "escala": { "tipo": "texto", "opciones": ["E", "MB", "B", "R", "NS"], "leyenda": "Excelente / Muy Bueno / Bueno / Regular / No Satisfactorio" },
+      "columnas": [
+        { "id": "trimestre_1", "nombre": "Primer Trimestre", "momento": "trimestre_1" },
+        { "id": "trimestre_2", "nombre": "Segundo Trimestre", "momento": "trimestre_2" },
+        { "id": "trimestre_3", "nombre": "Tercer Trimestre", "momento": "trimestre_3" },
+        { "id": "etapa_apoyo", "nombre": "Etapa de Apoyo", "momento": "trimestre_4", "opcional": true },
+        { "id": "calificacion_final", "nombre": "Calificación Final", "momento": "trimestre_3" },
+        { "id": "fecha", "nombre": "Fecha", "tipo": "fecha", "momento": "trimestre_3" }
+      ],
+      "filas_libres": true
+    },
+    {
+      "id": "apreciaciones",
+      "titulo": "Apreciaciones sobre Actitudes y Desempeños",
+      "tipo": "tabla_criterios",
+      "escala": { "tipo": "texto", "opciones": ["S", "AV", "PV", "N"], "leyenda": "Siempre / A veces / Pocas veces / Nunca" },
+      "columnas": [
+        { "id": "trimestre_1", "nombre": "Primer Trimestre", "momento": "trimestre_1" },
+        { "id": "trimestre_2", "nombre": "Segundo Trimestre", "momento": "trimestre_2" },
+        { "id": "trimestre_3", "nombre": "Tercer Trimestre", "momento": "trimestre_3" },
+        { "id": "etapa_apoyo", "nombre": "Etapa de Apoyo", "momento": "trimestre_4", "opcional": true }
+      ],
+      "filas": [
+        { "id": "participa_estrategias", "nombre": "Participa en clase y en las propuestas institucionales a través de diversas estrategias." },
+        { "id": "participa_convivencia", "nombre": "Participa en la construcción y en el respeto de los acuerdos de convivencia." },
+        { "id": "respeta_ideas_turnos", "nombre": "Respeta las ideas de los demás y los turnos de participación." },
+        { "id": "actitudes_solidarias", "nombre": "Presenta actitudes solidarias y de compañerismo para con sus compañeros/as." },
+        { "id": "cuidado_pertenencias", "nombre": "Presenta actitudes de cuidado de sus pertenencias, las de sus compañeros y las de la escuela." },
+        { "id": "responsabilidad_presentacion", "nombre": "Demuestra responsabilidad y compromiso en presentación personal, cumplimiento de horarios y asistencia a clases." }
+      ]
+    },
+    {
+      "id": "asistencia",
+      "titulo": "Asistencia",
+      "tipo": "tabla_metricas",
+      "escala": { "tipo": "numerica" },
+      "columnas": [
+        { "id": "trimestre_1", "nombre": "Primer Trimestre", "momento": "trimestre_1" },
+        { "id": "trimestre_2", "nombre": "Segundo Trimestre", "momento": "trimestre_2" },
+        { "id": "trimestre_3", "nombre": "Tercer Trimestre", "momento": "trimestre_3" },
+        { "id": "etapa_apoyo", "nombre": "Etapa de Apoyo", "momento": "trimestre_4", "opcional": true }
+      ],
+      "filas": [
+        { "id": "total_dias_clase", "nombre": "Total de días de clase en el ciclo lectivo" },
+        { "id": "asistencia_presencial", "nombre": "Asistencia Presencial" },
+        { "id": "asistencia_no_presencial", "nombre": "Asistencia no Presencial / Virtual" },
+        { "id": "inasistencias_justificadas", "nombre": "Inasistencias Justificadas" },
+        { "id": "inasistencias_no_justificadas", "nombre": "Inasistencias No Justificadas" }
+      ]
+    },
+    {
+      "id": "trayectoria_escolar",
+      "titulo": "Trayectoria Escolar",
+      "tipo": "campo_seleccion",
+      "momento": "trimestre_3",
+      "opciones": ["Sostenida", "Intermitente", "De baja intensidad"]
+    },
+    {
+      "id": "promocion",
+      "titulo": "Promoción",
+      "tipo": "campo_seleccion",
+      "momento": "trimestre_3",
+      "opciones": [
+        "Promoción al grado/nivel siguiente",
+        "Promoción Acompañada",
+        "Permanece en el grado que cursa - No promociona"
+      ]
+    },
+    {
+      "id": "consideraciones_conceptuales_finales",
+      "titulo": "Consideraciones Conceptuales Finales",
+      "tipo": "campo_texto",
+      "momento": "trimestre_3"
+    }
+  ]
+}

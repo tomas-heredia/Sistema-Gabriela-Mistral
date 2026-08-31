@@ -1,0 +1,96 @@
+{
+  "_fuente": "storage/app/private/boletines/secu_4to.pdf",
+  "_anio": 4,
+  "_orientacion": "Cs. Soc. y Hum.",
+  "_excluido_del_json": "Los campos de encabezado (Establecimiento, Estudiante, C.U.E., Curso, División, Turno, Orientación, DNI, Libro y Folio, Ciclo Lectivo) y los bloques de notificación/firma (Estudiante/Tutor/a/Preceptor/a/Directora) no se modelan acá: los primeros salen de alumno+boletín al generar el PDF, los segundos son líneas para firma física.",
+  "_nota_icaip": "ICAIP* aparece dos veces en la tabla de espacios curriculares. Por decisión del cliente queda como campo numérico genérico (icaip_1/icaip_2), sin resolver qué significa la sigla.",
+  "_pendiente_de_confirmar": "A partir de 4° año el escaneo muestra 'Orientación: Cs. Soc. y Hum.' — si el colegio ofrece más de una orientación por año, hace falta una plantilla por combinación año+orientación, no solo por año.",
+  "secciones": [
+    {
+      "id": "espacios_curriculares",
+      "titulo": "Espacios Curriculares",
+      "tipo": "tabla_materias",
+      "escala": { "tipo": "numerica", "min": 1, "max": 10 },
+      "columnas": [
+        { "id": "trimestre_1", "nombre": "Trimestre 1°", "momento": "trimestre_1" },
+        { "id": "trimestre_2", "nombre": "Trimestre 2°", "momento": "trimestre_2" },
+        { "id": "trimestre_3", "nombre": "Trimestre 3°", "momento": "trimestre_3" },
+        { "id": "calificacion_anual", "nombre": "Calificación Anual", "momento": "trimestre_3" },
+        { "id": "icaip_1", "nombre": "ICAIP*", "momento": "trimestre_3" },
+        { "id": "icaip_2", "nombre": "ICAIP*", "momento": "trimestre_3" },
+        { "id": "calificacion_final", "nombre": "Calificación Final", "momento": "trimestre_3" }
+      ],
+      "filas": [
+        { "id": "lengua_literatura", "nombre": "Lengua y Literatura" },
+        { "id": "matematica", "nombre": "Matemática" },
+        { "id": "lengua_ext_ingles", "nombre": "Lengua Ext.: Inglés" },
+        { "id": "ed_fisica", "nombre": "Ed. Física" },
+        { "id": "ed_artistica", "nombre": "Ed. Art.: Teatro" },
+        { "id": "historia_regional", "nombre": "Historia Regional" },
+        { "id": "nuevas_tics", "nombre": "Nuevas TICS" },
+        { "id": "comunicacion_social", "nombre": "Comunicación Social" },
+        { "id": "biologia", "nombre": "Biología" },
+        { "id": "fisica_quimica", "nombre": "Física-Química" },
+        { "id": "ciudadania_desarrollo_sociocomunitario", "nombre": "Ciudadanía y Desarrollo Sociocomunitario" }
+      ]
+    },
+    {
+      "id": "espacios_pendientes_acreditacion",
+      "titulo": "Espacios Pendientes de Acreditación",
+      "tipo": "tabla_materias_libre",
+      "nota": "Filas variables: el cobrador agrega una por cada espacio curricular que el alumno tenga pendiente.",
+      "columnas": [
+        { "id": "espacio_curricular", "nombre": "Espacio Curricular", "tipo": "texto", "momento": "trimestre_3" },
+        { "id": "calificacion", "nombre": "Calificación", "tipo": "numero", "momento": "trimestre_3" },
+        { "id": "fecha", "nombre": "Fecha", "tipo": "fecha", "momento": "trimestre_3" }
+      ],
+      "filas_libres": true
+    },
+    {
+      "id": "asistencia",
+      "titulo": "Asistencia",
+      "tipo": "tabla_metricas",
+      "escala": { "tipo": "numerica" },
+      "columnas": [
+        { "id": "trimestre_1", "nombre": "Primer Trimestre", "momento": "trimestre_1" },
+        { "id": "trimestre_2", "nombre": "Segundo Trimestre", "momento": "trimestre_2" },
+        { "id": "trimestre_3", "nombre": "Tercer Trimestre", "momento": "trimestre_3" }
+      ],
+      "filas": [
+        { "id": "total_dias_clase", "nombre": "Total de días de clases" },
+        { "id": "inasistencias_justificadas", "nombre": "Inasistencia/s Justificada/s" },
+        { "id": "inasistencias_injustificadas", "nombre": "Inasistencia/s Injustificada/s" }
+      ]
+    },
+    {
+      "id": "apreciaciones",
+      "titulo": "Apreciaciones acerca de los desempeños, valores y actitudes personales y sociales",
+      "tipo": "tabla_criterios",
+      "escala": { "tipo": "texto", "opciones": ["S", "AV", "PV", "N"], "leyenda": "Siempre / A veces / Pocas veces / Nunca" },
+      "columnas": [
+        { "id": "trimestre_1", "nombre": "Primer Trimestre", "momento": "trimestre_1" },
+        { "id": "trimestre_2", "nombre": "Segundo Trimestre", "momento": "trimestre_2" },
+        { "id": "trimestre_3", "nombre": "Tercer Trimestre", "momento": "trimestre_3" }
+      ],
+      "filas": [
+        { "id": "actitudes_solidarias", "nombre": "Presenta actitudes solidarias y de compañerismo en la escuela." },
+        { "id": "respeta_convivencia", "nombre": "Respeta los acuerdos de convivencia y colabora en la resolución de conflictos de manera responsable." },
+        { "id": "compromiso_cuidado", "nombre": "Manifiesta compromiso con el cuidado personal, grupal, institucional y del entorno social." },
+        { "id": "pertenencia_institucional", "nombre": "De definición institucional: Evidencia pertenencia participando activa, empática y solidariamente en las propuestas institucionales." }
+      ]
+    },
+    {
+      "id": "promedio_anual",
+      "titulo": "Promedio Anual",
+      "tipo": "campo_numero",
+      "momento": "trimestre_3"
+    },
+    {
+      "id": "promovido",
+      "titulo": "Promovido/a",
+      "tipo": "campo_seleccion",
+      "momento": "trimestre_3",
+      "opciones": ["Promovido/a", "No promovido/a"]
+    }
+  ]
+}

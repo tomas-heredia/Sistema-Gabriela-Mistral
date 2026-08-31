@@ -10,7 +10,7 @@ Módulos:
 - **Alumnos/Tutores**: datos de alumnos y sus tutores/apoderados.
 - **Cobranzas**: matrícula, cuotas, promociones por hermanos y por beca.
 - **Mora**: control de cuotas vencidas y envío de avisos.
-- **Boletines**: libretas de alumnos con flujo de aprobación de un directivo antes de quedar visibles.
+- **Boletines**: libretas de alumnos, cargadas por trimestre y enviadas por el cobrador (sin aprobación de un segundo actor — quien carga es quien envía).
 - **Recibos de sueldo**: recibos de sueldo docente.
 
 ## Stack tecnológico
@@ -18,7 +18,8 @@ Módulos:
 - **Backend**: Laravel + MySQL.
 - **Frontend**: Blade + Livewire (sin SPA separada). Se eligió por sobre Inertia+Vue/React para minimizar la superficie de tecnologías dado que es un panel administrativo interno, no una app de cara al público con alta interactividad.
 - **Roles y permisos**: `spatie/laravel-permission`, reforzado con Policies de Laravel en cada acción (nunca solo ocultando opciones en el menú).
-- **Auditoría**: `spatie/laravel-activitylog` (o equivalente) sobre los modelos financieros — ver reglas más abajo.
+- **Auditoría**: `spatie/laravel-activitylog` sobre los modelos financieros (trait `LogsActivity`) — ver reglas más abajo.
+- **Generación de PDF**: `barryvdh/laravel-dompdf` para el PDF acumulativo de boletines. Se eligió por sobre `spatie/laravel-pdf` (que renderiza vía Chrome/Puppeteer) porque los boletines son layouts tabulares simples — dompdf es PHP puro, sin depender de Node/Chromium en el VPS.
 - **Tests**: Pest, corriendo contra MySQL (base `sistema_gabriela_mistral_test`), no SQLite en memoria — se prioriza fidelidad con producción sobre velocidad, dado que hay lógica financiera sensible a comportamientos específicos de MySQL (precisión decimal, colación, etc.).
 - **Formato de código**: Laravel Pint.
 - **Infraestructura**: VPS de Hostinger, todo corriendo en Docker (app Laravel, MySQL, n8n).
@@ -34,7 +35,7 @@ app/
 ├── Alumnos/         # Alumnos y tutores/apoderados
 ├── Cobranzas/       # Matrícula, cuotas, promociones por hermano/beca
 ├── Mora/            # Control de cuotas vencidas y tabla outbox de avisos
-├── Boletines/       # Libretas y su flujo de aprobación
+├── Boletines/       # Libretas por trimestre, cargadas y enviadas por el cobrador
 └── Sueldos/         # Recibos de sueldo docente
 ```
 
@@ -61,8 +62,8 @@ php artisan migrate:fresh --seed # resetear DB con datos de prueba
 ## Roles
 
 - **Administrador**: acceso total al sistema.
-- **Cobrador**: cobranzas (matrícula, cuotas, mora) y gestión de avisos. Sin acceso a boletines ni a recibos de sueldo.
-- **Profesor**: carga y consulta de boletines (de sus propios cursos/alumnos), y consulta de sus propios recibos de sueldo. Sin acceso a cobranzas ni a datos de otros profesores.
+- **Cobrador**: cobranzas (matrícula, cuotas, mora), gestión de avisos, y carga/envío de boletines. Sin acceso a recibos de sueldo.
+- **Profesor**: solo consulta de sus propios recibos de sueldo. Sin acceso a cobranzas ni a boletines — no carga notas ni ve las de otros.
 
 Los tres roles se crean vía `database/seeders/RoleSeeder.php` (nombres: `administrador`, `cobrador`, `profesor`). Se asignan a un `User` con `$user->assignRole('...')`.
 
@@ -76,8 +77,8 @@ Los tres roles se crean vía `database/seeders/RoleSeeder.php` (nombres: `admini
 
 ## Reglas del proyecto
 
-1. **Nunca acceder a datos de otro usuario/rol sin verificar permisos.** Toda consulta o acción sobre alumnos, cobranzas, boletines o recibos de sueldo debe pasar por una Policy que valide el rol y, cuando aplica, la pertenencia (ej. un profesor solo ve boletines de sus propios cursos, un docente solo ve su propio recibo de sueldo).
+1. **Nunca acceder a datos de otro usuario/rol sin verificar permisos.** Toda consulta o acción sobre alumnos, cobranzas, boletines o recibos de sueldo debe pasar por una Policy que valide el rol y, cuando aplica, la pertenencia (ej. un docente solo ve su propio recibo de sueldo).
 2. **Todo cambio de dinero queda auditado.** Pagos, cuotas, matrícula, promociones y recibos de sueldo registran quién hizo el cambio, cuándo, y el valor anterior/nuevo. No se permiten updates directos a estos modelos sin pasar por el log de auditoría.
-3. **Los boletines no son visibles para tutores hasta ser aprobados por un directivo.** Flujo mínimo: borrador → pendiente de aprobación → aprobado/publicado. Un profesor no puede autoaprobar ni publicar sus propios boletines.
+3. **Los boletines no son visibles para tutores hasta que el cobrador confirma el envío del trimestre.** Flujo mínimo: pendiente → cargado (borrador editable) → enviado. No hay aprobación de un segundo actor — quien carga el trimestre es quien confirma su envío — pero el paso de "confirmar y enviar" es explícito, nunca automático al guardar.
 4. **La tabla `outbox` es una interfaz mínima hacia n8n.** Solo debe contener los datos estrictamente necesarios para enviar el aviso de mora (destinatario, mensaje, estado de envío) — nunca datos sensibles adicionales del alumno/tutor que n8n no necesite. El usuario de MySQL que usa n8n debe tener permisos acotados a esa tabla (no acceso de lectura/escritura al resto de la base).
-5. **El cobrador no tiene acceso a boletines ni a recibos de sueldo; el profesor no tiene acceso a cobranzas.** Estos límites se implementan con Policies/roles de Spatie, no ocultando menús.
+5. **El cobrador no tiene acceso a recibos de sueldo; el profesor no tiene acceso a cobranzas ni a boletines.** Estos límites se implementan con Policies/roles de Spatie, no ocultando menús.
