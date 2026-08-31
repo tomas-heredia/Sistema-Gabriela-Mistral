@@ -11,6 +11,11 @@ return Application::configure(basePath: dirname(__DIR__))
         commands: __DIR__.'/../routes/console.php',
         health: '/up',
     )
+    // Los comandos Artisan de dominio viven junto a su módulo
+    // (App\Mora\Console\Commands), no en app/Console/Commands.
+    ->withCommands([
+        __DIR__.'/../app/Mora/Console/Commands',
+    ])
     ->withMiddleware(function (Middleware $middleware): void {
         //
     })
