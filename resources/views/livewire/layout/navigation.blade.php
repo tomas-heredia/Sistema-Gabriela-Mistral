@@ -33,6 +33,18 @@ new class extends Component
                     <x-nav-link :href="route('dashboard')" :active="request()->routeIs('dashboard')" wire:navigate>
                         {{ __('Dashboard') }}
                     </x-nav-link>
+
+                    @can('viewAny', \App\Alumnos\Models\Tutor::class)
+                        <x-nav-link :href="route('tutores.index')" :active="request()->routeIs('tutores.*')" wire:navigate>
+                            {{ __('Tutores') }}
+                        </x-nav-link>
+                    @endcan
+
+                    @can('viewAny', \App\Alumnos\Models\Alumno::class)
+                        <x-nav-link :href="route('alumnos.index')" :active="request()->routeIs('alumnos.*')" wire:navigate>
+                            {{ __('Alumnos') }}
+                        </x-nav-link>
+                    @endcan
                 </div>
             </div>
 
@@ -84,6 +96,18 @@ new class extends Component
             <x-responsive-nav-link :href="route('dashboard')" :active="request()->routeIs('dashboard')" wire:navigate>
                 {{ __('Dashboard') }}
             </x-responsive-nav-link>
+
+            @can('viewAny', \App\Alumnos\Models\Tutor::class)
+                <x-responsive-nav-link :href="route('tutores.index')" :active="request()->routeIs('tutores.*')" wire:navigate>
+                    {{ __('Tutores') }}
+                </x-responsive-nav-link>
+            @endcan
+
+            @can('viewAny', \App\Alumnos\Models\Alumno::class)
+                <x-responsive-nav-link :href="route('alumnos.index')" :active="request()->routeIs('alumnos.*')" wire:navigate>
+                    {{ __('Alumnos') }}
+                </x-responsive-nav-link>
+            @endcan
         </div>
 
         <!-- Responsive Settings Options -->
