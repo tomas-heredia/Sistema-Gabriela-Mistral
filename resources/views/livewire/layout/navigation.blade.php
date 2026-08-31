@@ -45,6 +45,12 @@ new class extends Component
                             {{ __('Alumnos') }}
                         </x-nav-link>
                     @endcan
+
+                    @can('viewAny', \App\Cobranzas\Models\Pago::class)
+                        <x-nav-link :href="route('pagos.index')" :active="request()->routeIs('pagos.*')" wire:navigate>
+                            {{ __('Pagos') }}
+                        </x-nav-link>
+                    @endcan
                 </div>
             </div>
 
@@ -106,6 +112,12 @@ new class extends Component
             @can('viewAny', \App\Alumnos\Models\Alumno::class)
                 <x-responsive-nav-link :href="route('alumnos.index')" :active="request()->routeIs('alumnos.*')" wire:navigate>
                     {{ __('Alumnos') }}
+                </x-responsive-nav-link>
+            @endcan
+
+            @can('viewAny', \App\Cobranzas\Models\Pago::class)
+                <x-responsive-nav-link :href="route('pagos.index')" :active="request()->routeIs('pagos.*')" wire:navigate>
+                    {{ __('Pagos') }}
                 </x-responsive-nav-link>
             @endcan
         </div>

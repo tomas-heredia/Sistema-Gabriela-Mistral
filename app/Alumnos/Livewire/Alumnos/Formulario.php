@@ -6,6 +6,10 @@ use App\Alumnos\Models\Alumno;
 use App\Alumnos\Models\Enums\Nivel;
 use App\Alumnos\Models\Enums\Turno;
 use App\Alumnos\Models\Tutor;
+use App\Cobranzas\Models\Cuota;
+use App\Cobranzas\Services\GeneradorDeCuotas;
+use App\Core\Models\PeriodoLectivo;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Validation\Rule;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
@@ -206,12 +210,47 @@ class Formulario extends Component
         session()->flash('mensaje', 'Tutor desvinculado.');
     }
 
+    /**
+     * Solo genera una vez: si el alumno ya tiene cuotas para el período
+     * activo, no aparece ningún botón que las regenere.
+     */
+    public function generarCuotas(GeneradorDeCuotas $generador): void
+    {
+        $this->authorize('create', Cuota::class);
+
+        $periodo = PeriodoLectivo::where('activo', true)->first();
+
+        if (! $periodo || $this->tieneCuotas($periodo)) {
+            return;
+        }
+
+        try {
+            $generador->generar($this->alumno, $periodo);
+            session()->flash('mensaje', 'Cuotas generadas correctamente.');
+        } catch (ModelNotFoundException) {
+            session()->flash('error', "No hay un arancel cargado para el nivel {$this->alumno->nivel->value} en el período {$periodo->nombre}. Cargalo antes de generar las cuotas.");
+        }
+    }
+
+    private function tieneCuotas(PeriodoLectivo $periodo): bool
+    {
+        return Cuota::where('alumno_id', $this->alumno->id)
+            ->where('periodo_lectivo_id', $periodo->id)
+            ->exists();
+    }
+
     public function render()
     {
+        $periodoActivo = PeriodoLectivo::where('activo', true)->first();
+
         return view('livewire.alumnos.alumnos.formulario', [
             'niveles' => Nivel::cases(),
             'turnos' => Turno::cases(),
             'tutoresVinculados' => $this->alumno?->tutores()->get(),
+            'periodoActivo' => $periodoActivo,
+            'cuotas' => $this->alumno && $periodoActivo
+                ? Cuota::where('alumno_id', $this->alumno->id)->where('periodo_lectivo_id', $periodoActivo->id)->orderBy('mes')->get()
+                : collect(),
         ]);
     }
 }

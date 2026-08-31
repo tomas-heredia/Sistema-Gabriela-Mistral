@@ -5,6 +5,9 @@ use App\Alumnos\Models\Alumno;
 use App\Alumnos\Models\Enums\Nivel;
 use App\Alumnos\Models\Enums\Turno;
 use App\Alumnos\Models\Tutor;
+use App\Cobranzas\Models\Arancel;
+use App\Cobranzas\Models\Cuota;
+use App\Core\Models\PeriodoLectivo;
 use App\Core\Models\User;
 use Database\Seeders\RoleSeeder;
 use Livewire\Livewire;
@@ -115,4 +118,37 @@ test('quitar un tutor lo desvincula del alumno', function () {
         ->call('desvincularTutor', $tutor->id);
 
     expect($alumno->tutores()->count())->toBe(0);
+});
+
+test('generar cuotas crea las cuotas del periodo activo y ya no ofrece el boton', function () {
+    $cobrador = User::factory()->create()->assignRole('cobrador');
+    $periodo = PeriodoLectivo::factory()->activo()->create([
+        'fecha_inicio' => '2026-03-01',
+        'fecha_fin' => '2026-12-15',
+    ]);
+    $alumno = Alumno::factory()->primario()->create();
+    Arancel::factory()->matricula()->create(['periodo_lectivo_id' => $periodo->id, 'nivel' => $alumno->nivel]);
+    Arancel::factory()->mensualidad()->create(['periodo_lectivo_id' => $periodo->id, 'nivel' => $alumno->nivel]);
+
+    $component = Livewire::actingAs($cobrador)->test(Formulario::class, ['alumno' => $alumno])
+        ->assertSee('Generar cuotas del período')
+        ->call('generarCuotas');
+
+    expect(Cuota::where('alumno_id', $alumno->id)->count())->toBe(11);
+
+    $component->assertDontSee('Generar cuotas del período');
+});
+
+test('generar cuotas sin arancel cargado muestra un mensaje claro, no un error', function () {
+    $cobrador = User::factory()->create()->assignRole('cobrador');
+    PeriodoLectivo::factory()->activo()->create();
+    $alumno = Alumno::factory()->primario()->create();
+
+    // Sin arancel cargado, generarCuotas() no debe tirar un error 500 ni
+    // dejar cuotas a medio crear.
+    Livewire::actingAs($cobrador)->test(Formulario::class, ['alumno' => $alumno])
+        ->call('generarCuotas')
+        ->assertOk();
+
+    expect(Cuota::where('alumno_id', $alumno->id)->count())->toBe(0);
 });

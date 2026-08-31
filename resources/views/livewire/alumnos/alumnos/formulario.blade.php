@@ -193,5 +193,50 @@
                 @endif
             </div>
         </div>
+
+        <div>
+            <h2 class="text-lg font-semibold text-gray-900 mb-4">Cobranzas</h2>
+
+            <div class="bg-white shadow-sm rounded-lg p-6">
+                @if (! $periodoActivo)
+                    <p class="text-sm text-gray-500">No hay ningún período lectivo activo — no se pueden generar cuotas.</p>
+                @elseif ($cuotas->isEmpty())
+                    <p class="text-sm text-gray-600 mb-4">Este alumno todavía no tiene cuotas generadas para el período {{ $periodoActivo->nombre }}.</p>
+                    <x-primary-button type="button" wire:click="generarCuotas">Generar cuotas del período {{ $periodoActivo->nombre }}</x-primary-button>
+                @else
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Concepto</th>
+                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Monto</th>
+                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Vencimiento</th>
+                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-100">
+                            @foreach ($cuotas as $cuota)
+                                <tr wire:key="cuota-{{ $cuota->id }}">
+                                    <td class="px-4 py-2 text-sm text-gray-900">
+                                        {{ $cuota->tipo->value === 'matricula' ? 'Matrícula' : "Mensualidad — mes {$cuota->mes}" }}
+                                    </td>
+                                    <td class="px-4 py-2 text-sm text-gray-600">${{ number_format($cuota->monto / 100, 2, ',', '.') }}</td>
+                                    <td class="px-4 py-2 text-sm text-gray-600">{{ $cuota->fecha_vencimiento->format('d/m/Y') }}</td>
+                                    <td class="px-4 py-2 text-sm">
+                                        <x-pill :color="match ($cuota->estado->value) {
+                                            'pagada' => 'green',
+                                            'parcial' => 'amber',
+                                            'pendiente' => 'red',
+                                            default => 'gray',
+                                        }">
+                                            {{ ucfirst($cuota->estado->value) }}
+                                        </x-pill>
+                                    </td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                @endif
+            </div>
+        </div>
     @endif
 </div>
