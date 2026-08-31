@@ -2,6 +2,8 @@
 
 namespace App\Providers;
 
+use App\Cobranzas\Models\Observers\PagoCuotaObserver;
+use App\Cobranzas\Models\PagoCuota;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -19,6 +21,6 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        //
+        PagoCuota::observe(PagoCuotaObserver::class);
     }
 }

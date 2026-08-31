@@ -3,10 +3,12 @@
 namespace App\Alumnos\Models;
 
 use Database\Factories\TutorFactory;
+use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
+#[Fillable(['nombre', 'dni', 'domicilio', 'telefono', 'correo'])]
 class Tutor extends Model
 {
     use HasFactory;

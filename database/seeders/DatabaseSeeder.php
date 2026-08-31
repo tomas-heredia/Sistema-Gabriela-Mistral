@@ -4,7 +4,10 @@ namespace Database\Seeders;
 
 use App\Alumnos\Models\Alumno;
 use App\Alumnos\Models\Contrato;
+use App\Alumnos\Models\Enums\Nivel;
 use App\Alumnos\Models\Tutor;
+use App\Cobranzas\Models\Arancel;
+use App\Cobranzas\Services\GeneradorDeCuotas;
 use App\Core\Models\PeriodoLectivo;
 use App\Core\Models\User;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
@@ -32,12 +35,20 @@ class DatabaseSeeder extends Seeder
             'nombre' => '2026',
             'fecha_inicio' => '2026-03-01',
             'fecha_fin' => '2026-12-15',
+            'descuento_hermanos_pct' => 15,
         ]);
+
+        foreach (Nivel::cases() as $nivel) {
+            Arancel::factory()->matricula()->create(['periodo_lectivo_id' => $periodo->id, 'nivel' => $nivel]);
+            Arancel::factory()->mensualidad()->create(['periodo_lectivo_id' => $periodo->id, 'nivel' => $nivel]);
+        }
+
+        $generadorDeCuotas = app(GeneradorDeCuotas::class);
 
         Alumno::factory(10)
             ->primario()
             ->create()
-            ->each(function (Alumno $alumno) use ($periodo) {
+            ->each(function (Alumno $alumno) use ($periodo, $generadorDeCuotas) {
                 $tutor = Tutor::factory()->create();
                 $alumno->tutores()->attach($tutor, ['vinculo' => 'madre', 'responsable_pago' => true]);
 
@@ -46,12 +57,14 @@ class DatabaseSeeder extends Seeder
                     'periodo_lectivo_id' => $periodo->id,
                     'cargado_por_id' => User::first()->id,
                 ]);
+
+                $generadorDeCuotas->generar($alumno, $periodo);
             });
 
         Alumno::factory(10)
             ->secundario()
             ->create()
-            ->each(function (Alumno $alumno) use ($periodo) {
+            ->each(function (Alumno $alumno) use ($periodo, $generadorDeCuotas) {
                 $tutor = Tutor::factory()->create();
                 $alumno->tutores()->attach($tutor, ['vinculo' => 'padre', 'responsable_pago' => true]);
 
@@ -60,6 +73,8 @@ class DatabaseSeeder extends Seeder
                     'periodo_lectivo_id' => $periodo->id,
                     'cargado_por_id' => User::first()->id,
                 ]);
+
+                $generadorDeCuotas->generar($alumno, $periodo);
             });
     }
 }

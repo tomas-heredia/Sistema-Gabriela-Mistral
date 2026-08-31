@@ -3,9 +3,11 @@
 namespace App\Core\Models;
 
 use Database\Factories\PeriodoLectivoFactory;
+use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
+#[Fillable(['nombre', 'fecha_inicio', 'fecha_fin', 'descuento_hermanos_pct', 'activo'])]
 class PeriodoLectivo extends Model
 {
     use HasFactory;

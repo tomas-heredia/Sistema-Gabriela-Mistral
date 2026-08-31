@@ -5,10 +5,12 @@ namespace App\Alumnos\Models;
 use App\Core\Models\PeriodoLectivo;
 use App\Core\Models\User;
 use Database\Factories\ContratoFactory;
+use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
+#[Fillable(['alumno_id', 'periodo_lectivo_id', 'archivo', 'fecha', 'cargado_por_id'])]
 class Contrato extends Model
 {
     use HasFactory;
