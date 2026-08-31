@@ -12,4 +12,8 @@ Route::view('profile', 'profile')
     ->middleware(['auth'])
     ->name('profile');
 
+Route::middleware(['auth', 'verified'])->group(function () {
+    require __DIR__.'/alumnos.php';
+});
+
 require __DIR__.'/auth.php';
