@@ -51,6 +51,10 @@ No hace falta configurar autoload especial en `composer.json`: como el mapeo PSR
 
 **`Core` también tiene `Policies/`:** además de `Models/`, `Http/` y `Livewire/`, `App\Core\Policies` guarda las Policies de los modelos compartidos que viven en Core (ej. `PeriodoLectivoPolicy` para `App\Core\Models\PeriodoLectivo`). La resolución automática de Policies de Laravel encuentra estas clases sola porque sigue el mismo patrón `...\Models\X` → `...\Policies\XPolicy` dentro del mismo namespace de módulo — no hace falta registrarlas a mano en un service provider.
 
+**Subcarpetas adicionales, agregadas donde el módulo las necesita:** `Services/` para lógica de negocio que no es CRUD simple (ej. `App\Cobranzas\Services\GeneradorDeCuotas`, `AsignadorDePagos`); `Models/Observers/` para Observers de Eloquent (ej. `PagoCuotaObserver`, registrado a mano en `AppServiceProvider::boot()` — a diferencia de las Policies, los Observers no se autodescubren); `Exceptions/` para excepciones de dominio propias (ej. `AsignacionDePagoInvalidaException`); `Console/Commands/` para comandos Artisan del módulo (ej. `App\Mora\Console\Commands\GenerarAvisosMora`) — estos SÍ necesitan registro explícito, vía `->withCommands([...])` en `bootstrap/app.php`, porque Laravel solo autodescubre `app/Console/Commands` por defecto.
+
+**Todo modelo nuevo necesita `#[Fillable([...])]` explícito** (mismo atributo que ya usa `User`, de `Illuminate\Database\Eloquent\Attributes\Fillable`). Sin esto, `Model::create()` rechaza la asignación masiva — factories no lo notan porque bypasean la protección, pero cualquier código de negocio real (servicios, comandos, futuras Livewire) sí la sufre.
+
 ## Comandos habituales
 
 ```bash
@@ -79,6 +83,7 @@ Los tres roles se crean vía `database/seeders/RoleSeeder.php` (nombres: `admini
 - **Montos monetarios**: se almacenan como enteros (centavos), nunca como `float`, para evitar errores de redondeo.
 - **Cálculos de mora y cuotas**: siempre en el backend. Nunca confiar en montos o fechas calculados en el cliente.
 - **`$table` explícito en todo modelo.** La pluralización automática de Eloquent asume inglés y se rompe con nombres en español: `Tutor` adivinaría `tutors` (no `tutores`), `PeriodoLectivo` adivinaría `periodo_lectivos` (no `periodos_lectivos`, porque solo pluraliza la última palabra). Para no depender de cuándo la adivinanza coincide "por suerte" (`Alumno`→`alumnos`, `Contrato`→`contratos` sí coinciden) y cuándo no, todo modelo del proyecto declara `protected $table` a mano.
+- **`wherePivot()` no existe dentro de un closure de `whereHas()`.** `$relacion->wherePivot(...)` funciona sobre la relación `BelongsToMany` directa, pero el `$query` que recibe el closure de `whereHas('relacion', fn ($query) => ...)` es un query builder sobre el modelo relacionado con el join a la tabla pivote ya aplicado — ahí hay que filtrar por la columna calificada de la tabla pivote (ej. `$query->where('alumno_tutor.responsable_pago', true)`), no por `wherePivot()`.
 
 ## Reglas del proyecto
 
