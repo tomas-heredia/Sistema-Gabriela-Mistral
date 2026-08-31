@@ -45,17 +45,29 @@
                 </div>
             </div>
 
-            <div>
-                <x-input-label for="grado" value="Grado" />
-                <x-text-input id="grado" type="text" class="mt-1 block w-full" wire:model="grado" placeholder="Ej: 3er grado, 5º año…" />
-                <x-input-error :messages="$errors->get('grado')" class="mt-1" />
-            </div>
+            @if ($nivel === \App\Alumnos\Models\Enums\Nivel::Primario->value)
+                <div>
+                    <x-input-label for="grado" value="Grado" />
+                    <select id="grado" wire:model="grado" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                        <option value="">Seleccioná un grado…</option>
+                        @foreach (self::GRADOS_PRIMARIO as $opcion)
+                            <option value="{{ $opcion }}">{{ $opcion }}</option>
+                        @endforeach
+                    </select>
+                    <x-input-error :messages="$errors->get('grado')" class="mt-1" />
+                </div>
+            @endif
 
             @if ($nivel === \App\Alumnos\Models\Enums\Nivel::Secundario->value)
                 <div class="grid grid-cols-2 gap-4">
                     <div>
-                        <x-input-label for="anio_secundaria" value="Año de secundaria" />
-                        <x-text-input id="anio_secundaria" type="number" min="1" max="6" class="mt-1 block w-full" wire:model="anio_secundaria" />
+                        <x-input-label for="anio_secundaria" value="Año" />
+                        <select id="anio_secundaria" wire:model.live="anio_secundaria" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                            <option value="">Seleccioná un año…</option>
+                            @for ($anio = 1; $anio <= 6; $anio++)
+                                <option value="{{ $anio }}">{{ $anio }}º año</option>
+                            @endfor
+                        </select>
                         <x-input-error :messages="$errors->get('anio_secundaria')" class="mt-1" />
                     </div>
 

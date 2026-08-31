@@ -2,6 +2,7 @@
 
 namespace Database\Factories;
 
+use App\Alumnos\Livewire\Alumnos\Formulario;
 use App\Alumnos\Models\Alumno;
 use App\Alumnos\Models\Enums\Nivel;
 use App\Alumnos\Models\Enums\Turno;
@@ -23,7 +24,7 @@ class AlumnoFactory extends Factory
             $grado = "{$anioSecundaria}º año";
         } else {
             $anioSecundaria = null;
-            $grado = fake()->randomElement(['Sala de 4', 'Sala de 5', '1er grado', '2do grado', '3er grado', '4to grado', '5to grado', '6to grado']);
+            $grado = fake()->randomElement(Formulario::GRADOS_PRIMARIO);
         }
 
         return [
@@ -57,7 +58,7 @@ class AlumnoFactory extends Factory
     {
         return $this->state(fn (array $attributes) => [
             'nivel' => Nivel::Primario,
-            'grado' => fake()->randomElement(['1er grado', '2do grado', '3er grado', '4to grado', '5to grado', '6to grado']),
+            'grado' => fake()->randomElement(Formulario::GRADOS_PRIMARIO),
             'anio_secundaria' => null,
         ]);
     }

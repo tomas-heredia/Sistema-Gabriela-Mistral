@@ -41,10 +41,41 @@ test('crear un alumno secundario exige el anio de secundaria', function () {
         ->set('nombre', 'Beto Gómez')
         ->set('fecha_nacimiento', '2010-03-10')
         ->set('nivel', Nivel::Secundario->value)
-        ->set('grado', '3º año')
         ->set('turno', Turno::Tarde->value)
         ->call('guardar')
         ->assertHasErrors(['anio_secundaria']);
+});
+
+test('elegir el anio de secundaria completa el grado solo, sin campo de texto libre', function () {
+    $cobrador = User::factory()->create()->assignRole('cobrador');
+
+    $component = Livewire::actingAs($cobrador)->test(Formulario::class)
+        ->set('nombre', 'Beto Gómez')
+        ->set('fecha_nacimiento', '2010-03-10')
+        ->set('nivel', Nivel::Secundario->value)
+        ->set('anio_secundaria', 3)
+        ->set('turno', Turno::Tarde->value);
+
+    expect($component->get('grado'))->toBe('3º año');
+
+    $component->call('guardar');
+
+    $alumno = Alumno::where('nombre', 'Beto Gómez')->firstOrFail();
+    expect($alumno->anio_secundaria)->toBe(3)
+        ->and($alumno->grado)->toBe('3º año');
+});
+
+test('rechaza un grado de primaria que no esta en la lista permitida', function () {
+    $cobrador = User::factory()->create()->assignRole('cobrador');
+
+    Livewire::actingAs($cobrador)->test(Formulario::class)
+        ->set('nombre', 'Ana Pérez')
+        ->set('fecha_nacimiento', '2015-03-10')
+        ->set('nivel', Nivel::Primario->value)
+        ->set('grado', '7mo grado')
+        ->set('turno', Turno::Manana->value)
+        ->call('guardar')
+        ->assertHasErrors(['grado']);
 });
 
 test('editar un alumno precarga sus datos', function () {
