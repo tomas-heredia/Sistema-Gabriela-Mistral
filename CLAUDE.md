@@ -55,6 +55,10 @@ No hace falta configurar autoload especial en `composer.json`: como el mapeo PSR
 
 **Todo modelo nuevo necesita `#[Fillable([...])]` explícito** (mismo atributo que ya usa `User`, de `Illuminate\Database\Eloquent\Attributes\Fillable`). Sin esto, `Model::create()` rechaza la asignación masiva — factories no lo notan porque bypasean la protección, pero cualquier código de negocio real (servicios, comandos, futuras Livewire) sí la sufre.
 
+**Componentes Livewire: de clase, no Volt, con `render()` explícito.** Las pantallas de cada módulo viven en `App\{Módulo}\Livewire\...` (ej. `App\Alumnos\Livewire\Tutores\Listado`), con su vista en `resources/views/livewire/{módulo en minúscula}/...`. Livewire adivina vista y alias de tag asumiendo que la clase vive en `App\Livewire\...` — no aplica acá, mismo motivo que ya rompió `$table` y las factories. Por eso todo componente declara `render()` devolviendo la ruta de vista a mano. Volt (componentes de un solo archivo) queda limitado a las pantallas de auth que ya trajo Breeze — no encaja con la organización por módulo.
+
+**Autorización en el `mount()` del componente, no en la ruta.** Las rutas Livewire solo exigen `auth`+`verified`; cada componente llama `$this->authorize(...)` contra la Policy correspondiente al montar. Las rutas de cada módulo viven en su propio archivo (`routes/alumnos.php`, etc., mismo criterio que `routes/auth.php` de Breeze), incluido desde `routes/web.php`.
+
 ## Comandos habituales
 
 ```bash
