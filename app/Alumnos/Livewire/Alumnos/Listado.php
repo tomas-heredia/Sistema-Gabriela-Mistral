@@ -5,9 +5,11 @@ namespace App\Alumnos\Livewire\Alumnos;
 use App\Alumnos\Models\Alumno;
 use App\Alumnos\Models\Enums\Nivel;
 use Illuminate\Database\QueryException;
+use Livewire\Attributes\Layout;
 use Livewire\Component;
 use Livewire\WithPagination;
 
+#[Layout('layouts.app')]
 class Listado extends Component
 {
     use WithPagination;

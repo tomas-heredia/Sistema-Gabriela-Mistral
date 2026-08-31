@@ -7,8 +7,10 @@ use App\Alumnos\Models\Enums\Nivel;
 use App\Alumnos\Models\Enums\Turno;
 use App\Alumnos\Models\Tutor;
 use Illuminate\Validation\Rule;
+use Livewire\Attributes\Layout;
 use Livewire\Component;
 
+#[Layout('layouts.app')]
 class Formulario extends Component
 {
     public const VINCULOS = [

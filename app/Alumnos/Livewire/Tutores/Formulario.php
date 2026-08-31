@@ -4,8 +4,10 @@ namespace App\Alumnos\Livewire\Tutores;
 
 use App\Alumnos\Models\Tutor;
 use Illuminate\Validation\Rule;
+use Livewire\Attributes\Layout;
 use Livewire\Component;
 
+#[Layout('layouts.app')]
 class Formulario extends Component
 {
     public ?Tutor $tutor = null;
