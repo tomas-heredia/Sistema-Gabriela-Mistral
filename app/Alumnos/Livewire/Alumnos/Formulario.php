@@ -8,6 +8,7 @@ use App\Alumnos\Models\Enums\Turno;
 use App\Alumnos\Models\Tutor;
 use App\Boletines\Exceptions\PlantillaNoEncontradaException;
 use App\Boletines\Models\Boletin;
+use App\Boletines\Models\BoletinTrimestre;
 use App\Boletines\Services\CreadorDeBoletines;
 use App\Cobranzas\Models\Beca;
 use App\Cobranzas\Models\Cuota;
@@ -279,6 +280,32 @@ class Formulario extends Component
             ->where('alumno_id', $this->alumno->id)
             ->where('periodo_lectivo_id', $periodo->id)
             ->first();
+    }
+
+    /**
+     * La Etapa de Apoyo (trimestre 4) es opcional y solo existe en
+     * primaria — a diferencia de los trimestres 1/2/3, nada la crea
+     * automáticamente. Una vez creada, se carga y se envía exactamente
+     * igual que cualquier otro trimestre (Cargar ya maneja el trimestre 4
+     * de forma genérica).
+     */
+    public function agregarEtapaApoyo(): void
+    {
+        $periodo = PeriodoLectivo::where('activo', true)->first();
+        $boletin = $periodo ? $this->boletinDelPeriodo($periodo) : null;
+
+        if (! $boletin || $this->alumno->nivel !== Nivel::Primario) {
+            return;
+        }
+
+        $this->authorize('update', $boletin);
+
+        if ($boletin->trimestres->contains('trimestre', 4)) {
+            return;
+        }
+
+        BoletinTrimestre::create(['boletin_id' => $boletin->id, 'trimestre' => 4]);
+        session()->flash('mensaje', 'Etapa de Apoyo agregada.');
     }
 
     /**

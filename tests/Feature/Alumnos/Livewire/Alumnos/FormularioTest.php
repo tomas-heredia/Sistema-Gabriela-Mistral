@@ -247,3 +247,50 @@ test('volver a otorgar despues de revocar actualiza el motivo en vez de duplicar
     expect(Beca::where('alumno_id', $alumno->id)->count())->toBe(1)
         ->and(Beca::where('alumno_id', $alumno->id)->first()->motivo)->toBe('Beca convenio institucional');
 });
+
+test('agregar etapa de apoyo crea el trimestre 4 para un alumno primario', function () {
+    $cobrador = User::factory()->create()->assignRole('cobrador');
+    $periodo = PeriodoLectivo::factory()->activo()->create();
+    $alumno = Alumno::factory()->primario()->create();
+    PlantillaBoletin::factory()->create(['nivel' => $alumno->nivel, 'anio' => null]);
+    $boletin = Boletin::factory()->create(['alumno_id' => $alumno->id, 'periodo_lectivo_id' => $periodo->id]);
+    BoletinTrimestre::factory()->create(['boletin_id' => $boletin->id, 'trimestre' => 1]);
+    BoletinTrimestre::factory()->create(['boletin_id' => $boletin->id, 'trimestre' => 2]);
+    BoletinTrimestre::factory()->create(['boletin_id' => $boletin->id, 'trimestre' => 3]);
+
+    Livewire::actingAs($cobrador)->test(Formulario::class, ['alumno' => $alumno])
+        ->assertSee('Agregar Etapa de Apoyo')
+        ->call('agregarEtapaApoyo');
+
+    expect(BoletinTrimestre::where('boletin_id', $boletin->id)->where('trimestre', 4)->exists())->toBeTrue();
+});
+
+test('agregar etapa de apoyo no aparece ni hace nada para un alumno secundario', function () {
+    $cobrador = User::factory()->create()->assignRole('cobrador');
+    $periodo = PeriodoLectivo::factory()->activo()->create();
+    $alumno = Alumno::factory()->secundario()->create();
+    PlantillaBoletin::factory()->secundaria($alumno->anio_secundaria)->create();
+    $boletin = Boletin::factory()->create(['alumno_id' => $alumno->id, 'periodo_lectivo_id' => $periodo->id]);
+    BoletinTrimestre::factory()->create(['boletin_id' => $boletin->id, 'trimestre' => 1]);
+
+    Livewire::actingAs($cobrador)->test(Formulario::class, ['alumno' => $alumno])
+        ->assertDontSee('Agregar Etapa de Apoyo')
+        ->call('agregarEtapaApoyo');
+
+    expect(BoletinTrimestre::where('boletin_id', $boletin->id)->where('trimestre', 4)->exists())->toBeFalse();
+});
+
+test('agregar etapa de apoyo no duplica si ya existe', function () {
+    $cobrador = User::factory()->create()->assignRole('cobrador');
+    $periodo = PeriodoLectivo::factory()->activo()->create();
+    $alumno = Alumno::factory()->primario()->create();
+    PlantillaBoletin::factory()->create(['nivel' => $alumno->nivel, 'anio' => null]);
+    $boletin = Boletin::factory()->create(['alumno_id' => $alumno->id, 'periodo_lectivo_id' => $periodo->id]);
+    BoletinTrimestre::factory()->create(['boletin_id' => $boletin->id, 'trimestre' => 4]);
+
+    Livewire::actingAs($cobrador)->test(Formulario::class, ['alumno' => $alumno])
+        ->assertDontSee('Agregar Etapa de Apoyo')
+        ->call('agregarEtapaApoyo');
+
+    expect(BoletinTrimestre::where('boletin_id', $boletin->id)->where('trimestre', 4)->count())->toBe(1);
+});

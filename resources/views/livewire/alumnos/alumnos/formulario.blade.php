@@ -316,6 +316,12 @@
                             @endforeach
                         </tbody>
                     </table>
+
+                    @if ($alumno->nivel === \App\Alumnos\Models\Enums\Nivel::Primario && ! $boletin->trimestres->contains('trimestre', 4))
+                        <x-secondary-button type="button" wire:click="agregarEtapaApoyo" class="mt-4">
+                            Agregar Etapa de Apoyo
+                        </x-secondary-button>
+                    @endif
                 @endif
             </div>
         </div>
