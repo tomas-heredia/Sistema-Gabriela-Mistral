@@ -63,6 +63,12 @@ new class extends Component
                             {{ __('Períodos') }}
                         </x-nav-link>
                     @endcan
+
+                    @can('viewAny', \App\Mora\Models\NotificacionMora::class)
+                        <x-nav-link :href="route('mora.index')" :active="request()->routeIs('mora.*')" wire:navigate>
+                            {{ __('Mora') }}
+                        </x-nav-link>
+                    @endcan
                 </div>
             </div>
 
@@ -142,6 +148,12 @@ new class extends Component
             @can('viewAny', \App\Core\Models\PeriodoLectivo::class)
                 <x-responsive-nav-link :href="route('periodos.index')" :active="request()->routeIs('periodos.*')" wire:navigate>
                     {{ __('Períodos') }}
+                </x-responsive-nav-link>
+            @endcan
+
+            @can('viewAny', \App\Mora\Models\NotificacionMora::class)
+                <x-responsive-nav-link :href="route('mora.index')" :active="request()->routeIs('mora.*')" wire:navigate>
+                    {{ __('Mora') }}
                 </x-responsive-nav-link>
             @endcan
         </div>
