@@ -57,6 +57,12 @@ new class extends Component
                             {{ __('Libretas') }}
                         </x-nav-link>
                     @endcan
+
+                    @can('viewAny', \App\Core\Models\PeriodoLectivo::class)
+                        <x-nav-link :href="route('periodos.index')" :active="request()->routeIs('periodos.*')" wire:navigate>
+                            {{ __('Períodos') }}
+                        </x-nav-link>
+                    @endcan
                 </div>
             </div>
 
@@ -130,6 +136,12 @@ new class extends Component
             @can('viewAny', \App\Boletines\Models\Boletin::class)
                 <x-responsive-nav-link :href="route('boletines.index')" :active="request()->routeIs('boletines.*')" wire:navigate>
                     {{ __('Libretas') }}
+                </x-responsive-nav-link>
+            @endcan
+
+            @can('viewAny', \App\Core\Models\PeriodoLectivo::class)
+                <x-responsive-nav-link :href="route('periodos.index')" :active="request()->routeIs('periodos.*')" wire:navigate>
+                    {{ __('Períodos') }}
                 </x-responsive-nav-link>
             @endcan
         </div>

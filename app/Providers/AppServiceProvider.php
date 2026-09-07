@@ -12,6 +12,8 @@ use App\Cobranzas\Livewire\Pagos\Listado as PagosListado;
 use App\Cobranzas\Livewire\Pagos\Registrar as PagosRegistrar;
 use App\Cobranzas\Models\Observers\PagoCuotaObserver;
 use App\Cobranzas\Models\PagoCuota;
+use App\Core\Livewire\PeriodosLectivos\Formulario as PeriodosLectivosFormulario;
+use App\Core\Livewire\PeriodosLectivos\Listado as PeriodosLectivosListado;
 use Illuminate\Support\ServiceProvider;
 use Livewire\Livewire;
 
@@ -40,5 +42,7 @@ class AppServiceProvider extends ServiceProvider
         Livewire::component('pagos.registrar', PagosRegistrar::class);
         Livewire::component('boletines.listado', BoletinesListado::class);
         Livewire::component('boletines.trimestres.cargar', TrimestresCargar::class);
+        Livewire::component('periodos-lectivos.listado', PeriodosLectivosListado::class);
+        Livewire::component('periodos-lectivos.formulario', PeriodosLectivosFormulario::class);
     }
 }

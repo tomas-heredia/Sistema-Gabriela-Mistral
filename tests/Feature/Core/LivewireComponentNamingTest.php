@@ -63,6 +63,8 @@ test('cada pantalla de página completa resuelve su nombre de componente en un p
     'pagos.index' => ['pagos.index', 'pagos.listado'],
     'pagos.registrar' => ['pagos.registrar', 'pagos.registrar'],
     'boletines.index' => ['boletines.index', 'boletines.listado'],
+    'periodos.index' => ['periodos.index', 'periodos-lectivos.listado'],
+    'periodos.crear' => ['periodos.crear', 'periodos-lectivos.formulario'],
 ]);
 
 test('boletines.trimestres.cargar resuelve su nombre de componente en un pedido AJAX real', function () {
