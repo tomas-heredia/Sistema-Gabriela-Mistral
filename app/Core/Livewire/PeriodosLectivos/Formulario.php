@@ -2,10 +2,23 @@
 
 namespace App\Core\Livewire\PeriodosLectivos;
 
+use App\Alumnos\Models\Enums\Nivel;
+use App\Cobranzas\Models\Arancel;
+use App\Cobranzas\Models\Enums\TipoCuota;
 use App\Core\Models\PeriodoLectivo;
+use Illuminate\Support\Arr;
+use Illuminate\Support\Facades\DB;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
 
+/**
+ * Los aranceles (matrícula/mensualidad × primario/secundario, 4 filas fijas
+ * por período) se cargan acá mismo, no en una pantalla propia: no tienen
+ * identidad ni búsqueda propia, son una matriz de configuración atada 1 a 1
+ * a un período. Son obligatorios para no volver a depender del
+ * ModelNotFoundException que atrapa Alumnos\Formulario::generarCuotas()
+ * cuando falta uno.
+ */
 #[Layout('layouts.app')]
 class Formulario extends Component
 {
@@ -18,6 +31,9 @@ class Formulario extends Component
     public string $fecha_fin = '';
 
     public string $descuento_hermanos_pct = '0';
+
+    /** @var array<string, string> ["{nivel}_{tipo}" => monto en pesos, como texto] */
+    public array $montos = [];
 
     public function mount(?PeriodoLectivo $periodoLectivo = null): void
     {
@@ -32,6 +48,18 @@ class Formulario extends Component
         } else {
             $this->authorize('create', PeriodoLectivo::class);
         }
+
+        $aranceles = $this->periodoLectivo
+            ? Arancel::where('periodo_lectivo_id', $this->periodoLectivo->id)->get()->keyBy(fn ($a) => "{$a->nivel->value}_{$a->tipo->value}")
+            : collect();
+
+        foreach (Nivel::cases() as $nivel) {
+            foreach (TipoCuota::cases() as $tipo) {
+                $clave = "{$nivel->value}_{$tipo->value}";
+                $arancel = $aranceles->get($clave);
+                $this->montos[$clave] = $arancel ? number_format($arancel->monto / 100, 2, '.', '') : '';
+            }
+        }
     }
 
     protected function rules(): array
@@ -41,36 +69,60 @@ class Formulario extends Component
             'fecha_inicio' => ['required', 'date'],
             'fecha_fin' => ['required', 'date', 'after:fecha_inicio'],
             'descuento_hermanos_pct' => ['required', 'numeric', 'min:0', 'max:100'],
+            'montos.*' => ['required', 'numeric', 'min:0'],
         ];
     }
 
     protected function validationAttributes(): array
     {
-        return [
+        $atributos = [
             'nombre' => 'nombre',
             'fecha_inicio' => 'fecha de inicio',
             'fecha_fin' => 'fecha de fin',
             'descuento_hermanos_pct' => 'descuento por hermanos',
         ];
+
+        foreach (Nivel::cases() as $nivel) {
+            foreach (TipoCuota::cases() as $tipo) {
+                $atributos["montos.{$nivel->value}_{$tipo->value}"] = "{$tipo->value} ({$nivel->value})";
+            }
+        }
+
+        return $atributos;
     }
 
     public function guardar(): void
     {
         $datos = $this->validate();
 
-        if ($this->periodoLectivo) {
-            $this->periodoLectivo->update($datos);
-            session()->flash('mensaje', 'Período actualizado correctamente.');
-        } else {
-            PeriodoLectivo::create($datos);
-            session()->flash('mensaje', 'Período creado correctamente.');
-        }
+        DB::transaction(function () use ($datos) {
+            if ($this->periodoLectivo) {
+                $this->periodoLectivo->update(Arr::except($datos, 'montos'));
+            } else {
+                $this->periodoLectivo = PeriodoLectivo::create(Arr::except($datos, 'montos'));
+            }
 
+            foreach (Nivel::cases() as $nivel) {
+                foreach (TipoCuota::cases() as $tipo) {
+                    $clave = "{$nivel->value}_{$tipo->value}";
+
+                    Arancel::updateOrCreate(
+                        ['periodo_lectivo_id' => $this->periodoLectivo->id, 'nivel' => $nivel, 'tipo' => $tipo],
+                        ['monto' => (int) round(((float) $datos['montos'][$clave]) * 100)]
+                    );
+                }
+            }
+        });
+
+        session()->flash('mensaje', $this->periodoLectivo->wasRecentlyCreated ? 'Período creado correctamente.' : 'Período actualizado correctamente.');
         $this->redirectRoute('periodos.index', navigate: true);
     }
 
     public function render()
     {
-        return view('livewire.core.periodos-lectivos.formulario');
+        return view('livewire.core.periodos-lectivos.formulario', [
+            'niveles' => Nivel::cases(),
+            'tipos' => TipoCuota::cases(),
+        ]);
     }
 }
