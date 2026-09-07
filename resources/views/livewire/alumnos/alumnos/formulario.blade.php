@@ -99,11 +99,11 @@
         </form>
     </div>
 
-    @if ($alumno)
-        <div>
-            <h2 class="text-lg font-semibold text-gray-900 mb-4">Tutores vinculados</h2>
+    <div>
+        <h2 class="text-lg font-semibold text-gray-900 mb-4">{{ $alumno ? 'Tutores vinculados' : 'Tutores' }}</h2>
 
-            <div class="bg-white shadow-sm rounded-lg overflow-hidden mb-4">
+        <div class="bg-white shadow-sm rounded-lg overflow-hidden mb-4">
+            @if ($alumno)
                 @if ($tutoresVinculados->isEmpty())
                     <p class="text-center text-gray-500 py-8 text-sm">
                         Este alumno todavía no tiene ningún tutor vinculado.
@@ -131,12 +131,51 @@
                                         @endif
                                     </td>
                                     <td class="px-4 py-2 text-right text-sm">
-                                        <button
-                                            type="button"
-                                            wire:click="desvincularTutor({{ $tutorVinculado->id }})"
-                                            wire:confirm="¿Quitar a {{ $tutorVinculado->nombre }} como tutor de este alumno?"
-                                            class="text-red-600 hover:text-red-800"
-                                        >
+                                        @if ($tutoresVinculados->count() > 1)
+                                            <button
+                                                type="button"
+                                                wire:click="desvincularTutor({{ $tutorVinculado->id }})"
+                                                wire:confirm="¿Quitar a {{ $tutorVinculado->nombre }} como tutor de este alumno?"
+                                                class="text-red-600 hover:text-red-800"
+                                            >
+                                                Quitar
+                                            </button>
+                                        @endif
+                                    </td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                @endif
+            @else
+                @if (empty($tutoresPendientes))
+                    <p class="text-center text-gray-500 py-8 text-sm">
+                        Todavía no vinculaste ningún tutor — hace falta al menos uno para poder guardar.
+                    </p>
+                @else
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nombre</th>
+                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Vínculo</th>
+                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Responsable de pago</th>
+                                <th class="px-4 py-2"></th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-100">
+                            @foreach ($tutoresPendientes as $indice => $pendiente)
+                                <tr wire:key="tutor-pendiente-{{ $indice }}">
+                                    <td class="px-4 py-2 text-sm text-gray-900">{{ $pendiente['nombre'] }}</td>
+                                    <td class="px-4 py-2 text-sm text-gray-600">{{ self::VINCULOS[$pendiente['vinculo']] ?? $pendiente['vinculo'] }}</td>
+                                    <td class="px-4 py-2 text-sm">
+                                        @if ($pendiente['responsable_pago'])
+                                            <x-pill color="green">Sí</x-pill>
+                                        @else
+                                            <x-pill color="gray">No</x-pill>
+                                        @endif
+                                    </td>
+                                    <td class="px-4 py-2 text-right text-sm">
+                                        <button type="button" wire:click="quitarTutorPendiente({{ $indice }})" class="text-red-600 hover:text-red-800">
                                             Quitar
                                         </button>
                                     </td>
@@ -145,55 +184,58 @@
                         </tbody>
                     </table>
                 @endif
-            </div>
-
-            <div class="bg-white shadow-sm rounded-lg p-6 space-y-4">
-                <p class="text-sm font-medium text-gray-700">Vincular un tutor existente</p>
-
-                <div class="flex items-end gap-3">
-                    <div class="flex-1">
-                        <x-input-label for="dniTutorBuscado" value="DNI del tutor" />
-                        <x-text-input id="dniTutorBuscado" type="text" class="mt-1 block w-full" wire:model="dniTutorBuscado" />
-                    </div>
-                    <x-secondary-button type="button" wire:click="buscarTutor">Buscar</x-secondary-button>
-                </div>
-                <x-input-error :messages="$errors->get('dniTutorBuscado')" />
-
-                @if ($buscoTutor)
-                    @if ($tutorEncontrado)
-                        <div class="border border-gray-200 rounded-md p-4 space-y-4">
-                            <p class="text-sm text-gray-900">
-                                Encontrado: <strong>{{ $tutorEncontrado->nombre }}</strong>
-                            </p>
-
-                            <div class="grid grid-cols-2 gap-4">
-                                <div>
-                                    <x-input-label for="vinculoNuevo" value="Vínculo" />
-                                    <select id="vinculoNuevo" wire:model="vinculoNuevo" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
-                                        @foreach (self::VINCULOS as $valor => $etiqueta)
-                                            <option value="{{ $valor }}">{{ $etiqueta }}</option>
-                                        @endforeach
-                                    </select>
-                                </div>
-
-                                <label class="flex items-center gap-2 mt-6">
-                                    <input type="checkbox" wire:model="responsablePagoNuevo" class="rounded border-gray-300 text-indigo-600 shadow-sm focus:ring-indigo-500">
-                                    <span class="text-sm text-gray-700">Responsable de pago</span>
-                                </label>
-                            </div>
-
-                            <x-primary-button type="button" wire:click="vincularTutor">Vincular</x-primary-button>
-                        </div>
-                    @else
-                        <p class="text-sm text-gray-500">
-                            No encontramos ningún tutor con ese DNI.
-                            <a href="{{ route('tutores.crear') }}" wire:navigate class="text-indigo-600 hover:text-indigo-800">Crear uno nuevo</a>.
-                        </p>
-                    @endif
-                @endif
-            </div>
+                <x-input-error :messages="$errors->get('tutoresPendientes')" class="px-4 pb-4" />
+            @endif
         </div>
 
+        <div class="bg-white shadow-sm rounded-lg p-6 space-y-4">
+            <p class="text-sm font-medium text-gray-700">Vincular un tutor existente</p>
+
+            <div class="flex items-end gap-3">
+                <div class="flex-1">
+                    <x-input-label for="dniTutorBuscado" value="DNI del tutor" />
+                    <x-text-input id="dniTutorBuscado" type="text" class="mt-1 block w-full" wire:model="dniTutorBuscado" />
+                </div>
+                <x-secondary-button type="button" wire:click="buscarTutor">Buscar</x-secondary-button>
+            </div>
+            <x-input-error :messages="$errors->get('dniTutorBuscado')" />
+
+            @if ($buscoTutor)
+                @if ($tutorEncontrado)
+                    <div class="border border-gray-200 rounded-md p-4 space-y-4">
+                        <p class="text-sm text-gray-900">
+                            Encontrado: <strong>{{ $tutorEncontrado->nombre }}</strong>
+                        </p>
+
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <x-input-label for="vinculoNuevo" value="Vínculo" />
+                                <select id="vinculoNuevo" wire:model="vinculoNuevo" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                                    @foreach (self::VINCULOS as $valor => $etiqueta)
+                                        <option value="{{ $valor }}">{{ $etiqueta }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+
+                            <label class="flex items-center gap-2 mt-6">
+                                <input type="checkbox" wire:model="responsablePagoNuevo" class="rounded border-gray-300 text-indigo-600 shadow-sm focus:ring-indigo-500">
+                                <span class="text-sm text-gray-700">Responsable de pago</span>
+                            </label>
+                        </div>
+
+                        <x-primary-button type="button" wire:click="vincularTutor">Vincular</x-primary-button>
+                    </div>
+                @else
+                    <p class="text-sm text-gray-500">
+                        No encontramos ningún tutor con ese DNI.
+                        <a href="{{ route('tutores.crear') }}" wire:navigate class="text-indigo-600 hover:text-indigo-800">Crear uno nuevo</a>.
+                    </p>
+                @endif
+            @endif
+        </div>
+    </div>
+
+    @if ($alumno)
         <div>
             <h2 class="text-lg font-semibold text-gray-900 mb-4">Cobranzas</h2>
 

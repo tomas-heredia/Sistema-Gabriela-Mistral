@@ -15,6 +15,7 @@ use App\Cobranzas\Models\Cuota;
 use App\Cobranzas\Services\GeneradorDeCuotas;
 use App\Core\Models\PeriodoLectivo;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
@@ -59,7 +60,7 @@ class Formulario extends Component
 
     public bool $activo = true;
 
-    // Sección "Tutores vinculados" — solo aplica cuando el alumno ya existe.
+    // Sección "Tutores".
     public string $dniTutorBuscado = '';
 
     public ?Tutor $tutorEncontrado = null;
@@ -69,6 +70,16 @@ class Formulario extends Component
     public string $vinculoNuevo = 'madre';
 
     public bool $responsablePagoNuevo = false;
+
+    /**
+     * Tutores elegidos durante el alta, todavía no guardados — el alumno
+     * no existe hasta que se llama a guardar(), así que no hay a qué
+     * pivote engancharlos todavía. Se adjuntan recién dentro de la misma
+     * transacción que crea el alumno.
+     *
+     * @var array<int, array{tutor_id:int, nombre:string, vinculo:string, responsable_pago:bool}>
+     */
+    public array $tutoresPendientes = [];
 
     public bool $becado = false;
 
@@ -183,8 +194,26 @@ class Formulario extends Component
             return;
         }
 
-        $nuevo = Alumno::create($datos);
-        session()->flash('mensaje', 'Alumno creado correctamente. Ahora podés vincular sus tutores.');
+        if (empty($this->tutoresPendientes)) {
+            $this->addError('tutoresPendientes', 'Vinculá al menos un tutor antes de guardar.');
+
+            return;
+        }
+
+        $nuevo = DB::transaction(function () use ($datos) {
+            $alumno = Alumno::create($datos);
+
+            foreach ($this->tutoresPendientes as $pendiente) {
+                $alumno->tutores()->attach($pendiente['tutor_id'], [
+                    'vinculo' => $pendiente['vinculo'],
+                    'responsable_pago' => $pendiente['responsable_pago'],
+                ]);
+            }
+
+            return $alumno;
+        });
+
+        session()->flash('mensaje', 'Alumno creado correctamente.');
         $this->redirectRoute('alumnos.editar', $nuevo, navigate: true);
     }
 
@@ -194,31 +223,69 @@ class Formulario extends Component
         $this->tutorEncontrado = Tutor::where('dni', $this->dniTutorBuscado)->first();
     }
 
+    /**
+     * Con alumno existente, vincula directo en la base. En el alta (todavía
+     * sin alumno) solo agrega a la lista pendiente — recién se adjunta de
+     * verdad cuando guardar() crea el alumno.
+     */
     public function vincularTutor(): void
     {
-        if (! $this->tutorEncontrado || ! $this->alumno) {
+        if (! $this->tutorEncontrado) {
             return;
         }
 
-        $yaVinculado = $this->alumno->tutores()->where('tutores.id', $this->tutorEncontrado->id)->exists();
+        if ($this->alumno) {
+            $yaVinculado = $this->alumno->tutores()->where('tutores.id', $this->tutorEncontrado->id)->exists();
 
-        if ($yaVinculado) {
-            $this->addError('dniTutorBuscado', 'Ese tutor ya está vinculado a este alumno.');
+            if ($yaVinculado) {
+                $this->addError('dniTutorBuscado', 'Ese tutor ya está vinculado a este alumno.');
 
-            return;
+                return;
+            }
+
+            $this->alumno->tutores()->attach($this->tutorEncontrado->id, [
+                'vinculo' => $this->vinculoNuevo,
+                'responsable_pago' => $this->responsablePagoNuevo,
+            ]);
+
+            session()->flash('mensaje', 'Tutor vinculado correctamente.');
+        } else {
+            if (collect($this->tutoresPendientes)->contains('tutor_id', $this->tutorEncontrado->id)) {
+                $this->addError('dniTutorBuscado', 'Ese tutor ya está agregado.');
+
+                return;
+            }
+
+            $this->tutoresPendientes[] = [
+                'tutor_id' => $this->tutorEncontrado->id,
+                'nombre' => $this->tutorEncontrado->nombre,
+                'vinculo' => $this->vinculoNuevo,
+                'responsable_pago' => $this->responsablePagoNuevo,
+            ];
         }
-
-        $this->alumno->tutores()->attach($this->tutorEncontrado->id, [
-            'vinculo' => $this->vinculoNuevo,
-            'responsable_pago' => $this->responsablePagoNuevo,
-        ]);
 
         $this->reset(['dniTutorBuscado', 'tutorEncontrado', 'buscoTutor', 'vinculoNuevo', 'responsablePagoNuevo']);
-        session()->flash('mensaje', 'Tutor vinculado correctamente.');
     }
 
+    public function quitarTutorPendiente(int $indice): void
+    {
+        unset($this->tutoresPendientes[$indice]);
+        $this->tutoresPendientes = array_values($this->tutoresPendientes);
+    }
+
+    /**
+     * Un alumno necesita al menos un tutor vinculado en todo momento, no
+     * solo al crearlo -- si no, pagos/libretas/avisos de mora se siguen
+     * generando pero no le llegan a nadie, en silencio.
+     */
     public function desvincularTutor(int $tutorId): void
     {
+        if ($this->alumno->tutores()->count() <= 1) {
+            session()->flash('error', 'El alumno necesita al menos un tutor vinculado — no se puede quitar el último.');
+
+            return;
+        }
+
         $this->alumno->tutores()->detach($tutorId);
         session()->flash('mensaje', 'Tutor desvinculado.');
     }

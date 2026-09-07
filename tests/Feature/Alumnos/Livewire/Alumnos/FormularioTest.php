@@ -28,6 +28,7 @@ test('un profesor no puede montar el formulario de alumno', function () {
 
 test('crear un alumno primario guarda y redirige a su edicion', function () {
     $cobrador = User::factory()->create()->assignRole('cobrador');
+    $tutor = Tutor::factory()->create(['dni' => '30111222']);
 
     Livewire::actingAs($cobrador)->test(Formulario::class)
         ->set('nombre', 'Ana Pérez')
@@ -35,10 +36,14 @@ test('crear un alumno primario guarda y redirige a su edicion', function () {
         ->set('nivel', Nivel::Primario->value)
         ->set('grado', '4to grado')
         ->set('turno', Turno::Manana->value)
+        ->set('dniTutorBuscado', '30111222')
+        ->call('buscarTutor')
+        ->call('vincularTutor')
         ->call('guardar');
 
     $alumno = Alumno::where('nombre', 'Ana Pérez')->firstOrFail();
-    expect($alumno->grado)->toBe('4to grado');
+    expect($alumno->grado)->toBe('4to grado')
+        ->and($alumno->tutores()->where('tutores.id', $tutor->id)->exists())->toBeTrue();
 });
 
 test('crear un alumno secundario exige el anio de secundaria', function () {
@@ -55,13 +60,17 @@ test('crear un alumno secundario exige el anio de secundaria', function () {
 
 test('elegir el anio de secundaria completa el grado solo, sin campo de texto libre', function () {
     $cobrador = User::factory()->create()->assignRole('cobrador');
+    Tutor::factory()->create(['dni' => '30111222']);
 
     $component = Livewire::actingAs($cobrador)->test(Formulario::class)
         ->set('nombre', 'Beto Gómez')
         ->set('fecha_nacimiento', '2010-03-10')
         ->set('nivel', Nivel::Secundario->value)
         ->set('anio_secundaria', 3)
-        ->set('turno', Turno::Tarde->value);
+        ->set('turno', Turno::Tarde->value)
+        ->set('dniTutorBuscado', '30111222')
+        ->call('buscarTutor')
+        ->call('vincularTutor');
 
     expect($component->get('grado'))->toBe('3º año');
 
@@ -112,16 +121,75 @@ test('vincular un tutor existente lo agrega con su vinculo y responsable_pago', 
         ->and((bool) $vinculo->pivot->responsable_pago)->toBeTrue();
 });
 
-test('quitar un tutor lo desvincula del alumno', function () {
+test('quitar un tutor lo desvincula del alumno si le queda otro', function () {
+    $cobrador = User::factory()->create()->assignRole('cobrador');
+    $alumno = Alumno::factory()->primario()->create();
+    $tutor1 = Tutor::factory()->create();
+    $tutor2 = Tutor::factory()->create();
+    $alumno->tutores()->attach($tutor1, ['vinculo' => 'madre', 'responsable_pago' => true]);
+    $alumno->tutores()->attach($tutor2, ['vinculo' => 'padre', 'responsable_pago' => false]);
+
+    Livewire::actingAs($cobrador)->test(Formulario::class, ['alumno' => $alumno])
+        ->call('desvincularTutor', $tutor1->id);
+
+    expect($alumno->tutores()->count())->toBe(1)
+        ->and($alumno->tutores()->first()->id)->toBe($tutor2->id);
+});
+
+test('no se puede quitar el ultimo tutor de un alumno', function () {
     $cobrador = User::factory()->create()->assignRole('cobrador');
     $alumno = Alumno::factory()->primario()->create();
     $tutor = Tutor::factory()->create();
     $alumno->tutores()->attach($tutor, ['vinculo' => 'madre', 'responsable_pago' => true]);
 
     Livewire::actingAs($cobrador)->test(Formulario::class, ['alumno' => $alumno])
-        ->call('desvincularTutor', $tutor->id);
+        ->call('desvincularTutor', $tutor->id)
+        ->assertOk();
 
-    expect($alumno->tutores()->count())->toBe(0);
+    expect($alumno->tutores()->count())->toBe(1);
+});
+
+test('sin vincular ningun tutor no se puede crear el alumno', function () {
+    $cobrador = User::factory()->create()->assignRole('cobrador');
+
+    Livewire::actingAs($cobrador)->test(Formulario::class)
+        ->set('nombre', 'Ana Pérez')
+        ->set('fecha_nacimiento', '2015-03-10')
+        ->set('nivel', Nivel::Primario->value)
+        ->set('grado', '4to grado')
+        ->set('turno', Turno::Manana->value)
+        ->call('guardar')
+        ->assertHasErrors(['tutoresPendientes']);
+
+    expect(Alumno::where('nombre', 'Ana Pérez')->exists())->toBeFalse();
+});
+
+test('vincular un tutor en el alta lo agrega a la lista pendiente sin crear el alumno todavia', function () {
+    $cobrador = User::factory()->create()->assignRole('cobrador');
+    $tutor = Tutor::factory()->create(['dni' => '30111222']);
+
+    $component = Livewire::actingAs($cobrador)->test(Formulario::class)
+        ->set('dniTutorBuscado', '30111222')
+        ->call('buscarTutor')
+        ->call('vincularTutor');
+
+    expect($component->get('tutoresPendientes'))->toHaveCount(1)
+        ->and($component->get('tutoresPendientes')[0]['tutor_id'])->toBe($tutor->id)
+        ->and(Alumno::count())->toBe(0);
+});
+
+test('no se puede agregar el mismo tutor dos veces a la lista pendiente', function () {
+    $cobrador = User::factory()->create()->assignRole('cobrador');
+    Tutor::factory()->create(['dni' => '30111222']);
+
+    Livewire::actingAs($cobrador)->test(Formulario::class)
+        ->set('dniTutorBuscado', '30111222')
+        ->call('buscarTutor')
+        ->call('vincularTutor')
+        ->set('dniTutorBuscado', '30111222')
+        ->call('buscarTutor')
+        ->call('vincularTutor')
+        ->assertHasErrors(['dniTutorBuscado']);
 });
 
 test('generar cuotas crea las cuotas del periodo activo y ya no ofrece el boton', function () {
