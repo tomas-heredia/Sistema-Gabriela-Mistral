@@ -9,6 +9,7 @@ use App\Boletines\Models\Boletin;
 use App\Boletines\Models\BoletinTrimestre;
 use App\Boletines\Models\PlantillaBoletin;
 use App\Cobranzas\Models\Arancel;
+use App\Cobranzas\Models\Beca;
 use App\Cobranzas\Models\Cuota;
 use App\Core\Models\PeriodoLectivo;
 use App\Core\Models\User;
@@ -186,4 +187,63 @@ test('generar boletin sin plantilla activa muestra un mensaje claro, no un error
         ->assertOk();
 
     expect(Boletin::where('alumno_id', $alumno->id)->count())->toBe(0);
+});
+
+test('otorgar una beca crea el registro con motivo y usuario que la aprueba', function () {
+    $cobrador = User::factory()->create()->assignRole('cobrador');
+    $periodo = PeriodoLectivo::factory()->activo()->create();
+    $alumno = Alumno::factory()->primario()->create();
+
+    Livewire::actingAs($cobrador)->test(Formulario::class, ['alumno' => $alumno])
+        ->set('becado', true)
+        ->set('motivoBeca', 'Beca socioeconómica')
+        ->call('guardarBeca');
+
+    $beca = Beca::where('alumno_id', $alumno->id)->where('periodo_lectivo_id', $periodo->id)->first();
+    expect($beca)->not->toBeNull()
+        ->and($beca->motivo)->toBe('Beca socioeconómica')
+        ->and($beca->aprobado_por_id)->toBe($cobrador->id)
+        ->and($beca->fecha_otorgamiento->isToday())->toBeTrue();
+});
+
+test('el motivo es obligatorio para otorgar una beca', function () {
+    $cobrador = User::factory()->create()->assignRole('cobrador');
+    PeriodoLectivo::factory()->activo()->create();
+    $alumno = Alumno::factory()->primario()->create();
+
+    Livewire::actingAs($cobrador)->test(Formulario::class, ['alumno' => $alumno])
+        ->set('becado', true)
+        ->set('motivoBeca', '')
+        ->call('guardarBeca')
+        ->assertHasErrors(['motivoBeca' => 'required']);
+
+    expect(Beca::where('alumno_id', $alumno->id)->exists())->toBeFalse();
+});
+
+test('revocar una beca existente la elimina', function () {
+    $cobrador = User::factory()->create()->assignRole('cobrador');
+    $periodo = PeriodoLectivo::factory()->activo()->create();
+    $alumno = Alumno::factory()->primario()->create();
+    Beca::factory()->create(['alumno_id' => $alumno->id, 'periodo_lectivo_id' => $periodo->id]);
+
+    Livewire::actingAs($cobrador)->test(Formulario::class, ['alumno' => $alumno])
+        ->assertSet('becado', true)
+        ->set('becado', false)
+        ->call('guardarBeca');
+
+    expect(Beca::where('alumno_id', $alumno->id)->exists())->toBeFalse();
+});
+
+test('volver a otorgar despues de revocar actualiza el motivo en vez de duplicar', function () {
+    $cobrador = User::factory()->create()->assignRole('cobrador');
+    $periodo = PeriodoLectivo::factory()->activo()->create();
+    $alumno = Alumno::factory()->primario()->create();
+    Beca::factory()->create(['alumno_id' => $alumno->id, 'periodo_lectivo_id' => $periodo->id, 'motivo' => 'Beca deportiva']);
+
+    Livewire::actingAs($cobrador)->test(Formulario::class, ['alumno' => $alumno])
+        ->set('motivoBeca', 'Beca convenio institucional')
+        ->call('guardarBeca');
+
+    expect(Beca::where('alumno_id', $alumno->id)->count())->toBe(1)
+        ->and(Beca::where('alumno_id', $alumno->id)->first()->motivo)->toBe('Beca convenio institucional');
 });

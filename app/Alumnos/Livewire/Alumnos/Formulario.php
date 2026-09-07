@@ -9,6 +9,7 @@ use App\Alumnos\Models\Tutor;
 use App\Boletines\Exceptions\PlantillaNoEncontradaException;
 use App\Boletines\Models\Boletin;
 use App\Boletines\Services\CreadorDeBoletines;
+use App\Cobranzas\Models\Beca;
 use App\Cobranzas\Models\Cuota;
 use App\Cobranzas\Services\GeneradorDeCuotas;
 use App\Core\Models\PeriodoLectivo;
@@ -68,6 +69,10 @@ class Formulario extends Component
 
     public bool $responsablePagoNuevo = false;
 
+    public bool $becado = false;
+
+    public string $motivoBeca = '';
+
     public function mount(?Alumno $alumno = null): void
     {
         if ($alumno?->exists) {
@@ -89,6 +94,10 @@ class Formulario extends Component
             $this->nivel = Nivel::Primario->value;
             $this->turno = Turno::Manana->value;
         }
+
+        $becaActual = $this->becaDelPeriodoActivo();
+        $this->becado = (bool) $becaActual;
+        $this->motivoBeca = $becaActual?->motivo ?? '';
     }
 
     protected function rules(): array
@@ -272,6 +281,62 @@ class Formulario extends Component
             ->first();
     }
 
+    /**
+     * Otorgar y revocar es una sola acción: tildar el checkbox y guardar da
+     * de alta (o actualiza el motivo de) la beca del período activo;
+     * destildarlo y guardar la borra. No recalcula cuotas ya generadas —
+     * `GeneradorDeCuotas` solo evalúa la beca al momento de generar.
+     */
+    public function guardarBeca(): void
+    {
+        $periodo = PeriodoLectivo::where('activo', true)->first();
+
+        if (! $periodo) {
+            return;
+        }
+
+        $becaExistente = Beca::where('alumno_id', $this->alumno->id)->where('periodo_lectivo_id', $periodo->id)->first();
+
+        if ($this->becado) {
+            $this->authorize($becaExistente ? 'update' : 'create', $becaExistente ?? Beca::class);
+
+            $this->validate(
+                ['motivoBeca' => ['required', 'string', 'max:255']],
+                attributes: ['motivoBeca' => 'motivo']
+            );
+
+            Beca::updateOrCreate(
+                ['alumno_id' => $this->alumno->id, 'periodo_lectivo_id' => $periodo->id],
+                ['motivo' => $this->motivoBeca, 'aprobado_por_id' => auth()->id(), 'fecha_otorgamiento' => now()]
+            );
+
+            session()->flash('mensaje', 'Beca otorgada correctamente.');
+
+            return;
+        }
+
+        if ($becaExistente) {
+            $this->authorize('delete', $becaExistente);
+            $becaExistente->delete();
+            session()->flash('mensaje', 'Beca revocada.');
+        }
+    }
+
+    private function becaDelPeriodoActivo(): ?Beca
+    {
+        if (! $this->alumno) {
+            return null;
+        }
+
+        $periodo = PeriodoLectivo::where('activo', true)->first();
+
+        if (! $periodo) {
+            return null;
+        }
+
+        return Beca::where('alumno_id', $this->alumno->id)->where('periodo_lectivo_id', $periodo->id)->first();
+    }
+
     public function render()
     {
         $periodoActivo = PeriodoLectivo::where('activo', true)->first();
@@ -285,6 +350,7 @@ class Formulario extends Component
                 ? Cuota::where('alumno_id', $this->alumno->id)->where('periodo_lectivo_id', $periodoActivo->id)->orderBy('mes')->get()
                 : collect(),
             'boletin' => $this->alumno && $periodoActivo ? $this->boletinDelPeriodo($periodoActivo) : null,
+            'beca' => $this->becaDelPeriodoActivo(),
         ]);
     }
 }

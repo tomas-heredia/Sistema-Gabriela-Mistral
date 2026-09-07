@@ -240,6 +240,39 @@
         </div>
 
         <div>
+            <h2 class="text-lg font-semibold text-gray-900 mb-4">Beca</h2>
+
+            <div class="bg-white shadow-sm rounded-lg p-6">
+                @if (! $periodoActivo)
+                    <p class="text-sm text-gray-500">No hay ningún período lectivo activo — no se puede gestionar la beca.</p>
+                @else
+                    <label class="flex items-center gap-2 mb-3">
+                        <input type="checkbox" wire:model.live="becado" class="rounded border-gray-300 text-indigo-600 shadow-sm focus:ring-indigo-500">
+                        <span class="text-sm text-gray-700">Becado en el período {{ $periodoActivo->nombre }} (exime el 100% de sus cuotas)</span>
+                    </label>
+
+                    @if ($becado)
+                        <div class="mb-3 max-w-md">
+                            <x-input-label for="motivoBeca" value="Motivo" />
+                            <x-text-input id="motivoBeca" type="text" class="mt-1 block w-full" wire:model="motivoBeca" />
+                            <x-input-error :messages="$errors->get('motivoBeca')" class="mt-1" />
+                        </div>
+                    @endif
+
+                    @if ($beca)
+                        <p class="text-xs text-gray-500 mb-3">Otorgada el {{ $beca->fecha_otorgamiento->format('d/m/Y') }} por {{ $beca->aprobadoPor->name }}.</p>
+                    @endif
+
+                    @if ($cuotas->isNotEmpty())
+                        <p class="text-xs text-amber-700 mb-3">Este alumno ya tiene cuotas generadas para este período — otorgar o revocar la beca no las modifica retroactivamente.</p>
+                    @endif
+
+                    <x-primary-button type="button" wire:click="guardarBeca">Guardar</x-primary-button>
+                @endif
+            </div>
+        </div>
+
+        <div>
             <h2 class="text-lg font-semibold text-gray-900 mb-4">Libreta</h2>
 
             <div class="bg-white shadow-sm rounded-lg p-6">
