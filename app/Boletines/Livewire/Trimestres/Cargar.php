@@ -92,6 +92,8 @@ class Cargar extends Component
 
     public function guardarBorrador(): void
     {
+        $this->normalizarDatos();
+
         try {
             $this->boletinTrimestre->cargar($this->datos, auth()->user());
             session()->flash('mensaje', 'Borrador guardado correctamente.');
@@ -123,17 +125,118 @@ class Cargar extends Component
         };
     }
 
+    /**
+     * Límite [min, max] de un campo numérico. La asistencia son conteos de
+     * días — no tienen techo, solo no pueden ser negativos. Todo lo demás
+     * numérico (notas de materias, talleres, espacios pendientes, promedio)
+     * es una calificación en la escala 0–10 del colegio.
+     */
+    public function limitesNumericos(array $seccion, array $columna = []): array
+    {
+        if (($seccion['tipo'] ?? null) === 'tabla_metricas') {
+            return [0, null];
+        }
+
+        $tipo = $columna['tipo'] ?? $seccion['escala']['tipo'] ?? null;
+
+        if (in_array($tipo, ['numerica', 'numero'], true)) {
+            return [0, 10];
+        }
+
+        return [null, null];
+    }
+
+    /**
+     * Muestra junto a cada valor de una escala de opciones (S/AV/PV/N, etc.)
+     * su significado completo, tomado de la "leyenda" de la plantilla — así
+     * el cobrador no tiene que recordar qué significa cada sigla.
+     */
+    public function etiquetaOpcion(array $seccion, string $opcion): string
+    {
+        $opciones = $seccion['escala']['opciones'] ?? [];
+        $leyenda = $seccion['escala']['leyenda'] ?? null;
+
+        if (! $leyenda) {
+            return $opcion;
+        }
+
+        $significados = array_map('trim', explode('/', $leyenda));
+        $indice = array_search($opcion, $opciones, true);
+
+        if ($indice === false || ! isset($significados[$indice])) {
+            return $opcion;
+        }
+
+        return "{$opcion} — {$significados[$indice]}";
+    }
+
     private function esGrilla(array $seccion): bool
     {
         return str_starts_with($seccion['tipo'] ?? '', 'tabla_');
     }
 
+    /**
+     * Una columna sin "momento" declarado no está atada a un trimestre en
+     * particular y se muestra siempre (ej. "Espacios Pendientes de
+     * Acreditación": se puede acreditar en cualquier trimestre, no solo al
+     * cierre del año).
+     */
     private function columnasVisibles(array $seccion, string $momentoActual): array
     {
         return collect($seccion['columnas'] ?? [])
-            ->filter(fn ($columna) => ($columna['momento'] ?? null) === $momentoActual)
+            ->filter(fn ($columna) => ! isset($columna['momento']) || $columna['momento'] === $momentoActual)
             ->values()
             ->all();
+    }
+
+    /**
+     * Ajusta cualquier valor numérico fuera de rango al límite más cercano
+     * antes de guardar (ej. una nota de 12 pasa a 10, una asistencia de -3
+     * pasa a 0), en vez de rechazar el borrador.
+     */
+    private function normalizarDatos(): void
+    {
+        foreach ($this->seccionesVisibles() as $entry) {
+            $seccion = $entry['seccion'];
+            $seccionId = $seccion['id'];
+
+            if ($this->esGrilla($seccion)) {
+                foreach ($this->datos[$seccionId] ?? [] as $indice => $fila) {
+                    foreach ($entry['columnas'] as $columna) {
+                        $columnaId = $columna['id'];
+
+                        if (! array_key_exists($columnaId, $fila)) {
+                            continue;
+                        }
+
+                        [$min, $max] = $this->limitesNumericos($seccion, $columna);
+                        $this->datos[$seccionId][$indice][$columnaId] = $this->clamparNumero($fila[$columnaId], $min, $max);
+                    }
+                }
+            } else {
+                [$min, $max] = $this->limitesNumericos($seccion);
+                $this->datos[$seccionId] = $this->clamparNumero($this->datos[$seccionId] ?? null, $min, $max);
+            }
+        }
+    }
+
+    private function clamparNumero(mixed $valor, ?float $min, ?float $max): mixed
+    {
+        if (($min === null && $max === null) || $valor === '' || $valor === null || ! is_numeric($valor)) {
+            return $valor;
+        }
+
+        $numero = (float) $valor;
+
+        if ($min !== null) {
+            $numero = max($min, $numero);
+        }
+
+        if ($max !== null) {
+            $numero = min($max, $numero);
+        }
+
+        return fmod($numero, 1.0) === 0.0 ? (string) (int) $numero : (string) $numero;
     }
 
     /**

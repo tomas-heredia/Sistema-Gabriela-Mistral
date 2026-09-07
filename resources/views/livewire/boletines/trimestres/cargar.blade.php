@@ -68,14 +68,17 @@
                                                     >
                                                         <option value="">—</option>
                                                         @foreach ($seccion['escala']['opciones'] as $opcion)
-                                                            <option value="{{ $opcion }}">{{ $opcion }}</option>
+                                                            <option value="{{ $opcion }}">{{ $this->etiquetaOpcion($seccion, $opcion) }}</option>
                                                         @endforeach
                                                     </select>
                                                 @else
+                                                    @php [$min, $max] = $tipo === 'number' ? $this->limitesNumericos($seccion, $columna) : [null, null]; @endphp
                                                     <input
                                                         type="{{ $tipo }}"
                                                         wire:model="datos.{{ $seccion['id'] }}.{{ $indice }}.{{ $columna['id'] }}"
                                                         @disabled($soloLectura)
+                                                        @if (! is_null($min)) min="{{ $min }}" @endif
+                                                        @if (! is_null($max)) max="{{ $max }}" @endif
                                                         class="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
                                                     >
                                                 @endif
@@ -120,10 +123,13 @@
                         class="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
                     ></textarea>
                 @else
+                    @php [$min, $max] = $this->limitesNumericos($seccion); @endphp
                     <input
                         type="number"
                         wire:model="datos.{{ $seccion['id'] }}"
                         @disabled($soloLectura)
+                        @if (! is_null($min)) min="{{ $min }}" @endif
+                        @if (! is_null($max)) max="{{ $max }}" @endif
                         class="block w-full max-w-xs rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
                     >
                 @endif

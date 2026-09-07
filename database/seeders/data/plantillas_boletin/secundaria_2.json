@@ -39,9 +39,9 @@
       "tipo": "tabla_materias_libre",
       "nota": "Filas variables: el cobrador agrega una por cada espacio curricular que el alumno tenga pendiente.",
       "columnas": [
-        { "id": "espacio_curricular", "nombre": "Espacio Curricular", "tipo": "texto", "momento": "trimestre_3" },
-        { "id": "calificacion", "nombre": "Calificación", "tipo": "numero", "momento": "trimestre_3" },
-        { "id": "fecha", "nombre": "Fecha", "tipo": "fecha", "momento": "trimestre_3" }
+        { "id": "espacio_curricular", "nombre": "Espacio Curricular", "tipo": "texto" },
+        { "id": "calificacion", "nombre": "Calificación", "tipo": "numero" },
+        { "id": "fecha", "nombre": "Fecha", "tipo": "fecha" }
       ],
       "filas_libres": true
     },

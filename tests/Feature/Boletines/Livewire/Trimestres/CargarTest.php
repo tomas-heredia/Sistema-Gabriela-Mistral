@@ -39,6 +39,40 @@ beforeEach(function () {
                     'momento' => 'trimestre_3',
                     'opciones' => ['Promocionado', 'No promocionado'],
                 ],
+                [
+                    'id' => 'asistencia',
+                    'titulo' => 'Asistencia',
+                    'tipo' => 'tabla_metricas',
+                    'escala' => ['tipo' => 'numerica'],
+                    'columnas' => [
+                        ['id' => 'trimestre_1', 'nombre' => 'Trimestre 1', 'momento' => 'trimestre_1'],
+                    ],
+                    'filas' => [
+                        ['id' => 'inasistencias', 'nombre' => 'Inasistencias'],
+                    ],
+                ],
+                [
+                    'id' => 'apreciaciones',
+                    'titulo' => 'Apreciaciones',
+                    'tipo' => 'tabla_criterios',
+                    'escala' => ['tipo' => 'texto', 'opciones' => ['S', 'AV', 'PV', 'N'], 'leyenda' => 'Siempre / A veces / Pocas veces / Nunca'],
+                    'columnas' => [
+                        ['id' => 'trimestre_1', 'nombre' => 'Trimestre 1', 'momento' => 'trimestre_1'],
+                    ],
+                    'filas' => [
+                        ['id' => 'participa', 'nombre' => 'Participa en clase'],
+                    ],
+                ],
+                [
+                    'id' => 'espacios_pendientes',
+                    'titulo' => 'Espacios Pendientes de Acreditación',
+                    'tipo' => 'tabla_materias_libre',
+                    'columnas' => [
+                        ['id' => 'espacio', 'nombre' => 'Espacio Curricular', 'tipo' => 'texto'],
+                        ['id' => 'calificacion', 'nombre' => 'Calificación', 'tipo' => 'numero'],
+                    ],
+                    'filas_libres' => true,
+                ],
             ],
         ],
     ]);
@@ -126,6 +160,66 @@ test('un trimestre enviado se muestra de solo lectura sin los botones de accion'
     Livewire::actingAs($cobrador)->test(Cargar::class, ['boletinTrimestre' => $trimestre])
         ->assertDontSee('Guardar borrador')
         ->assertDontSee('Confirmar y enviar');
+});
+
+test('una nota fuera de 0 a 10 se ajusta al limite mas cercano al guardar', function () {
+    $cobrador = User::factory()->create()->assignRole('cobrador');
+    $boletin = Boletin::factory()->create(['plantilla_id' => $this->plantilla->id]);
+    $trimestre1 = BoletinTrimestre::factory()->create(['boletin_id' => $boletin->id, 'trimestre' => 1]);
+
+    Livewire::actingAs($cobrador)->test(Cargar::class, ['boletinTrimestre' => $trimestre1])
+        ->set('datos.espacios_curriculares.0.trimestre_1', '15')
+        ->set('datos.espacios_curriculares.1.trimestre_1', '-3')
+        ->call('guardarBorrador');
+
+    $trimestre1->refresh();
+
+    expect($trimestre1->datos['espacios_curriculares'][0]['trimestre_1'])->toBe('10')
+        ->and($trimestre1->datos['espacios_curriculares'][1]['trimestre_1'])->toBe('0');
+});
+
+test('la asistencia no permite valores negativos pero no tiene techo', function () {
+    $cobrador = User::factory()->create()->assignRole('cobrador');
+    $boletin = Boletin::factory()->create(['plantilla_id' => $this->plantilla->id]);
+    $trimestre1 = BoletinTrimestre::factory()->create(['boletin_id' => $boletin->id, 'trimestre' => 1]);
+
+    Livewire::actingAs($cobrador)->test(Cargar::class, ['boletinTrimestre' => $trimestre1])
+        ->set('datos.asistencia.0.trimestre_1', '-5')
+        ->call('guardarBorrador');
+
+    $trimestre1->refresh();
+
+    expect($trimestre1->datos['asistencia'][0]['trimestre_1'])->toBe('0');
+
+    Livewire::actingAs($cobrador)->test(Cargar::class, ['boletinTrimestre' => $trimestre1])
+        ->set('datos.asistencia.0.trimestre_1', '180')
+        ->call('guardarBorrador');
+
+    expect($trimestre1->refresh()->datos['asistencia'][0]['trimestre_1'])->toBe('180');
+});
+
+test('una columna sin momento se muestra en cualquier trimestre', function () {
+    $cobrador = User::factory()->create()->assignRole('cobrador');
+    $boletin = Boletin::factory()->create(['plantilla_id' => $this->plantilla->id]);
+    $trimestre1 = BoletinTrimestre::factory()->create(['boletin_id' => $boletin->id, 'trimestre' => 1]);
+    $trimestre2 = BoletinTrimestre::factory()->create(['boletin_id' => $boletin->id, 'trimestre' => 2]);
+
+    Livewire::actingAs($cobrador)->test(Cargar::class, ['boletinTrimestre' => $trimestre1])
+        ->assertSee('Espacios Pendientes de Acreditación');
+
+    Livewire::actingAs($cobrador)->test(Cargar::class, ['boletinTrimestre' => $trimestre2])
+        ->assertSee('Espacios Pendientes de Acreditación');
+});
+
+test('las opciones de una escala muestran su significado completo', function () {
+    $cobrador = User::factory()->create()->assignRole('cobrador');
+    $boletin = Boletin::factory()->create(['plantilla_id' => $this->plantilla->id]);
+    $trimestre1 = BoletinTrimestre::factory()->create(['boletin_id' => $boletin->id, 'trimestre' => 1]);
+
+    Livewire::actingAs($cobrador)->test(Cargar::class, ['boletinTrimestre' => $trimestre1])
+        ->assertSee('S — Siempre')
+        ->assertSee('AV — A veces')
+        ->assertSee('N — Nunca');
 });
 
 test('profesor no puede montar el componente', function () {
