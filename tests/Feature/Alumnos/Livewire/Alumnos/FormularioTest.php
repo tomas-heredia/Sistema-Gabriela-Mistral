@@ -163,7 +163,7 @@ test('generar boletin crea el boletin con sus 3 trimestres pendientes y ya no of
     PlantillaBoletin::factory()->create(['nivel' => $alumno->nivel, 'anio' => null]);
 
     $component = Livewire::actingAs($cobrador)->test(Formulario::class, ['alumno' => $alumno])
-        ->assertSee('Generar boletín del período')
+        ->assertSee('Generar libreta del período')
         ->call('generarBoletin');
 
     $boletin = Boletin::where('alumno_id', $alumno->id)->where('periodo_lectivo_id', $periodo->id)->first();
@@ -171,7 +171,7 @@ test('generar boletin crea el boletin con sus 3 trimestres pendientes y ya no of
     expect($boletin)->not->toBeNull()
         ->and(BoletinTrimestre::where('boletin_id', $boletin->id)->count())->toBe(3);
 
-    $component->assertDontSee('Generar boletín del período');
+    $component->assertDontSee('Generar libreta del período');
 });
 
 test('generar boletin sin plantilla activa muestra un mensaje claro, no un error', function () {

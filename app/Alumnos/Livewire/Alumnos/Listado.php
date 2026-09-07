@@ -41,7 +41,7 @@ class Listado extends Component
             $alumno->delete();
             session()->flash('mensaje', 'Alumno eliminado correctamente.');
         } catch (QueryException) {
-            session()->flash('error', 'No se pudo eliminar: este alumno tiene cuotas, boletines u otros registros asociados.');
+            session()->flash('error', 'No se pudo eliminar: este alumno tiene cuotas, libretas u otros registros asociados.');
         }
     }
 

@@ -240,14 +240,14 @@
         </div>
 
         <div>
-            <h2 class="text-lg font-semibold text-gray-900 mb-4">Boletín</h2>
+            <h2 class="text-lg font-semibold text-gray-900 mb-4">Libreta</h2>
 
             <div class="bg-white shadow-sm rounded-lg p-6">
                 @if (! $periodoActivo)
-                    <p class="text-sm text-gray-500">No hay ningún período lectivo activo — no se puede generar el boletín.</p>
+                    <p class="text-sm text-gray-500">No hay ningún período lectivo activo — no se puede generar la libreta.</p>
                 @elseif (! $boletin)
-                    <p class="text-sm text-gray-600 mb-4">Este alumno todavía no tiene boletín generado para el período {{ $periodoActivo->nombre }}.</p>
-                    <x-primary-button type="button" wire:click="generarBoletin">Generar boletín del período {{ $periodoActivo->nombre }}</x-primary-button>
+                    <p class="text-sm text-gray-600 mb-4">Este alumno todavía no tiene libreta generada para el período {{ $periodoActivo->nombre }}.</p>
+                    <x-primary-button type="button" wire:click="generarBoletin">Generar libreta del período {{ $periodoActivo->nombre }}</x-primary-button>
                 @else
                     <table class="min-w-full divide-y divide-gray-200">
                         <thead class="bg-gray-50">

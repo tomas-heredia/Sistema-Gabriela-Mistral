@@ -258,7 +258,7 @@ class Formulario extends Component
 
         try {
             $creador->crear($this->alumno, $periodo);
-            session()->flash('mensaje', 'Boletín generado correctamente.');
+            session()->flash('mensaje', 'Libreta generada correctamente.');
         } catch (PlantillaNoEncontradaException $e) {
             session()->flash('error', $e->getMessage());
         }

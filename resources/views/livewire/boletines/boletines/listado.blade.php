@@ -1,7 +1,7 @@
 <div>
     <div class="max-w-6xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
         <div class="flex items-center justify-between gap-4 mb-6">
-            <h1 class="text-lg font-semibold text-gray-900">Boletines{{ $periodoActivo ? " — {$periodoActivo->nombre}" : '' }}</h1>
+            <h1 class="text-lg font-semibold text-gray-900">Libretas{{ $periodoActivo ? " — {$periodoActivo->nombre}" : '' }}</h1>
 
             <div class="w-full max-w-sm">
                 <label for="busqueda" class="sr-only">Buscar por nombre o DNI del alumno</label>
@@ -21,9 +21,9 @@
             @elseif ($boletines->isEmpty())
                 <p class="text-center text-gray-500 py-12">
                     @if ($busqueda)
-                        No encontramos ningún boletín que coincida con "{{ $busqueda }}".
+                        No encontramos ninguna libreta que coincida con "{{ $busqueda }}".
                     @else
-                        Todavía no hay boletines generados para este período.
+                        Todavía no hay libretas generadas para este período.
                     @endif
                 </p>
             @else

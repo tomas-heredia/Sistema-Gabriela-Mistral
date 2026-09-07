@@ -24,7 +24,7 @@ class BoletinEnviado extends Mailable
         $alumno = $this->trimestre->boletin->alumno;
 
         return new Envelope(
-            subject: "Boletín de {$alumno->nombre}",
+            subject: "Libreta de {$alumno->nombre}",
         );
     }
 
@@ -40,7 +40,7 @@ class BoletinEnviado extends Mailable
     {
         return [
             Attachment::fromPath($this->pdfAbsolutePath)
-                ->as('boletin.pdf')
+                ->as('libreta.pdf')
                 ->withMime('application/pdf'),
         ];
     }

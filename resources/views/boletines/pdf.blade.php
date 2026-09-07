@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
     <meta charset="utf-8">
-    <title>Boletín — {{ $alumno->nombre }}</title>
+    <title>Libreta — {{ $alumno->nombre }}</title>
     <style>
         body { font-family: sans-serif; font-size: 11px; color: #1c2333; }
         h1 { font-size: 16px; margin-bottom: 0; }

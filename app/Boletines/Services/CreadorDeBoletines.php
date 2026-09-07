@@ -47,7 +47,7 @@ class CreadorDeBoletines
 
         if (! $plantilla) {
             throw new PlantillaNoEncontradaException(
-                "No hay una plantilla de boletín activa para nivel={$alumno->nivel->value}, año={$alumno->anio_secundaria}."
+                "No hay una plantilla de libreta activa para nivel={$alumno->nivel->value}, año={$alumno->anio_secundaria}."
             );
         }
 
