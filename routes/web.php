@@ -15,6 +15,7 @@ Route::view('profile', 'profile')
 Route::middleware(['auth', 'verified'])->group(function () {
     require __DIR__.'/alumnos.php';
     require __DIR__.'/cobranzas.php';
+    require __DIR__.'/boletines.php';
 });
 
 require __DIR__.'/auth.php';

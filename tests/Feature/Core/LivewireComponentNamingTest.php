@@ -1,5 +1,6 @@
 <?php
 
+use App\Boletines\Models\BoletinTrimestre;
 use App\Core\Models\User;
 use Database\Seeders\RoleSeeder;
 use Illuminate\Testing\TestResponse;
@@ -61,4 +62,13 @@ test('cada pantalla de página completa resuelve su nombre de componente en un p
     'alumnos.crear' => ['alumnos.crear', 'alumnos.formulario'],
     'pagos.index' => ['pagos.index', 'pagos.listado'],
     'pagos.registrar' => ['pagos.registrar', 'pagos.registrar'],
+    'boletines.index' => ['boletines.index', 'boletines.listado'],
 ]);
+
+test('boletines.trimestres.cargar resuelve su nombre de componente en un pedido AJAX real', function () {
+    $trimestre = BoletinTrimestre::factory()->create();
+
+    $html = $this->actingAs($this->administrador)->get(route('boletines.trimestres.cargar', $trimestre))->getContent();
+
+    llamarLivewireUpdate($html, 'boletines.trimestres.cargar')->assertOk();
+});

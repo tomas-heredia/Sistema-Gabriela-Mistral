@@ -6,6 +6,9 @@ use App\Alumnos\Models\Alumno;
 use App\Alumnos\Models\Enums\Nivel;
 use App\Alumnos\Models\Enums\Turno;
 use App\Alumnos\Models\Tutor;
+use App\Boletines\Exceptions\PlantillaNoEncontradaException;
+use App\Boletines\Models\Boletin;
+use App\Boletines\Services\CreadorDeBoletines;
 use App\Cobranzas\Models\Cuota;
 use App\Cobranzas\Services\GeneradorDeCuotas;
 use App\Core\Models\PeriodoLectivo;
@@ -239,6 +242,36 @@ class Formulario extends Component
             ->exists();
     }
 
+    /**
+     * Igual que generarCuotas(): solo genera una vez, sin botón para
+     * regenerar si el alumno ya tiene boletín para el período.
+     */
+    public function generarBoletin(CreadorDeBoletines $creador): void
+    {
+        $this->authorize('create', Boletin::class);
+
+        $periodo = PeriodoLectivo::where('activo', true)->first();
+
+        if (! $periodo || $this->boletinDelPeriodo($periodo)) {
+            return;
+        }
+
+        try {
+            $creador->crear($this->alumno, $periodo);
+            session()->flash('mensaje', 'Boletín generado correctamente.');
+        } catch (PlantillaNoEncontradaException $e) {
+            session()->flash('error', $e->getMessage());
+        }
+    }
+
+    private function boletinDelPeriodo(PeriodoLectivo $periodo): ?Boletin
+    {
+        return Boletin::with('trimestres')
+            ->where('alumno_id', $this->alumno->id)
+            ->where('periodo_lectivo_id', $periodo->id)
+            ->first();
+    }
+
     public function render()
     {
         $periodoActivo = PeriodoLectivo::where('activo', true)->first();
@@ -251,6 +284,7 @@ class Formulario extends Component
             'cuotas' => $this->alumno && $periodoActivo
                 ? Cuota::where('alumno_id', $this->alumno->id)->where('periodo_lectivo_id', $periodoActivo->id)->orderBy('mes')->get()
                 : collect(),
+            'boletin' => $this->alumno && $periodoActivo ? $this->boletinDelPeriodo($periodoActivo) : null,
         ]);
     }
 }

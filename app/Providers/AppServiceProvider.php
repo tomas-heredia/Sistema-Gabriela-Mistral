@@ -6,6 +6,8 @@ use App\Alumnos\Livewire\Alumnos\Formulario as AlumnosFormulario;
 use App\Alumnos\Livewire\Alumnos\Listado as AlumnosListado;
 use App\Alumnos\Livewire\Tutores\Formulario as TutoresFormulario;
 use App\Alumnos\Livewire\Tutores\Listado as TutoresListado;
+use App\Boletines\Livewire\Boletines\Listado as BoletinesListado;
+use App\Boletines\Livewire\Trimestres\Cargar as TrimestresCargar;
 use App\Cobranzas\Livewire\Pagos\Listado as PagosListado;
 use App\Cobranzas\Livewire\Pagos\Registrar as PagosRegistrar;
 use App\Cobranzas\Models\Observers\PagoCuotaObserver;
@@ -36,5 +38,7 @@ class AppServiceProvider extends ServiceProvider
         Livewire::component('alumnos.formulario', AlumnosFormulario::class);
         Livewire::component('pagos.listado', PagosListado::class);
         Livewire::component('pagos.registrar', PagosRegistrar::class);
+        Livewire::component('boletines.listado', BoletinesListado::class);
+        Livewire::component('boletines.trimestres.cargar', TrimestresCargar::class);
     }
 }

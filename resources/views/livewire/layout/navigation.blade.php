@@ -51,6 +51,12 @@ new class extends Component
                             {{ __('Pagos') }}
                         </x-nav-link>
                     @endcan
+
+                    @can('viewAny', \App\Boletines\Models\Boletin::class)
+                        <x-nav-link :href="route('boletines.index')" :active="request()->routeIs('boletines.*')" wire:navigate>
+                            {{ __('Boletines') }}
+                        </x-nav-link>
+                    @endcan
                 </div>
             </div>
 
@@ -118,6 +124,12 @@ new class extends Component
             @can('viewAny', \App\Cobranzas\Models\Pago::class)
                 <x-responsive-nav-link :href="route('pagos.index')" :active="request()->routeIs('pagos.*')" wire:navigate>
                     {{ __('Pagos') }}
+                </x-responsive-nav-link>
+            @endcan
+
+            @can('viewAny', \App\Boletines\Models\Boletin::class)
+                <x-responsive-nav-link :href="route('boletines.index')" :active="request()->routeIs('boletines.*')" wire:navigate>
+                    {{ __('Boletines') }}
                 </x-responsive-nav-link>
             @endcan
         </div>

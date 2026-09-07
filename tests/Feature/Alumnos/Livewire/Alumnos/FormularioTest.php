@@ -5,6 +5,9 @@ use App\Alumnos\Models\Alumno;
 use App\Alumnos\Models\Enums\Nivel;
 use App\Alumnos\Models\Enums\Turno;
 use App\Alumnos\Models\Tutor;
+use App\Boletines\Models\Boletin;
+use App\Boletines\Models\BoletinTrimestre;
+use App\Boletines\Models\PlantillaBoletin;
 use App\Cobranzas\Models\Arancel;
 use App\Cobranzas\Models\Cuota;
 use App\Core\Models\PeriodoLectivo;
@@ -151,4 +154,36 @@ test('generar cuotas sin arancel cargado muestra un mensaje claro, no un error',
         ->assertOk();
 
     expect(Cuota::where('alumno_id', $alumno->id)->count())->toBe(0);
+});
+
+test('generar boletin crea el boletin con sus 3 trimestres pendientes y ya no ofrece el boton', function () {
+    $cobrador = User::factory()->create()->assignRole('cobrador');
+    $periodo = PeriodoLectivo::factory()->activo()->create();
+    $alumno = Alumno::factory()->primario()->create();
+    PlantillaBoletin::factory()->create(['nivel' => $alumno->nivel, 'anio' => null]);
+
+    $component = Livewire::actingAs($cobrador)->test(Formulario::class, ['alumno' => $alumno])
+        ->assertSee('Generar boletín del período')
+        ->call('generarBoletin');
+
+    $boletin = Boletin::where('alumno_id', $alumno->id)->where('periodo_lectivo_id', $periodo->id)->first();
+
+    expect($boletin)->not->toBeNull()
+        ->and(BoletinTrimestre::where('boletin_id', $boletin->id)->count())->toBe(3);
+
+    $component->assertDontSee('Generar boletín del período');
+});
+
+test('generar boletin sin plantilla activa muestra un mensaje claro, no un error', function () {
+    $cobrador = User::factory()->create()->assignRole('cobrador');
+    PeriodoLectivo::factory()->activo()->create();
+    $alumno = Alumno::factory()->primario()->create();
+
+    // Sin plantilla activa para el nivel/año, generarBoletin() no debe
+    // tirar un error 500 ni dejar un boletín a medio crear.
+    Livewire::actingAs($cobrador)->test(Formulario::class, ['alumno' => $alumno])
+        ->call('generarBoletin')
+        ->assertOk();
+
+    expect(Boletin::where('alumno_id', $alumno->id)->count())->toBe(0);
 });
