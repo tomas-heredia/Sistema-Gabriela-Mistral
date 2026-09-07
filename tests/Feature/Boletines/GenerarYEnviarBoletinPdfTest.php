@@ -57,6 +57,26 @@ test('genera un pdf acumulativo y lo manda a todos los tutores con correo, no so
     });
 });
 
+test('un alumno sin tutores vinculados no manda mail pero igual marca el trimestre como enviado', function () {
+    Storage::fake('local');
+    Mail::fake();
+
+    $plantilla = PlantillaBoletin::factory()->create(['estructura_campos' => ['secciones' => []]]);
+    $alumno = Alumno::factory()->create();
+    $boletin = Boletin::factory()->create(['alumno_id' => $alumno->id, 'plantilla_id' => $plantilla->id]);
+    $trimestre = BoletinTrimestre::factory()->create([
+        'boletin_id' => $boletin->id,
+        'trimestre' => 1,
+        'estado' => EstadoTrimestre::Cargado,
+        'datos' => [],
+    ]);
+
+    $trimestre->confirmarYEnviar();
+
+    expect($trimestre->refresh()->estado)->toBe(EstadoTrimestre::Enviado);
+    Mail::assertNothingSent();
+});
+
 test('el boletin pasa a completo cuando los 3 trimestres regulares estan enviados', function () {
     Storage::fake('local');
     Mail::fake();

@@ -43,7 +43,7 @@
                                 <td class="px-6 py-3 text-sm text-gray-900">{{ $tutor->nombre }}</td>
                                 <td class="px-6 py-3 text-sm text-gray-600">{{ $tutor->dni }}</td>
                                 <td class="px-6 py-3 text-sm text-gray-600">{{ $tutor->telefono }}</td>
-                                <td class="px-6 py-3 text-sm text-gray-600">{{ $tutor->correo ?? '—' }}</td>
+                                <td class="px-6 py-3 text-sm text-gray-600">{{ $tutor->correo }}</td>
                                 <td class="px-6 py-3 text-right text-sm space-x-3 whitespace-nowrap">
                                     <a href="{{ route('tutores.editar', $tutor) }}" wire:navigate class="text-indigo-600 hover:text-indigo-800">Editar</a>
                                     <button

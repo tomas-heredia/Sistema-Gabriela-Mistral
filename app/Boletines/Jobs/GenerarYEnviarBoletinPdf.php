@@ -17,10 +17,12 @@ use Illuminate\Support\Facades\Storage;
 /**
  * Arma un PDF único y acumulativo (este trimestre + todos los `enviado`
  * previos del mismo boletín — nunca reenvía trimestres viejos por
- * separado) y lo manda por mail a todos los tutores del alumno con correo
- * cargado (no solo el `responsable_pago`: es información académica, a
- * diferencia del aviso de mora). Si algo falla, el trimestre queda en
- * `cargado` — no se marca `enviado` hasta que todo termine bien.
+ * separado) y lo manda por mail a todos los tutores del alumno (no solo
+ * el `responsable_pago`: es información académica, a diferencia del aviso
+ * de mora). El correo es obligatorio en `Tutor`, así que no hace falta
+ * filtrar por si está cargado — solo queda vacío si el alumno no tiene
+ * ningún tutor vinculado. Si algo falla, el trimestre queda en `cargado`
+ * — no se marca `enviado` hasta que todo termine bien.
  */
 class GenerarYEnviarBoletinPdf implements ShouldQueue
 {
@@ -52,7 +54,7 @@ class GenerarYEnviarBoletinPdf implements ShouldQueue
         $rutaRelativa = "boletines/generados/{$boletin->id}/trimestre-{$this->trimestre->trimestre}.pdf";
         Storage::disk('local')->put($rutaRelativa, $pdfBinario);
 
-        $destinatarios = $boletin->alumno->tutores->whereNotNull('correo')->pluck('correo');
+        $destinatarios = $boletin->alumno->tutores->pluck('correo');
 
         if ($destinatarios->isNotEmpty()) {
             Mail::to($destinatarios->all())->send(

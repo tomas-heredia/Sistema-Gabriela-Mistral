@@ -31,6 +31,19 @@ test('crear un tutor guarda y redirige al listado', function () {
     expect(Tutor::where('dni', '30111222')->exists())->toBeTrue();
 });
 
+test('el correo es obligatorio', function () {
+    $cobrador = User::factory()->create()->assignRole('cobrador');
+
+    Livewire::actingAs($cobrador)->test(Formulario::class)
+        ->set('nombre', 'Marta Gómez')
+        ->set('dni', '30111222')
+        ->set('domicilio', 'San Martín 123')
+        ->set('telefono', '3834555555')
+        ->set('correo', '')
+        ->call('guardar')
+        ->assertHasErrors(['correo' => 'required']);
+});
+
 test('el formulario rechaza un dni duplicado', function () {
     $cobrador = User::factory()->create()->assignRole('cobrador');
     Tutor::factory()->create(['dni' => '30111222']);

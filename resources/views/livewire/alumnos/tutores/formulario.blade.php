@@ -29,7 +29,7 @@
         </div>
 
         <div>
-            <x-input-label for="correo" value="Correo (opcional)" />
+            <x-input-label for="correo" value="Correo" />
             <x-text-input id="correo" type="email" class="mt-1 block w-full" wire:model="correo" />
             <x-input-error :messages="$errors->get('correo')" class="mt-1" />
         </div>

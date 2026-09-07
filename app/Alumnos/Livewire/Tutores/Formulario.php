@@ -20,7 +20,7 @@ class Formulario extends Component
 
     public string $telefono = '';
 
-    public ?string $correo = null;
+    public string $correo = '';
 
     public function mount(?Tutor $tutor = null): void
     {
@@ -45,7 +45,7 @@ class Formulario extends Component
             'dni' => ['required', 'string', 'max:20', Rule::unique('tutores', 'dni')->ignore($this->tutor?->id)],
             'domicilio' => ['required', 'string', 'max:255'],
             'telefono' => ['required', 'string', 'max:30'],
-            'correo' => ['nullable', 'email', 'max:255'],
+            'correo' => ['required', 'email', 'max:255'],
         ];
     }
 
