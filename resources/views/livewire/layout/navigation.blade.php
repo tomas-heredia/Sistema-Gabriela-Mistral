@@ -69,6 +69,12 @@ new class extends Component
                             {{ __('Mora') }}
                         </x-nav-link>
                     @endcan
+
+                    @can('viewAny', \App\Sueldos\Models\ReciboSueldo::class)
+                        <x-nav-link :href="route('recibos-sueldo.index')" :active="request()->routeIs('recibos-sueldo.*')" wire:navigate>
+                            {{ __('Sueldos') }}
+                        </x-nav-link>
+                    @endcan
                 </div>
             </div>
 
@@ -154,6 +160,12 @@ new class extends Component
             @can('viewAny', \App\Mora\Models\NotificacionMora::class)
                 <x-responsive-nav-link :href="route('mora.index')" :active="request()->routeIs('mora.*')" wire:navigate>
                     {{ __('Mora') }}
+                </x-responsive-nav-link>
+            @endcan
+
+            @can('viewAny', \App\Sueldos\Models\ReciboSueldo::class)
+                <x-responsive-nav-link :href="route('recibos-sueldo.index')" :active="request()->routeIs('recibos-sueldo.*')" wire:navigate>
+                    {{ __('Sueldos') }}
                 </x-responsive-nav-link>
             @endcan
         </div>

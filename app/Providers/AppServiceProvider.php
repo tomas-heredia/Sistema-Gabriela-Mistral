@@ -15,6 +15,8 @@ use App\Cobranzas\Models\PagoCuota;
 use App\Core\Livewire\PeriodosLectivos\Formulario as PeriodosLectivosFormulario;
 use App\Core\Livewire\PeriodosLectivos\Listado as PeriodosLectivosListado;
 use App\Mora\Livewire\NotificacionesMora\Listado as NotificacionesMoraListado;
+use App\Sueldos\Livewire\RecibosSueldo\Formulario as RecibosSueldoFormulario;
+use App\Sueldos\Livewire\RecibosSueldo\Listado as RecibosSueldoListado;
 use Illuminate\Support\ServiceProvider;
 use Livewire\Livewire;
 
@@ -46,5 +48,7 @@ class AppServiceProvider extends ServiceProvider
         Livewire::component('periodos-lectivos.listado', PeriodosLectivosListado::class);
         Livewire::component('periodos-lectivos.formulario', PeriodosLectivosFormulario::class);
         Livewire::component('notificaciones-mora.listado', NotificacionesMoraListado::class);
+        Livewire::component('recibos-sueldo.listado', RecibosSueldoListado::class);
+        Livewire::component('recibos-sueldo.formulario', RecibosSueldoFormulario::class);
     }
 }
