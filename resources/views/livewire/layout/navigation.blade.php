@@ -75,6 +75,12 @@ new class extends Component
                             {{ __('Sueldos') }}
                         </x-nav-link>
                     @endcan
+
+                    @can('viewAny', \App\Core\Models\User::class)
+                        <x-nav-link :href="route('usuarios.index')" :active="request()->routeIs('usuarios.*')" wire:navigate>
+                            {{ __('Usuarios') }}
+                        </x-nav-link>
+                    @endcan
                 </div>
             </div>
 
@@ -166,6 +172,12 @@ new class extends Component
             @can('viewAny', \App\Sueldos\Models\ReciboSueldo::class)
                 <x-responsive-nav-link :href="route('recibos-sueldo.index')" :active="request()->routeIs('recibos-sueldo.*')" wire:navigate>
                     {{ __('Sueldos') }}
+                </x-responsive-nav-link>
+            @endcan
+
+            @can('viewAny', \App\Core\Models\User::class)
+                <x-responsive-nav-link :href="route('usuarios.index')" :active="request()->routeIs('usuarios.*')" wire:navigate>
+                    {{ __('Usuarios') }}
                 </x-responsive-nav-link>
             @endcan
         </div>

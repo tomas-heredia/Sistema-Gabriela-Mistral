@@ -5,9 +5,10 @@ use Illuminate\Support\Facades\Route;
 use Livewire\Volt\Volt;
 
 Route::middleware('guest')->group(function () {
-    Volt::route('register', 'pages.auth.register')
-        ->name('register');
-
+    // El registro público queda cerrado a propósito: en un sistema interno
+    // de una escuela, las cuentas las crea un administrador desde
+    // "Usuarios" (App\Core\Livewire\Usuarios\Formulario), no cualquiera
+    // que llegue a la URL.
     Volt::route('login', 'pages.auth.login')
         ->name('login');
 

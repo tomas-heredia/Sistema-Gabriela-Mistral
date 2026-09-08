@@ -14,6 +14,8 @@ use App\Cobranzas\Models\Observers\PagoCuotaObserver;
 use App\Cobranzas\Models\PagoCuota;
 use App\Core\Livewire\PeriodosLectivos\Formulario as PeriodosLectivosFormulario;
 use App\Core\Livewire\PeriodosLectivos\Listado as PeriodosLectivosListado;
+use App\Core\Livewire\Usuarios\Formulario as UsuariosFormulario;
+use App\Core\Livewire\Usuarios\Listado as UsuariosListado;
 use App\Mora\Livewire\NotificacionesMora\Listado as NotificacionesMoraListado;
 use App\Sueldos\Livewire\RecibosSueldo\Formulario as RecibosSueldoFormulario;
 use App\Sueldos\Livewire\RecibosSueldo\Listado as RecibosSueldoListado;
@@ -50,5 +52,7 @@ class AppServiceProvider extends ServiceProvider
         Livewire::component('notificaciones-mora.listado', NotificacionesMoraListado::class);
         Livewire::component('recibos-sueldo.listado', RecibosSueldoListado::class);
         Livewire::component('recibos-sueldo.formulario', RecibosSueldoFormulario::class);
+        Livewire::component('usuarios.listado', UsuariosListado::class);
+        Livewire::component('usuarios.formulario', UsuariosFormulario::class);
     }
 }

@@ -19,6 +19,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     require __DIR__.'/periodos.php';
     require __DIR__.'/mora.php';
     require __DIR__.'/sueldos.php';
+    require __DIR__.'/usuarios.php';
 });
 
 require __DIR__.'/auth.php';
