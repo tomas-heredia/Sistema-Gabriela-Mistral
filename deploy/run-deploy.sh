@@ -40,7 +40,7 @@ set +a
 # no dependemos de ese comportamiento.
 echo "==> Desplegando el stack"
 cd "$DEPLOY_DIR"
-envsubst '$APP_NAME $APP_KEY $APP_URL $APP_IMAGE_TAG $DB_DATABASE $DB_USERNAME $DB_PASSWORD $MYSQL_ROOT_PASSWORD' \
+envsubst '$APP_NAME $APP_KEY $APP_URL $APP_IMAGE_TAG $DB_DATABASE $DB_USERNAME $DB_PASSWORD $MYSQL_ROOT_PASSWORD $MAIL_HOST $MAIL_PORT $MAIL_USERNAME $MAIL_PASSWORD $MAIL_FROM_ADDRESS' \
     < docker-stack.yml > /tmp/gabriela-mistral-stack.resolved.yml
 docker stack deploy -c /tmp/gabriela-mistral-stack.resolved.yml "$STACK_NAME" --resolve-image never
 rm -f /tmp/gabriela-mistral-stack.resolved.yml

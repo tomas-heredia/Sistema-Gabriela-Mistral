@@ -28,7 +28,12 @@ services:
       FILESYSTEM_DISK: local
       QUEUE_CONNECTION: database
       CACHE_STORE: database
-      MAIL_MAILER: log
+      MAIL_MAILER: smtp
+      MAIL_HOST: ${MAIL_HOST}
+      MAIL_PORT: ${MAIL_PORT}
+      MAIL_USERNAME: ${MAIL_USERNAME}
+      MAIL_PASSWORD: ${MAIL_PASSWORD}
+      MAIL_FROM_ADDRESS: ${MAIL_FROM_ADDRESS}
     volumes:
       - app_storage:/var/www/html/storage/app
     networks:
