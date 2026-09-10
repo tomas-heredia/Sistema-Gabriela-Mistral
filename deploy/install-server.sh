@@ -17,9 +17,13 @@ if [ ! -f "$BASE_DIR/app/deploy/.env" ]; then
     cp "$BASE_DIR/app/deploy/.env.stack.example" "$BASE_DIR/app/deploy/.env"
     echo "!! Faltan completar los secretos en $BASE_DIR/app/deploy/.env antes de desplegar."
 fi
+chmod 600 "$BASE_DIR/app/deploy/.env"
 
 # Backup diario a las 3am, ademas del que ya se hace antes de cada deploy.
+# El "|| true" es necesario: si todavia no existe ningun crontab, `crontab -l`
+# y el grep sobre una entrada vacia devuelven codigo de error, y con "set -e"
+# eso cortaria el script antes de instalar el cron.
 CRON_LINE="0 3 * * * $BASE_DIR/app/deploy/backup.sh >> $BASE_DIR/backups/cron.log 2>&1"
-( crontab -l 2>/dev/null | grep -vF "$BASE_DIR/app/deploy/backup.sh" ; echo "$CRON_LINE" ) | crontab -
+( crontab -l 2>/dev/null | grep -vF "$BASE_DIR/app/deploy/backup.sh" || true; echo "$CRON_LINE" ) | crontab -
 
 echo "Listo. Completar $BASE_DIR/app/deploy/.env y despues correr deploy.sh"
