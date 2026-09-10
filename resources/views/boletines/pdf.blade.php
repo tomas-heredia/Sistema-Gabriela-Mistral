@@ -31,7 +31,7 @@
         @foreach (($plantilla->estructura_campos['secciones'] ?? []) as $seccion)
             @php $valor = data_get($trimestre->datos, $seccion['id']); @endphp
 
-            @if ($valor !== null)
+            @if ($valor !== null && $valor !== [])
                 <h3>{{ $seccion['titulo'] ?? $seccion['id'] }}</h3>
                 @include('boletines.partials.valor-generico', ['valor' => $valor])
             @endif

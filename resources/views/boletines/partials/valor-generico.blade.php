@@ -47,6 +47,8 @@
             @endforeach
         </tbody>
     </table>
+@elseif (is_array($valor))
+    {{-- Lista o mapa vacío (ej. una sección que quedó sin cargar) -- nada que mostrar. --}}
 @else
     <p>{{ $valor }}</p>
 @endif
