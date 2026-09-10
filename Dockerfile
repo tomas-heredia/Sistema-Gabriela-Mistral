@@ -19,12 +19,16 @@ RUN composer dump-autoload --optimize --no-dev --classmap-authoritative
 # ---- Stage 3: imagen final de runtime (PHP-FPM + Nginx + Supervisor) ----
 FROM php:8.3-fpm-alpine
 
+# Ojo: los paquetes "-dev" de Alpine arrastran la libreria runtime como
+# dependencia -- un "apk del" de los -dev al final se lleva puesta esa
+# runtime tambien (nadie mas la referencia desde el punto de vista de apk),
+# y las extensiones de PHP quedan sin poder cargar (.so roto en runtime).
+# Se deja instalado todo: son ~20-30MB de mas, nada relevante en este VPS.
 RUN apk add --no-cache \
         nginx supervisor mysql-client bash \
         libpng-dev libzip-dev freetype-dev libjpeg-turbo-dev icu-dev oniguruma-dev \
     && docker-php-ext-configure gd --with-freetype --with-jpeg \
-    && docker-php-ext-install pdo_mysql gd zip bcmath intl opcache mbstring \
-    && apk del libpng-dev libzip-dev freetype-dev libjpeg-turbo-dev icu-dev oniguruma-dev
+    && docker-php-ext-install pdo_mysql gd zip bcmath intl opcache mbstring
 
 WORKDIR /var/www/html
 
