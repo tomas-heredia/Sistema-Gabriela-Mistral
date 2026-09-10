@@ -15,7 +15,6 @@ REF="${1:-origin/main}"
 APP_DIR="$HOME/gabriela-mistral/app"
 DEPLOY_DIR="$APP_DIR/deploy"
 STACK_NAME="gabriela-mistral"
-IMAGE="gabriela-mistral-app:latest"
 
 cd "$APP_DIR"
 
@@ -25,10 +24,19 @@ git fetch origin
 echo "==> Parandome en: $REF"
 git checkout --detach "$REF"
 
+# Taggear con el commit exacto (no ":latest") es lo que hace que Swarm se
+# de cuenta de que hay una imagen nueva -- con un tag fijo que se repite,
+# "docker stack deploy" ve el mismo nombre de imagen que ya tenia y no
+# reinicia los contenedores, aunque el contenido de adentro haya cambiado
+# (nos paso: quedo corriendo una imagen vieja con un bug ya corregido).
+IMAGE_TAG=$(git rev-parse --short HEAD)
+IMAGE="gabriela-mistral-app:$IMAGE_TAG"
+export APP_IMAGE_TAG="$IMAGE_TAG"
+
 echo "==> Backup de la base antes de tocar nada"
 "$DEPLOY_DIR/backup.sh"
 
-echo "==> Build de la imagen"
+echo "==> Build de la imagen ($IMAGE)"
 docker build -t "$IMAGE" -f Dockerfile .
 
 set -a
@@ -53,3 +61,10 @@ docker run --rm \
 
 echo "==> Listo. Estado de los servicios:"
 docker stack services "$STACK_NAME"
+
+# Se queda con las ultimas 5 imagenes de la app -- suficiente margen para
+# rollback sin acumular basura en el disco para siempre.
+docker images "gabriela-mistral-app" --format '{{.Tag}} {{.ID}}' \
+    | tail -n +6 \
+    | awk '{print $2}' \
+    | xargs -r docker rmi 2>/dev/null || true

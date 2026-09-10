@@ -2,7 +2,7 @@ version: "3.8"
 
 services:
   app:
-    image: gabriela-mistral-app:latest
+    image: gabriela-mistral-app:${APP_IMAGE_TAG}
     ports:
       - target: 8080
         published: 8080
