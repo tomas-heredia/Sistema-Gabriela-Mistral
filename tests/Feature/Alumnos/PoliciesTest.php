@@ -1,7 +1,6 @@
 <?php
 
 use App\Alumnos\Models\Alumno;
-use App\Alumnos\Models\Contrato;
 use App\Alumnos\Models\Tutor;
 use App\Core\Models\PeriodoLectivo;
 use App\Core\Models\User;
@@ -12,12 +11,11 @@ beforeEach(function () {
 });
 
 // PeriodoLectivo queda afuera de este loop genérico: a diferencia de
-// Tutor/Alumno/Contrato, su `create` está reservado a administrador
+// Tutor/Alumno, su `create` está reservado a administrador
 // (ver el test dedicado más abajo).
 $modulo = [
     'Tutor' => Tutor::class,
     'Alumno' => Alumno::class,
-    'Contrato' => Contrato::class,
 ];
 
 foreach ($modulo as $nombre => $clase) {

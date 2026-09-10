@@ -3,7 +3,6 @@
 namespace Database\Seeders;
 
 use App\Alumnos\Models\Alumno;
-use App\Alumnos\Models\Contrato;
 use App\Alumnos\Models\Enums\Nivel;
 use App\Alumnos\Models\Tutor;
 use App\Boletines\Services\CreadorDeBoletines;
@@ -57,12 +56,6 @@ class DatabaseSeeder extends Seeder
                 $tutor = Tutor::factory()->create();
                 $alumno->tutores()->attach($tutor, ['vinculo' => 'madre', 'responsable_pago' => true]);
 
-                Contrato::factory()->create([
-                    'alumno_id' => $alumno->id,
-                    'periodo_lectivo_id' => $periodo->id,
-                    'cargado_por_id' => User::first()->id,
-                ]);
-
                 $generadorDeCuotas->generar($alumno, $periodo);
                 $creadorDeBoletines->crear($alumno, $periodo);
             });
@@ -73,12 +66,6 @@ class DatabaseSeeder extends Seeder
             ->each(function (Alumno $alumno) use ($periodo, $generadorDeCuotas, $creadorDeBoletines) {
                 $tutor = Tutor::factory()->create();
                 $alumno->tutores()->attach($tutor, ['vinculo' => 'padre', 'responsable_pago' => true]);
-
-                Contrato::factory()->create([
-                    'alumno_id' => $alumno->id,
-                    'periodo_lectivo_id' => $periodo->id,
-                    'cargado_por_id' => User::first()->id,
-                ]);
 
                 $generadorDeCuotas->generar($alumno, $periodo);
                 $creadorDeBoletines->crear($alumno, $periodo);

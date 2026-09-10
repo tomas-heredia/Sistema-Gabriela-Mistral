@@ -1,10 +1,8 @@
 <?php
 
 use App\Alumnos\Models\Alumno;
-use App\Alumnos\Models\Contrato;
 use App\Alumnos\Models\Enums\Nivel;
 use App\Alumnos\Models\Tutor;
-use App\Core\Models\PeriodoLectivo;
 use Illuminate\Database\QueryException;
 
 test('la factory de alumno crea un registro valido', function () {
@@ -42,17 +40,6 @@ test('un alumno puede tener mas de un tutor, con vinculo y responsable_pago prop
 
     // La relación se lee también desde el tutor.
     expect($madre->fresh()->alumnos()->get())->toHaveCount(1);
-});
-
-test('un alumno tiene muchos contratos, uno por periodo lectivo', function () {
-    $alumno = Alumno::factory()->create();
-    $periodo2026 = PeriodoLectivo::factory()->create(['nombre' => '2026']);
-    $periodo2027 = PeriodoLectivo::factory()->create(['nombre' => '2027']);
-
-    Contrato::factory()->create(['alumno_id' => $alumno->id, 'periodo_lectivo_id' => $periodo2026->id]);
-    Contrato::factory()->create(['alumno_id' => $alumno->id, 'periodo_lectivo_id' => $periodo2027->id]);
-
-    expect($alumno->contratos()->count())->toBe(2);
 });
 
 test('el dni de un alumno es unico cuando no es nulo', function () {
