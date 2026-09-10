@@ -31,21 +31,25 @@ echo "==> Backup de la base antes de tocar nada"
 echo "==> Build de la imagen"
 docker build -t "$IMAGE" -f Dockerfile .
 
-echo "==> Corriendo migraciones"
 set -a
 source "$DEPLOY_DIR/.env"
 set +a
 
+# El stack (mysql incluido) tiene que existir ANTES de migrar -- en el
+# primer deploy no hay ningun "mysql" al que conectarse todavia. La app
+# tambien puede tardar un ratito en responder bien hasta que termina de
+# migrar (nada raro en un despliegue chico como este).
+echo "==> Desplegando el stack"
+cd "$DEPLOY_DIR"
+docker stack deploy -c docker-stack.yml "$STACK_NAME" --resolve-image never
+
+echo "==> Corriendo migraciones (espera a que mysql este listo)"
 docker run --rm \
     --network easypanel-gabriela-mistral \
     -e DB_CONNECTION=mysql -e DB_HOST=mysql -e DB_PORT=3306 \
     -e DB_DATABASE="$DB_DATABASE" -e DB_USERNAME="$DB_USERNAME" -e DB_PASSWORD="$DB_PASSWORD" \
     -e APP_KEY="$APP_KEY" \
     "$IMAGE" php artisan migrate --force
-
-echo "==> Desplegando el stack"
-cd "$DEPLOY_DIR"
-docker stack deploy -c docker-stack.yml "$STACK_NAME" --resolve-image never
 
 echo "==> Listo. Estado de los servicios:"
 docker stack services "$STACK_NAME"
