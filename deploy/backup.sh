@@ -3,8 +3,8 @@
 # Si el contenedor de mysql todavia no existe (primer deploy), no hace nada.
 set -euo pipefail
 
-DEPLOY_DIR="/opt/gabriela-mistral/app/deploy"
-BACKUP_DIR="/opt/gabriela-mistral/backups"
+DEPLOY_DIR="$HOME/gabriela-mistral/app/deploy"
+BACKUP_DIR="$HOME/gabriela-mistral/backups"
 STACK_NAME="gabriela-mistral"
 KEEP=14
 

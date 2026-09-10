@@ -12,7 +12,7 @@ set -euo pipefail
 
 REF="${1:-origin/main}"
 
-APP_DIR="/opt/gabriela-mistral/app"
+APP_DIR="$HOME/gabriela-mistral/app"
 DEPLOY_DIR="$APP_DIR/deploy"
 STACK_NAME="gabriela-mistral"
 IMAGE="gabriela-mistral-app:latest"

@@ -2,7 +2,7 @@
 # Preparacion UNICA del servidor. Se corre una sola vez, la primera vez.
 set -euo pipefail
 
-BASE_DIR="/opt/gabriela-mistral"
+BASE_DIR="$HOME/gabriela-mistral"
 REPO_URL="https://github.com/tomas-heredia/Sistema-Gabriela-Mistral.git"
 
 mkdir -p "$BASE_DIR/backups"
