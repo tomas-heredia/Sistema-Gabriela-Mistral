@@ -13,7 +13,7 @@
                 </div>
 
                 <div>
-                    <x-input-label for="dni" value="DNI (opcional)" />
+                    <x-input-label for="dni" value="DNI" />
                     <x-text-input id="dni" type="text" class="mt-1 block w-full" wire:model="dni" />
                     <x-input-error :messages="$errors->get('dni')" class="mt-1" />
                 </div>
@@ -79,12 +79,6 @@
                         </div>
                     </div>
                 @endif
-
-                <div>
-                    <x-input-label for="libro_folio" value="Libro y folio (opcional)" />
-                    <x-text-input id="libro_folio" type="text" class="mt-1 block w-full" wire:model="libro_folio" />
-                    <x-input-error :messages="$errors->get('libro_folio')" class="mt-1" />
-                </div>
 
                 <label class="flex items-center gap-2">
                     <input type="checkbox" wire:model="activo" class="rounded border-gray-300 text-indigo-600 shadow-sm focus:ring-indigo-500">
@@ -358,7 +352,7 @@
 
                     @if ($becado)
                         <div class="mb-3 max-w-md">
-                            <x-input-label for="motivoBeca" value="Motivo" />
+                            <x-input-label for="motivoBeca" value="Motivo (opcional)" />
                             <x-text-input id="motivoBeca" type="text" class="mt-1 block w-full" wire:model="motivoBeca" />
                             <x-input-error :messages="$errors->get('motivoBeca')" class="mt-1" />
                         </div>

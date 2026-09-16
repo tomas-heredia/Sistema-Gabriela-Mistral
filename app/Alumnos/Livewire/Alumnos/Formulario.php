@@ -54,8 +54,6 @@ class Formulario extends Component
 
     public ?string $division = null;
 
-    public ?string $libro_folio = null;
-
     public string $turno = '';
 
     public bool $activo = true;
@@ -112,7 +110,6 @@ class Formulario extends Component
             $this->grado = $alumno->grado;
             $this->anio_secundaria = $alumno->anio_secundaria;
             $this->division = $alumno->division;
-            $this->libro_folio = $alumno->libro_folio;
             $this->turno = $alumno->turno->value;
             $this->activo = $alumno->activo;
         } else {
@@ -130,7 +127,7 @@ class Formulario extends Component
     {
         return [
             'nombre' => ['required', 'string', 'max:255'],
-            'dni' => ['nullable', 'string', 'max:20', Rule::unique('alumnos', 'dni')->ignore($this->alumno?->id)],
+            'dni' => ['required', 'string', 'max:20', Rule::unique('alumnos', 'dni')->ignore($this->alumno?->id)],
             'fecha_nacimiento' => ['required', 'date'],
             'nivel' => ['required', Rule::enum(Nivel::class)],
             'grado' => [
@@ -140,7 +137,6 @@ class Formulario extends Component
             ],
             'anio_secundaria' => ['nullable', 'integer', 'min:1', 'max:6', 'required_if:nivel,'.Nivel::Secundario->value],
             'division' => ['nullable', 'string', 'max:10'],
-            'libro_folio' => ['nullable', 'string', 'max:50'],
             'turno' => ['required', Rule::enum(Turno::class)],
             'activo' => ['boolean'],
         ];
@@ -184,7 +180,6 @@ class Formulario extends Component
             'grado' => 'grado',
             'anio_secundaria' => 'año',
             'division' => 'división',
-            'libro_folio' => 'libro y folio',
             'turno' => 'turno',
         ];
     }
@@ -481,7 +476,7 @@ class Formulario extends Component
             $this->authorize($becaExistente ? 'update' : 'create', $becaExistente ?? Beca::class);
 
             $this->validate(
-                ['motivoBeca' => ['required', 'string', 'max:255']],
+                ['motivoBeca' => ['nullable', 'string', 'max:255']],
                 attributes: ['motivoBeca' => 'motivo']
             );
 

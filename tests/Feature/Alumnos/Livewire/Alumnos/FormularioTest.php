@@ -32,6 +32,7 @@ test('crear un alumno primario guarda y redirige a su edicion', function () {
 
     Livewire::actingAs($cobrador)->test(Formulario::class)
         ->set('nombre', 'Ana Pérez')
+        ->set('dni', '40111222')
         ->set('fecha_nacimiento', '2015-03-10')
         ->set('nivel', Nivel::Primario->value)
         ->set('grado', '4to grado')
@@ -64,6 +65,7 @@ test('elegir el anio de secundaria completa el grado solo, sin campo de texto li
 
     $component = Livewire::actingAs($cobrador)->test(Formulario::class)
         ->set('nombre', 'Beto Gómez')
+        ->set('dni', '40222333')
         ->set('fecha_nacimiento', '2010-03-10')
         ->set('nivel', Nivel::Secundario->value)
         ->set('anio_secundaria', 3)
@@ -92,6 +94,21 @@ test('rechaza un grado de primaria que no esta en la lista permitida', function 
         ->set('turno', Turno::Manana->value)
         ->call('guardar')
         ->assertHasErrors(['grado']);
+});
+
+test('el dni es obligatorio para crear un alumno', function () {
+    $cobrador = User::factory()->create()->assignRole('cobrador');
+
+    Livewire::actingAs($cobrador)->test(Formulario::class)
+        ->set('nombre', 'Ana Pérez')
+        ->set('fecha_nacimiento', '2015-03-10')
+        ->set('nivel', Nivel::Primario->value)
+        ->set('grado', '4to grado')
+        ->set('turno', Turno::Manana->value)
+        ->call('guardar')
+        ->assertHasErrors(['dni' => 'required']);
+
+    expect(Alumno::where('nombre', 'Ana Pérez')->exists())->toBeFalse();
 });
 
 test('editar un alumno precarga sus datos', function () {
@@ -154,6 +171,7 @@ test('sin vincular ningun tutor no se puede crear el alumno', function () {
 
     Livewire::actingAs($cobrador)->test(Formulario::class)
         ->set('nombre', 'Ana Pérez')
+        ->set('dni', '40333444')
         ->set('fecha_nacimiento', '2015-03-10')
         ->set('nivel', Nivel::Primario->value)
         ->set('grado', '4to grado')
@@ -361,18 +379,20 @@ test('otorgar una beca crea el registro con motivo y usuario que la aprueba', fu
         ->and($beca->fecha_otorgamiento->isToday())->toBeTrue();
 });
 
-test('el motivo es obligatorio para otorgar una beca', function () {
+test('el motivo es opcional para otorgar una beca', function () {
     $cobrador = User::factory()->create()->assignRole('cobrador');
-    PeriodoLectivo::factory()->activo()->create();
+    $periodo = PeriodoLectivo::factory()->activo()->create();
     $alumno = Alumno::factory()->primario()->create();
 
     Livewire::actingAs($cobrador)->test(Formulario::class, ['alumno' => $alumno])
         ->set('becado', true)
         ->set('motivoBeca', '')
         ->call('guardarBeca')
-        ->assertHasErrors(['motivoBeca' => 'required']);
+        ->assertHasNoErrors('motivoBeca');
 
-    expect(Beca::where('alumno_id', $alumno->id)->exists())->toBeFalse();
+    $beca = Beca::where('alumno_id', $alumno->id)->where('periodo_lectivo_id', $periodo->id)->first();
+    expect($beca)->not->toBeNull()
+        ->and($beca->motivo)->toBe('');
 });
 
 test('revocar una beca existente la elimina', function () {
