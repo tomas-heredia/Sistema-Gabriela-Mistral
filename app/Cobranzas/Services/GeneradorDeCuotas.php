@@ -63,7 +63,61 @@ class GeneradorDeCuotas
             ));
         }
 
+        if ($descuentoTipo === DescuentoTipo::Hermanos) {
+            $this->actualizarHermanosYaMatriculados($alumno, $periodo);
+        }
+
         return $cuotas;
+    }
+
+    /**
+     * Al matricular al alumno que hace cruzar el umbral, los hermanos que ya
+     * estaban cargados quedaron con cuotas generadas *antes* de llegar a 3 --
+     * su descuento_tipo quedó fijo en "ninguno" para siempre, aunque ahora sí
+     * corresponda. Se corrige hacia adelante: solo las cuotas del mismo
+     * período que todavía no vencieron (una cuota ya vencida es un monto ya
+     * facturado, no se toca retroactivamente — mismo criterio que el resto
+     * del sistema). Un hermano con beca no se toca: la beca sigue ganando.
+     */
+    private function actualizarHermanosYaMatriculados(Alumno $alumnoRecienMatriculado, PeriodoLectivo $periodo): void
+    {
+        $tutorIds = $alumnoRecienMatriculado->tutores()
+            ->wherePivot('responsable_pago', true)
+            ->pluck('tutores.id');
+
+        $hermanos = Alumno::query()
+            ->where('id', '!=', $alumnoRecienMatriculado->id)
+            ->where('activo', true)
+            ->whereHas('tutores', function ($query) use ($tutorIds) {
+                $query->whereIn('tutores.id', $tutorIds)->where('alumno_tutor.responsable_pago', true);
+            })
+            ->get();
+
+        foreach ($hermanos as $hermano) {
+            [$descuentoTipo, $descuentoPct] = $this->descuentoAplicable($hermano, $periodo);
+
+            if ($descuentoTipo !== DescuentoTipo::Hermanos) {
+                continue;
+            }
+
+            Cuota::query()
+                ->where('alumno_id', $hermano->id)
+                ->where('periodo_lectivo_id', $periodo->id)
+                ->where('fecha_vencimiento', '>=', today())
+                ->where('estado', '!=', EstadoCuota::Anulada)
+                ->get()
+                ->each(function (Cuota $cuota) use ($descuentoTipo, $descuentoPct) {
+                    $descuentoMonto = (int) round($cuota->monto_base * $descuentoPct / 100);
+
+                    $cuota->forceFill([
+                        'descuento_tipo' => $descuentoTipo,
+                        'descuento_monto' => $descuentoMonto,
+                        'monto' => max(0, $cuota->monto_base - $descuentoMonto),
+                    ])->save();
+
+                    $cuota->recalcularEstado();
+                });
+        }
     }
 
     /**
