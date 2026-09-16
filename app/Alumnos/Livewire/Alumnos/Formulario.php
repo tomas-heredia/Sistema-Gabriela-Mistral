@@ -71,6 +71,20 @@ class Formulario extends Component
 
     public bool $responsablePagoNuevo = false;
 
+    // Alta de un tutor nuevo, sin salir de esta pantalla, para cuando la
+    // búsqueda por DNI no encuentra a nadie.
+    public bool $creandoTutorNuevo = false;
+
+    public string $nombreTutorACrear = '';
+
+    public string $dniTutorACrear = '';
+
+    public string $domicilioTutorACrear = '';
+
+    public string $telefonoTutorACrear = '';
+
+    public string $correoTutorACrear = '';
+
     /**
      * Tutores elegidos durante el alta, todavía no guardados — el alumno
      * no existe hasta que se llama a guardar(), así que no hay a qué
@@ -234,37 +248,109 @@ class Formulario extends Component
             return;
         }
 
+        if (! $this->vincularOEncolar($this->tutorEncontrado)) {
+            return;
+        }
+
+        $this->reset(['dniTutorBuscado', 'tutorEncontrado', 'buscoTutor', 'vinculoNuevo', 'responsablePagoNuevo']);
+    }
+
+    /**
+     * Muestra el mini-formulario de alta de tutor, para cuando la búsqueda
+     * por DNI no encuentra a nadie — sin salir de la pantalla ni perder lo
+     * ya cargado del alumno. Precarga el DNI ya tipeado en la búsqueda.
+     */
+    public function mostrarCrearTutor(): void
+    {
+        $this->authorize('create', Tutor::class);
+
+        $this->creandoTutorNuevo = true;
+        $this->dniTutorACrear = $this->dniTutorBuscado;
+    }
+
+    public function cancelarCrearTutor(): void
+    {
+        $this->creandoTutorNuevo = false;
+        $this->reset(['nombreTutorACrear', 'dniTutorACrear', 'domicilioTutorACrear', 'telefonoTutorACrear', 'correoTutorACrear']);
+    }
+
+    /**
+     * Mismas reglas que App\Alumnos\Livewire\Tutores\Formulario -- un tutor
+     * creado desde acá tiene que quedar tan completo como uno creado desde
+     * su propia pantalla.
+     */
+    public function crearYVincularTutor(): void
+    {
+        $this->authorize('create', Tutor::class);
+
+        $datos = $this->validate([
+            'nombreTutorACrear' => ['required', 'string', 'max:255'],
+            'dniTutorACrear' => ['required', 'string', 'max:20', Rule::unique('tutores', 'dni')],
+            'domicilioTutorACrear' => ['required', 'string', 'max:255'],
+            'telefonoTutorACrear' => ['required', 'string', 'max:30'],
+            'correoTutorACrear' => ['required', 'email', 'max:255'],
+        ], attributes: [
+            'nombreTutorACrear' => 'nombre',
+            'dniTutorACrear' => 'DNI',
+            'domicilioTutorACrear' => 'domicilio',
+            'telefonoTutorACrear' => 'teléfono',
+            'correoTutorACrear' => 'correo',
+        ]);
+
+        $tutor = Tutor::create([
+            'nombre' => $datos['nombreTutorACrear'],
+            'dni' => $datos['dniTutorACrear'],
+            'domicilio' => $datos['domicilioTutorACrear'],
+            'telefono' => $datos['telefonoTutorACrear'],
+            'correo' => $datos['correoTutorACrear'],
+        ]);
+
+        if (! $this->vincularOEncolar($tutor)) {
+            return;
+        }
+
+        $this->creandoTutorNuevo = false;
+        $this->reset([
+            'dniTutorBuscado', 'tutorEncontrado', 'buscoTutor', 'vinculoNuevo', 'responsablePagoNuevo',
+            'nombreTutorACrear', 'dniTutorACrear', 'domicilioTutorACrear', 'telefonoTutorACrear', 'correoTutorACrear',
+        ]);
+    }
+
+    private function vincularOEncolar(Tutor $tutor): bool
+    {
         if ($this->alumno) {
-            $yaVinculado = $this->alumno->tutores()->where('tutores.id', $this->tutorEncontrado->id)->exists();
+            $yaVinculado = $this->alumno->tutores()->where('tutores.id', $tutor->id)->exists();
 
             if ($yaVinculado) {
                 $this->addError('dniTutorBuscado', 'Ese tutor ya está vinculado a este alumno.');
 
-                return;
+                return false;
             }
 
-            $this->alumno->tutores()->attach($this->tutorEncontrado->id, [
+            $this->alumno->tutores()->attach($tutor->id, [
                 'vinculo' => $this->vinculoNuevo,
                 'responsable_pago' => $this->responsablePagoNuevo,
             ]);
 
             session()->flash('mensaje', 'Tutor vinculado correctamente.');
-        } else {
-            if (collect($this->tutoresPendientes)->contains('tutor_id', $this->tutorEncontrado->id)) {
-                $this->addError('dniTutorBuscado', 'Ese tutor ya está agregado.');
 
-                return;
-            }
-
-            $this->tutoresPendientes[] = [
-                'tutor_id' => $this->tutorEncontrado->id,
-                'nombre' => $this->tutorEncontrado->nombre,
-                'vinculo' => $this->vinculoNuevo,
-                'responsable_pago' => $this->responsablePagoNuevo,
-            ];
+            return true;
         }
 
-        $this->reset(['dniTutorBuscado', 'tutorEncontrado', 'buscoTutor', 'vinculoNuevo', 'responsablePagoNuevo']);
+        if (collect($this->tutoresPendientes)->contains('tutor_id', $tutor->id)) {
+            $this->addError('dniTutorBuscado', 'Ese tutor ya está agregado.');
+
+            return false;
+        }
+
+        $this->tutoresPendientes[] = [
+            'tutor_id' => $tutor->id,
+            'nombre' => $tutor->nombre,
+            'vinculo' => $this->vinculoNuevo,
+            'responsable_pago' => $this->responsablePagoNuevo,
+        ];
+
+        return true;
     }
 
     public function quitarTutorPendiente(int $indice): void

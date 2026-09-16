@@ -192,6 +192,93 @@ test('no se puede agregar el mismo tutor dos veces a la lista pendiente', functi
         ->assertHasErrors(['dniTutorBuscado']);
 });
 
+test('buscar un dni sin resultado ofrece crear un tutor nuevo', function () {
+    $cobrador = User::factory()->create()->assignRole('cobrador');
+
+    Livewire::actingAs($cobrador)->test(Formulario::class)
+        ->set('dniTutorBuscado', '30999888')
+        ->call('buscarTutor')
+        ->assertSet('tutorEncontrado', null)
+        ->assertSee('Crear uno nuevo');
+});
+
+test('crear un tutor nuevo en el alta lo agrega a la lista pendiente con el dni ya precargado', function () {
+    $cobrador = User::factory()->create()->assignRole('cobrador');
+
+    $component = Livewire::actingAs($cobrador)->test(Formulario::class)
+        ->set('dniTutorBuscado', '30999888')
+        ->call('buscarTutor')
+        ->call('mostrarCrearTutor')
+        ->assertSet('dniTutorACrear', '30999888')
+        ->set('nombreTutorACrear', 'Marta Gómez')
+        ->set('domicilioTutorACrear', 'San Martín 123')
+        ->set('telefonoTutorACrear', '3834111222')
+        ->set('correoTutorACrear', 'marta@example.com')
+        ->set('vinculoNuevo', 'madre')
+        ->set('responsablePagoNuevo', true)
+        ->call('crearYVincularTutor');
+
+    $tutor = Tutor::where('dni', '30999888')->firstOrFail();
+    expect($tutor->nombre)->toBe('Marta Gómez')
+        ->and($tutor->correo)->toBe('marta@example.com')
+        ->and($component->get('tutoresPendientes'))->toHaveCount(1)
+        ->and($component->get('tutoresPendientes')[0]['tutor_id'])->toBe($tutor->id)
+        ->and($component->get('creandoTutorNuevo'))->toBeFalse();
+});
+
+test('crear un tutor nuevo al editar un alumno lo vincula directo', function () {
+    $cobrador = User::factory()->create()->assignRole('cobrador');
+    $alumno = Alumno::factory()->primario()->create();
+
+    Livewire::actingAs($cobrador)->test(Formulario::class, ['alumno' => $alumno])
+        ->set('dniTutorBuscado', '30999888')
+        ->call('buscarTutor')
+        ->call('mostrarCrearTutor')
+        ->set('nombreTutorACrear', 'Marta Gómez')
+        ->set('dniTutorACrear', '30999888')
+        ->set('domicilioTutorACrear', 'San Martín 123')
+        ->set('telefonoTutorACrear', '3834111222')
+        ->set('correoTutorACrear', 'marta@example.com')
+        ->call('crearYVincularTutor');
+
+    $tutor = Tutor::where('dni', '30999888')->firstOrFail();
+    expect($alumno->tutores()->where('tutores.id', $tutor->id)->exists())->toBeTrue();
+});
+
+test('crear un tutor nuevo exige los mismos campos que su propia pantalla', function () {
+    $cobrador = User::factory()->create()->assignRole('cobrador');
+
+    Livewire::actingAs($cobrador)->test(Formulario::class)
+        ->call('mostrarCrearTutor')
+        ->call('crearYVincularTutor')
+        ->assertHasErrors([
+            'nombreTutorACrear' => 'required',
+            'dniTutorACrear' => 'required',
+            'domicilioTutorACrear' => 'required',
+            'telefonoTutorACrear' => 'required',
+            'correoTutorACrear' => 'required',
+        ]);
+
+    expect(Tutor::count())->toBe(0);
+});
+
+test('crear un tutor nuevo con un dni ya usado rechaza la duplicacion', function () {
+    $cobrador = User::factory()->create()->assignRole('cobrador');
+    Tutor::factory()->create(['dni' => '30999888']);
+
+    Livewire::actingAs($cobrador)->test(Formulario::class)
+        ->call('mostrarCrearTutor')
+        ->set('nombreTutorACrear', 'Marta Gómez')
+        ->set('dniTutorACrear', '30999888')
+        ->set('domicilioTutorACrear', 'San Martín 123')
+        ->set('telefonoTutorACrear', '3834111222')
+        ->set('correoTutorACrear', 'marta@example.com')
+        ->call('crearYVincularTutor')
+        ->assertHasErrors(['dniTutorACrear' => 'unique']);
+
+    expect(Tutor::where('dni', '30999888')->count())->toBe(1);
+});
+
 test('generar cuotas crea las cuotas del periodo activo y ya no ofrece el boton', function () {
     $cobrador = User::factory()->create()->assignRole('cobrador');
     $periodo = PeriodoLectivo::factory()->activo()->create([
