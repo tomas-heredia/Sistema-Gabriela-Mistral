@@ -20,6 +20,17 @@ test('administrador y cobrador pueden viewAny y create sobre Boletin, profesor n
         ->and($profesor->can('viewAny', Boletin::class))->toBeFalse();
 });
 
+test('docente puede viewAny/view/update sobre Boletin pero no create ni delete', function () {
+    $docente = User::factory()->create()->assignRole('docente');
+    $boletin = Boletin::factory()->create();
+
+    expect($docente->can('viewAny', Boletin::class))->toBeTrue()
+        ->and($docente->can('view', $boletin))->toBeTrue()
+        ->and($docente->can('update', $boletin))->toBeTrue()
+        ->and($docente->can('create', Boletin::class))->toBeFalse()
+        ->and($docente->can('delete', $boletin))->toBeFalse();
+});
+
 test('solo administrador puede crear/editar/borrar una plantilla de boletin; cobrador solo la lee', function () {
     $administrador = User::factory()->create()->assignRole('administrador');
     $cobrador = User::factory()->create()->assignRole('cobrador');

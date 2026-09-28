@@ -79,9 +79,10 @@ php artisan migrate:fresh --seed # resetear DB con datos de prueba
 
 - **Administrador**: acceso total al sistema.
 - **Cobrador**: cobranzas (matrícula, cuotas, mora), gestión de avisos, y carga/envío de boletines. Sin acceso a recibos de sueldo.
-- **Profesor**: solo consulta de sus propios recibos de sueldo. Sin acceso a cobranzas ni a boletines — no carga notas ni ve las de otros.
+- **Profesor**: solo consulta de sus propios recibos de sueldo. Sin acceso a cobranzas ni a boletines.
+- **Docente**: solo carga y envío de boletines (misma pantalla y flujo que usa el cobrador para esa tarea, ver regla 3). Sin acceso a cobranzas, mora, sueldos, usuarios, ni a crear/eliminar alumnos o boletines.
 
-Los tres roles se crean vía `database/seeders/RoleSeeder.php` (nombres: `administrador`, `cobrador`, `profesor`). Se asignan a un `User` con `$user->assignRole('...')`.
+Los cuatro roles se crean vía `database/seeders/RoleSeeder.php` (nombres: `administrador`, `cobrador`, `profesor`, `docente`). Se asignan a un `User` con `$user->assignRole('...')`.
 
 ## Convenciones de código
 

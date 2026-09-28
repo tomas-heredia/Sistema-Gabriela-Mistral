@@ -64,3 +64,18 @@ test('cobrador y profesor no pueden montar el componente', function () {
     Livewire::actingAs($cobrador)->test(Formulario::class)->assertForbidden();
     Livewire::actingAs($profesor)->test(Formulario::class)->assertForbidden();
 });
+
+test('se puede crear un usuario con el rol docente', function () {
+    $administrador = User::factory()->create()->assignRole('administrador');
+
+    Livewire::actingAs($administrador)->test(Formulario::class)
+        ->set('name', 'Elena Ruiz')
+        ->set('email', 'elena@example.com')
+        ->set('password', '123456')
+        ->set('rol', 'docente')
+        ->call('guardar')
+        ->assertRedirect(route('usuarios.index'));
+
+    $nuevo = User::where('email', 'elena@example.com')->firstOrFail();
+    expect($nuevo->hasRole('docente'))->toBeTrue();
+});
