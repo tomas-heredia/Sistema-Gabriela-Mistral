@@ -2,17 +2,21 @@
 
 namespace App\Mora\Livewire\NotificacionesMora;
 
-use App\Mora\Models\Enums\EstadoNotificacion;
+use App\Core\Models\PeriodoLectivo;
 use App\Mora\Models\NotificacionMora;
+use App\Mora\Services\CalculadorDeDeuda;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
 use Livewire\WithPagination;
 
 /**
- * Solo lectura: `notificaciones_mora` es una interfaz mínima hacia n8n (ver
- * CLAUDE.md regla 4) — es n8n quien la actualiza (estado, fecha_envio,
- * intentos) al mandar el aviso de verdad. Esta pantalla es puramente de
- * visibilidad sobre lo que ya generó `mora:generar-avisos`.
+ * A diferencia de antes, ya no lee `notificaciones_mora` (esa tabla sigue
+ * existiendo tal cual, es la interfaz mínima hacia n8n -- ver CLAUDE.md
+ * regla 4, y mora:generar-avisos la sigue alimentando para los avisos por
+ * WhatsApp/mail). Esta pantalla calcula la deuda en el momento a partir de
+ * las cuotas -- el cliente pidió poder ver a los tutores en mora "en todo
+ * momento", sin depender de que el comando diario ya haya corrido.
  */
 #[Layout('layouts.app')]
 class Listado extends Component
@@ -21,7 +25,7 @@ class Listado extends Component
 
     public string $busqueda = '';
 
-    public string $estado = '';
+    public string $periodoLectivoId = '';
 
     public function mount(): void
     {
@@ -33,28 +37,32 @@ class Listado extends Component
         $this->resetPage();
     }
 
-    public function updatedEstado(): void
+    public function updatedPeriodoLectivoId(): void
     {
         $this->resetPage();
     }
 
-    public function render()
+    public function render(CalculadorDeDeuda $calculador)
     {
-        $notificaciones = NotificacionMora::query()
-            ->with('tutor')
-            ->when($this->busqueda, function ($query) {
-                $query->whereHas('tutor', function ($subquery) {
-                    $subquery->where('nombre', 'like', "%{$this->busqueda}%")
-                        ->orWhere('dni', 'like', "%{$this->busqueda}%");
-                });
-            })
-            ->when($this->estado, fn ($query) => $query->where('estado', $this->estado))
-            ->latest('fecha')
-            ->paginate(15);
+        $todos = $calculador->tutoresEnMora(
+            $this->periodoLectivoId ? (int) $this->periodoLectivoId : null,
+            $this->busqueda,
+        );
+
+        $porPagina = 15;
+        $pagina = $this->getPage();
+
+        $morosos = new LengthAwarePaginator(
+            $todos->slice(($pagina - 1) * $porPagina, $porPagina)->values(),
+            $todos->count(),
+            $porPagina,
+            $pagina,
+            ['path' => request()->url(), 'pageName' => 'page'],
+        );
 
         return view('livewire.mora.notificaciones-mora.listado', [
-            'notificaciones' => $notificaciones,
-            'estados' => EstadoNotificacion::cases(),
+            'morosos' => $morosos,
+            'periodos' => PeriodoLectivo::orderByDesc('fecha_inicio')->get(),
         ]);
     }
 }

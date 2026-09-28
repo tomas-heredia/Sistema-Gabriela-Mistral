@@ -6,6 +6,7 @@ use App\Alumnos\Models\Tutor;
 use App\Cobranzas\Models\Cuota;
 use App\Cobranzas\Models\Enums\EstadoCuota;
 use App\Cobranzas\Models\Enums\TipoCuota;
+use Illuminate\Support\Collection;
 
 class CalculadorDeDeuda
 {
@@ -39,5 +40,65 @@ class CalculadorDeDeuda
             'monto_adeudado' => (int) $montoAdeudado,
             'meses_adeudados' => $mesesAdeudados,
         ];
+    }
+
+    /**
+     * Igual que calcular(), pero para todos los tutores a la vez -- una
+     * sola pasada por las cuotas vencidas en vez de una consulta por
+     * tutor. Pensado para la pantalla de morosos: siempre calculado en el
+     * momento (nunca desde una tabla que haya que ir actualizando a mano),
+     * así que apenas se generan cuotas nuevas para un alumno, su tutor
+     * aparece o desaparece solo de esta lista la próxima vez que se mire.
+     *
+     * $busqueda filtra por nombre o DNI del tutor -- se resuelve acá y no en
+     * cada pantalla que lo usa (Listado y el PDF) para que las dos vean
+     * exactamente el mismo criterio, sin arriesgarse a que se desincronicen.
+     *
+     * @return Collection<int, array{tutor: Tutor, monto_adeudado: int, meses_adeudados: int}>
+     */
+    public function tutoresEnMora(?int $periodoLectivoId = null, string $busqueda = ''): Collection
+    {
+        $cuotasEnMora = Cuota::query()
+            ->whereIn('estado', [EstadoCuota::Pendiente, EstadoCuota::Parcial])
+            ->where('fecha_vencimiento', '<', today())
+            ->when($periodoLectivoId, fn ($query) => $query->where('periodo_lectivo_id', $periodoLectivoId))
+            ->with('alumno.tutores')
+            ->get();
+
+        $porTutor = collect();
+
+        foreach ($cuotasEnMora as $cuota) {
+            $saldo = $cuota->monto - $cuota->montoPagado();
+
+            if ($saldo <= 0) {
+                continue;
+            }
+
+            $responsables = $cuota->alumno->tutores->filter(fn (Tutor $tutor) => $tutor->pivot->responsable_pago);
+
+            foreach ($responsables as $tutor) {
+                $fila = $porTutor->get($tutor->id) ?? ['tutor' => $tutor, 'monto_adeudado' => 0, 'meses_adeudados' => 0];
+                $fila['monto_adeudado'] += $saldo;
+
+                if ($cuota->tipo === TipoCuota::Mensualidad) {
+                    $fila['meses_adeudados']++;
+                }
+
+                $porTutor->put($tutor->id, $fila);
+            }
+        }
+
+        $resultado = $porTutor->values()->sortByDesc('monto_adeudado')->values();
+
+        if ($busqueda === '') {
+            return $resultado;
+        }
+
+        $busquedaNormalizada = mb_strtolower($busqueda);
+
+        return $resultado->filter(
+            fn (array $fila) => str_contains(mb_strtolower($fila['tutor']->nombre), $busquedaNormalizada)
+                || str_contains(mb_strtolower($fila['tutor']->dni), $busquedaNormalizada)
+        )->values();
     }
 }
