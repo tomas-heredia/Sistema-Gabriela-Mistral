@@ -50,18 +50,18 @@ class CalculadorDeDeuda
      * así que apenas se generan cuotas nuevas para un alumno, su tutor
      * aparece o desaparece solo de esta lista la próxima vez que se mire.
      *
-     * $busqueda filtra por nombre o DNI del tutor -- se resuelve acá y no en
-     * cada pantalla que lo usa (Listado y el PDF) para que las dos vean
-     * exactamente el mismo criterio, sin arriesgarse a que se desincronicen.
+     * $desde/$hasta filtran por fecha de vencimiento de la cuota (no por
+     * período lectivo). $busqueda filtra por nombre o DNI del tutor.
      *
      * @return Collection<int, array{tutor: Tutor, monto_adeudado: int, meses_adeudados: int}>
      */
-    public function tutoresEnMora(?int $periodoLectivoId = null, string $busqueda = ''): Collection
+    public function tutoresEnMora(?string $desde = null, ?string $hasta = null, string $busqueda = ''): Collection
     {
         $cuotasEnMora = Cuota::query()
             ->whereIn('estado', [EstadoCuota::Pendiente, EstadoCuota::Parcial])
             ->where('fecha_vencimiento', '<', today())
-            ->when($periodoLectivoId, fn ($query) => $query->where('periodo_lectivo_id', $periodoLectivoId))
+            ->when($desde, fn ($query) => $query->where('fecha_vencimiento', '>=', $desde))
+            ->when($hasta, fn ($query) => $query->where('fecha_vencimiento', '<=', $hasta))
             ->with('alumno.tutores')
             ->get();
 

@@ -2,7 +2,6 @@
 
 namespace App\Mora\Livewire\NotificacionesMora;
 
-use App\Core\Models\PeriodoLectivo;
 use App\Mora\Models\NotificacionMora;
 use App\Mora\Services\CalculadorDeDeuda;
 use Illuminate\Pagination\LengthAwarePaginator;
@@ -25,7 +24,9 @@ class Listado extends Component
 
     public string $busqueda = '';
 
-    public string $periodoLectivoId = '';
+    public string $desde = '';
+
+    public string $hasta = '';
 
     public function mount(): void
     {
@@ -37,7 +38,12 @@ class Listado extends Component
         $this->resetPage();
     }
 
-    public function updatedPeriodoLectivoId(): void
+    public function updatedDesde(): void
+    {
+        $this->resetPage();
+    }
+
+    public function updatedHasta(): void
     {
         $this->resetPage();
     }
@@ -45,7 +51,8 @@ class Listado extends Component
     public function render(CalculadorDeDeuda $calculador)
     {
         $todos = $calculador->tutoresEnMora(
-            $this->periodoLectivoId ? (int) $this->periodoLectivoId : null,
+            $this->desde ?: null,
+            $this->hasta ?: null,
             $this->busqueda,
         );
 
@@ -62,7 +69,6 @@ class Listado extends Component
 
         return view('livewire.mora.notificaciones-mora.listado', [
             'morosos' => $morosos,
-            'periodos' => PeriodoLectivo::orderByDesc('fecha_inicio')->get(),
         ]);
     }
 }

@@ -15,7 +15,7 @@ beforeEach(function () {
     $this->seed(RoleSeeder::class);
 });
 
-function tutorEnMora(string $nombre, int $montoVencido, ?PeriodoLectivo $periodo = null): Tutor
+function tutorEnMora(string $nombre, int $montoVencido, ?PeriodoLectivo $periodo = null, ?string $fechaVencimiento = null): Tutor
 {
     $periodo ??= PeriodoLectivo::factory()->activo()->create();
     $tutor = Tutor::factory()->create(['nombre' => $nombre]);
@@ -29,7 +29,7 @@ function tutorEnMora(string $nombre, int $montoVencido, ?PeriodoLectivo $periodo
         'monto_base' => $montoVencido,
         'monto' => $montoVencido,
         'estado' => EstadoCuota::Pendiente,
-        'fecha_vencimiento' => now()->subMonth(),
+        'fecha_vencimiento' => $fechaVencimiento ?? now()->subMonth(),
     ]);
 
     return $tutor;
@@ -74,18 +74,18 @@ test('busca por nombre o dni del tutor', function () {
         ->assertDontSee('Bruno Pérez');
 });
 
-test('filtra por periodo lectivo', function () {
+test('filtra por rango de fechas de vencimiento', function () {
     $cobrador = User::factory()->create()->assignRole('cobrador');
-    $periodoViejo = PeriodoLectivo::factory()->create(['nombre' => '2025']);
-    $periodoActivo = PeriodoLectivo::factory()->activo()->create(['nombre' => '2026']);
+    $periodo = PeriodoLectivo::factory()->activo()->create();
 
-    tutorEnMora('Deuda 2025', 100_000, $periodoViejo);
-    tutorEnMora('Deuda 2026', 100_000, $periodoActivo);
+    tutorEnMora('Deuda Vieja', 100_000, $periodo, now()->subMonths(3)->format('Y-m-d'));
+    tutorEnMora('Deuda Reciente', 100_000, $periodo, now()->subDays(5)->format('Y-m-d'));
 
     Livewire::actingAs($cobrador)->test(Listado::class)
-        ->set('periodoLectivoId', (string) $periodoViejo->id)
-        ->assertSee('Deuda 2025')
-        ->assertDontSee('Deuda 2026');
+        ->set('desde', now()->subMonths(4)->format('Y-m-d'))
+        ->set('hasta', now()->subMonths(2)->format('Y-m-d'))
+        ->assertSee('Deuda Vieja')
+        ->assertDontSee('Deuda Reciente');
 });
 
 test('un profesor no puede montar el componente', function () {

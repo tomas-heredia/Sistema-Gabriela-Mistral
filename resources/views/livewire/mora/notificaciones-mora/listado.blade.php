@@ -15,29 +15,34 @@
                     >
                 </div>
 
-                <div>
-                    <label for="periodoLectivoId" class="sr-only">Filtrar por período</label>
-                    <select id="periodoLectivoId" wire:model.live="periodoLectivoId" class="rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
-                        <option value="">Todos los períodos</option>
-                        @foreach ($periodos as $periodo)
-                            <option value="{{ $periodo->id }}">{{ $periodo->nombre }}</option>
-                        @endforeach
-                    </select>
+                <div class="flex items-center gap-2">
+                    <div>
+                        <label for="desde" class="sr-only">Vencimiento desde</label>
+                        <input
+                            type="date"
+                            id="desde"
+                            wire:model.live="desde"
+                            class="rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                        >
+                    </div>
+                    <span class="text-gray-500 text-sm">a</span>
+                    <div>
+                        <label for="hasta" class="sr-only">Vencimiento hasta</label>
+                        <input
+                            type="date"
+                            id="hasta"
+                            wire:model.live="hasta"
+                            class="rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                        >
+                    </div>
                 </div>
-
-                <a
-                    href="{{ route('mora.pdf', ['busqueda' => $busqueda, 'periodo_lectivo_id' => $periodoLectivoId]) }}"
-                    target="_blank"
-                >
-                    <x-secondary-button type="button">Generar PDF</x-secondary-button>
-                </a>
             </div>
         </div>
 
         <div class="bg-white shadow-sm rounded-lg overflow-hidden">
             @if ($morosos->isEmpty())
                 <p class="text-center text-gray-500 py-12">
-                    @if ($busqueda || $periodoLectivoId)
+                    @if ($busqueda || $desde || $hasta)
                         No encontramos ningún tutor en mora que coincida con los filtros.
                     @else
                         No hay ningún tutor en mora en este momento.
