@@ -12,16 +12,29 @@
         table { width: 100%; border-collapse: collapse; margin-bottom: 8px; }
         th, td { border: 1px solid #ccc; padding: 4px 6px; text-align: left; vertical-align: top; }
         th { background: #f0efe9; font-weight: bold; }
+        .encabezado { width: 100%; border-collapse: collapse; margin-bottom: 4px; }
+        .encabezado td { border: none; padding: 0; vertical-align: top; }
+        .encabezado .logo { width: 90px; text-align: right; }
+        .encabezado .logo img { width: 70px; }
     </style>
 </head>
 <body>
-    <h1>{{ $alumno->nombre }}</h1>
-    <p class="meta">
-        DNI: {{ $alumno->dni ?? '—' }} ·
-        Nivel: {{ $alumno->nivel->value }} ·
-        Grado: {{ $alumno->grado }} ·
-        Período: {{ $periodo->nombre }}
-    </p>
+    <table class="encabezado">
+        <tr>
+            <td>
+                <h1>{{ $alumno->nombre }}</h1>
+                <p class="meta">
+                    DNI: {{ $alumno->dni ?? '—' }} ·
+                    Nivel: {{ $alumno->nivel->value }} ·
+                    Grado: {{ $alumno->grado }} ·
+                    Período: {{ $periodo->nombre }}
+                </p>
+            </td>
+            <td class="logo">
+                <img src="{{ public_path('images/logo.png') }}" alt="">
+            </td>
+        </tr>
+    </table>
 
     @foreach ($trimestres as $trimestre)
         <h2>

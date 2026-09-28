@@ -10,23 +10,35 @@
         th, td { padding: 6px 8px; text-align: left; border-bottom: 1px solid #e5e7eb; }
         th { background: #f3f4f6; }
         .total { margin-top: 12px; font-weight: bold; }
+        .encabezado td { border: none; padding: 0; vertical-align: top; }
+        .encabezado .logo { width: 90px; text-align: right; }
+        .encabezado .logo img { width: 70px; }
     </style>
 </head>
 <body>
-    <h1>Pagos</h1>
-    <p class="meta">
-        @if ($desde || $hasta)
-            Fecha: {{ $desde ? \Illuminate\Support\Carbon::parse($desde)->format('d/m/Y') : 'inicio' }}
-            a {{ $hasta ? \Illuminate\Support\Carbon::parse($hasta)->format('d/m/Y') : 'hoy' }}
-        @endif
-        @if ($periodo)
-            · Período: {{ $periodo->nombre }}
-        @endif
-        @if (! $desde && ! $hasta && ! $periodo)
-            Todos los pagos
-        @endif
-        · Generado el {{ $generadoEl->format('d/m/Y H:i') }}
-    </p>
+    <table class="encabezado">
+        <tr>
+            <td>
+                <h1>Pagos</h1>
+                <p class="meta">
+                    @if ($desde || $hasta)
+                        Fecha: {{ $desde ? \Illuminate\Support\Carbon::parse($desde)->format('d/m/Y') : 'inicio' }}
+                        a {{ $hasta ? \Illuminate\Support\Carbon::parse($hasta)->format('d/m/Y') : 'hoy' }}
+                    @endif
+                    @if ($periodo)
+                        · Período: {{ $periodo->nombre }}
+                    @endif
+                    @if (! $desde && ! $hasta && ! $periodo)
+                        Todos los pagos
+                    @endif
+                    · Generado el {{ $generadoEl->format('d/m/Y H:i') }}
+                </p>
+            </td>
+            <td class="logo">
+                <img src="{{ public_path('images/logo.png') }}" alt="">
+            </td>
+        </tr>
+    </table>
 
     <table>
         <thead>
