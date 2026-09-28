@@ -111,6 +111,20 @@ test('el dni es obligatorio para crear un alumno', function () {
     expect(Alumno::where('nombre', 'Ana Pérez')->exists())->toBeFalse();
 });
 
+test('el dni de un alumno solo acepta digitos', function () {
+    $cobrador = User::factory()->create()->assignRole('cobrador');
+
+    Livewire::actingAs($cobrador)->test(Formulario::class)
+        ->set('nombre', 'Ana Pérez')
+        ->set('dni', '30.111.222')
+        ->set('fecha_nacimiento', '2015-03-10')
+        ->set('nivel', Nivel::Primario->value)
+        ->set('grado', '4to grado')
+        ->set('turno', Turno::Manana->value)
+        ->call('guardar')
+        ->assertHasErrors(['dni']);
+});
+
 test('editar un alumno precarga sus datos', function () {
     $cobrador = User::factory()->create()->assignRole('cobrador');
     $alumno = Alumno::factory()->primario()->create(['nombre' => 'Ana Pérez']);

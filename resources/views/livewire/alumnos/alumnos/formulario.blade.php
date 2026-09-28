@@ -14,7 +14,7 @@
 
                 <div>
                     <x-input-label for="dni" value="DNI" />
-                    <x-text-input id="dni" type="text" class="mt-1 block w-full" wire:model="dni" />
+                    <x-numeric-input id="dni" type="text" class="mt-1 block w-full" wire:model="dni" />
                     <x-input-error :messages="$errors->get('dni')" class="mt-1" />
                 </div>
 
@@ -194,7 +194,7 @@
                     <div class="flex items-end gap-3">
                         <div class="flex-1">
                             <x-input-label for="dniTutorBuscado" value="DNI del tutor" />
-                            <x-text-input id="dniTutorBuscado" type="text" class="mt-1 block w-full" wire:model="dniTutorBuscado" />
+                            <x-numeric-input id="dniTutorBuscado" type="text" class="mt-1 block w-full" wire:model="dniTutorBuscado" />
                         </div>
                         <x-secondary-button type="button" wire:click="buscarTutor">Buscar</x-secondary-button>
                     </div>
@@ -237,7 +237,7 @@
 
                                 <div>
                                     <x-input-label for="dniTutorACrear" value="DNI" />
-                                    <x-text-input id="dniTutorACrear" type="text" class="mt-1 block w-full" wire:model="dniTutorACrear" />
+                                    <x-numeric-input id="dniTutorACrear" type="text" class="mt-1 block w-full" wire:model="dniTutorACrear" />
                                     <x-input-error :messages="$errors->get('dniTutorACrear')" class="mt-1" />
                                 </div>
 
@@ -250,7 +250,7 @@
                                 <div class="grid grid-cols-2 gap-4">
                                     <div>
                                         <x-input-label for="telefonoTutorACrear" value="Teléfono" />
-                                        <x-text-input id="telefonoTutorACrear" type="text" class="mt-1 block w-full" wire:model="telefonoTutorACrear" />
+                                        <x-numeric-input id="telefonoTutorACrear" type="text" class="mt-1 block w-full" wire:model="telefonoTutorACrear" />
                                         <x-input-error :messages="$errors->get('telefonoTutorACrear')" class="mt-1" />
                                     </div>
 

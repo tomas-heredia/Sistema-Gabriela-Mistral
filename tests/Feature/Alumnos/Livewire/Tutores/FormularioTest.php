@@ -57,6 +57,19 @@ test('el formulario rechaza un dni duplicado', function () {
         ->assertHasErrors(['dni']);
 });
 
+test('dni y telefono solo aceptan digitos', function () {
+    $cobrador = User::factory()->create()->assignRole('cobrador');
+
+    Livewire::actingAs($cobrador)->test(Formulario::class)
+        ->set('nombre', 'Marta Gómez')
+        ->set('dni', '30-111-222')
+        ->set('domicilio', 'San Martín 123')
+        ->set('telefono', '3834-555555')
+        ->set('correo', 'marta@example.com')
+        ->call('guardar')
+        ->assertHasErrors(['dni', 'telefono']);
+});
+
 test('editar un tutor precarga sus datos', function () {
     $cobrador = User::factory()->create()->assignRole('cobrador');
     $tutor = Tutor::factory()->create(['nombre' => 'Marta Gómez']);

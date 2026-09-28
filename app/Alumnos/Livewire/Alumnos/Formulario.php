@@ -134,7 +134,7 @@ class Formulario extends Component
     {
         return [
             'nombre' => ['required', 'string', 'max:255'],
-            'dni' => ['required', 'string', 'max:20', Rule::unique('alumnos', 'dni')->ignore($this->alumno?->id)],
+            'dni' => ['required', 'digits_between:1,20', Rule::unique('alumnos', 'dni')->ignore($this->alumno?->id)],
             'fecha_nacimiento' => ['required', 'date'],
             'nivel' => ['required', Rule::enum(Nivel::class)],
             'grado' => [
@@ -288,9 +288,9 @@ class Formulario extends Component
 
         $datos = $this->validate([
             'nombreTutorACrear' => ['required', 'string', 'max:255'],
-            'dniTutorACrear' => ['required', 'string', 'max:20', Rule::unique('tutores', 'dni')],
+            'dniTutorACrear' => ['required', 'digits_between:1,20', Rule::unique('tutores', 'dni')],
             'domicilioTutorACrear' => ['required', 'string', 'max:255'],
-            'telefonoTutorACrear' => ['required', 'string', 'max:30'],
+            'telefonoTutorACrear' => ['required', 'digits_between:1,30'],
             'correoTutorACrear' => ['required', 'email', 'max:255'],
         ], attributes: [
             'nombreTutorACrear' => 'nombre',

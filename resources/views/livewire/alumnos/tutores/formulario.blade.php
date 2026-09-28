@@ -12,7 +12,7 @@
 
         <div>
             <x-input-label for="dni" value="DNI" />
-            <x-text-input id="dni" type="text" class="mt-1 block w-full" wire:model="dni" />
+            <x-numeric-input id="dni" type="text" class="mt-1 block w-full" wire:model="dni" />
             <x-input-error :messages="$errors->get('dni')" class="mt-1" />
         </div>
 
@@ -24,7 +24,7 @@
 
         <div>
             <x-input-label for="telefono" value="Teléfono" />
-            <x-text-input id="telefono" type="text" class="mt-1 block w-full" wire:model="telefono" />
+            <x-numeric-input id="telefono" type="text" class="mt-1 block w-full" wire:model="telefono" />
             <x-input-error :messages="$errors->get('telefono')" class="mt-1" />
         </div>
 

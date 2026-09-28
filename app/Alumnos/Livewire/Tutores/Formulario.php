@@ -42,9 +42,9 @@ class Formulario extends Component
     {
         return [
             'nombre' => ['required', 'string', 'max:255'],
-            'dni' => ['required', 'string', 'max:20', Rule::unique('tutores', 'dni')->ignore($this->tutor?->id)],
+            'dni' => ['required', 'digits_between:1,20', Rule::unique('tutores', 'dni')->ignore($this->tutor?->id)],
             'domicilio' => ['required', 'string', 'max:255'],
-            'telefono' => ['required', 'string', 'max:30'],
+            'telefono' => ['required', 'digits_between:1,30'],
             'correo' => ['required', 'email', 'max:255'],
         ];
     }

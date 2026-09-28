@@ -18,7 +18,7 @@ class TutorFactory extends Factory
             'nombre' => fake()->name(),
             'dni' => fake()->unique()->numerify('########'),
             'domicilio' => fake()->address(),
-            'telefono' => fake()->phoneNumber(),
+            'telefono' => fake()->numerify('##########'),
             'correo' => fake()->safeEmail(),
         ];
     }
