@@ -12,14 +12,17 @@ test('la factory de alumno crea un registro valido', function () {
         ->and($alumno->nivel)->toBeInstanceOf(Nivel::class);
 });
 
-test('un alumno secundario tiene anio_secundaria, uno primario no', function () {
+test('un alumno secundario tiene anio_secundaria, uno primario o inicial no', function () {
     $secundario = Alumno::factory()->secundario()->create();
     $primario = Alumno::factory()->primario()->create();
+    $inicial = Alumno::factory()->inicial()->create();
 
     expect($secundario->nivel)->toBe(Nivel::Secundario)
         ->and($secundario->anio_secundaria)->not->toBeNull()
         ->and($primario->nivel)->toBe(Nivel::Primario)
-        ->and($primario->anio_secundaria)->toBeNull();
+        ->and($primario->anio_secundaria)->toBeNull()
+        ->and($inicial->nivel)->toBe(Nivel::Inicial)
+        ->and($inicial->anio_secundaria)->toBeNull();
 });
 
 test('un alumno puede tener mas de un tutor, con vinculo y responsable_pago propios', function () {

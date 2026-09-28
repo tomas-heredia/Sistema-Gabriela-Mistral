@@ -24,7 +24,7 @@ class AlumnoFactory extends Factory
             $grado = "{$anioSecundaria}º año";
         } else {
             $anioSecundaria = null;
-            $grado = fake()->randomElement(Formulario::GRADOS_PRIMARIO);
+            $grado = fake()->randomElement($nivel === Nivel::Inicial ? Formulario::GRADOS_INICIAL : Formulario::GRADOS_PRIMARIO);
         }
 
         return [
@@ -59,6 +59,15 @@ class AlumnoFactory extends Factory
         return $this->state(fn (array $attributes) => [
             'nivel' => Nivel::Primario,
             'grado' => fake()->randomElement(Formulario::GRADOS_PRIMARIO),
+            'anio_secundaria' => null,
+        ]);
+    }
+
+    public function inicial(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'nivel' => Nivel::Inicial,
+            'grado' => fake()->randomElement(Formulario::GRADOS_INICIAL),
             'anio_secundaria' => null,
         ]);
     }

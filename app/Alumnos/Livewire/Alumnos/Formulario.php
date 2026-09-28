@@ -38,6 +38,13 @@ class Formulario extends Component
         '1er grado', '2do grado', '3er grado', '4to grado', '5to grado', '6to grado',
     ];
 
+    /**
+     * Nivel inicial (jardín): solo para control administrativo del alumno y
+     * la mora de su tutor -- nunca se les carga libreta (ver
+     * generarBoletin() y la vista, que ocultan esa sección para este nivel).
+     */
+    public const GRADOS_INICIAL = ['Sala de 3', 'Sala de 4', 'Sala de 5'];
+
     public ?Alumno $alumno = null;
 
     public string $nombre = '';
@@ -134,6 +141,7 @@ class Formulario extends Component
                 'required',
                 'string',
                 Rule::when($this->nivel === Nivel::Primario->value, [Rule::in(self::GRADOS_PRIMARIO)]),
+                Rule::when($this->nivel === Nivel::Inicial->value, [Rule::in(self::GRADOS_INICIAL)]),
             ],
             'anio_secundaria' => ['nullable', 'integer', 'min:1', 'max:6', 'required_if:nivel,'.Nivel::Secundario->value],
             'division' => ['nullable', 'string', 'max:10'],
@@ -407,6 +415,12 @@ class Formulario extends Component
     public function generarBoletin(CreadorDeBoletines $creador): void
     {
         $this->authorize('create', Boletin::class);
+
+        // Nivel inicial nunca tiene libreta -- no hay plantilla para ese
+        // nivel ni tiene sentido que la tenga (ver GRADOS_INICIAL).
+        if ($this->alumno->nivel === Nivel::Inicial) {
+            return;
+        }
 
         $periodo = PeriodoLectivo::where('activo', true)->first();
 

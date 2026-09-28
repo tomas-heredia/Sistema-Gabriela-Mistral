@@ -46,6 +46,19 @@
                     </div>
                 </div>
 
+                @if ($nivel === \App\Alumnos\Models\Enums\Nivel::Inicial->value)
+                    <div>
+                        <x-input-label for="grado" value="Sala" />
+                        <select id="grado" wire:model="grado" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                            <option value="">Seleccioná una sala…</option>
+                            @foreach (self::GRADOS_INICIAL as $opcion)
+                                <option value="{{ $opcion }}">{{ $opcion }}</option>
+                            @endforeach
+                        </select>
+                        <x-input-error :messages="$errors->get('grado')" class="mt-1" />
+                    </div>
+                @endif
+
                 @if ($nivel === \App\Alumnos\Models\Enums\Nivel::Primario->value)
                     <div>
                         <x-input-label for="grado" value="Grado" />
@@ -371,6 +384,7 @@
             </div>
         </div>
 
+        @unless ($alumno->nivel === \App\Alumnos\Models\Enums\Nivel::Inicial)
         <div>
             <h2 class="text-lg font-semibold text-gray-900 mb-4">Libreta</h2>
 
@@ -424,5 +438,6 @@
                 @endif
             </div>
         </div>
+        @endunless
     @endif
 </div>

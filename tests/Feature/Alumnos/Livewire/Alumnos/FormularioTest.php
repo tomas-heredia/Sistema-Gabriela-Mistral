@@ -348,6 +348,54 @@ test('generar boletin crea el boletin con sus 3 trimestres pendientes y ya no of
     $component->assertDontSee('Generar libreta del período');
 });
 
+test('crear un alumno de nivel inicial guarda su sala', function () {
+    $cobrador = User::factory()->create()->assignRole('cobrador');
+    Tutor::factory()->create(['dni' => '30111222']);
+
+    Livewire::actingAs($cobrador)->test(Formulario::class)
+        ->set('nombre', 'Mora Suárez')
+        ->set('dni', '40444555')
+        ->set('fecha_nacimiento', '2022-06-01')
+        ->set('nivel', Nivel::Inicial->value)
+        ->set('grado', 'Sala de 4')
+        ->set('turno', Turno::Manana->value)
+        ->set('dniTutorBuscado', '30111222')
+        ->call('buscarTutor')
+        ->call('vincularTutor')
+        ->call('guardar');
+
+    $alumno = Alumno::where('nombre', 'Mora Suárez')->firstOrFail();
+    expect($alumno->nivel)->toBe(Nivel::Inicial)
+        ->and($alumno->grado)->toBe('Sala de 4');
+});
+
+test('rechaza una sala de inicial que no esta en la lista permitida', function () {
+    $cobrador = User::factory()->create()->assignRole('cobrador');
+
+    Livewire::actingAs($cobrador)->test(Formulario::class)
+        ->set('nombre', 'Mora Suárez')
+        ->set('dni', '40444555')
+        ->set('fecha_nacimiento', '2022-06-01')
+        ->set('nivel', Nivel::Inicial->value)
+        ->set('grado', 'Sala de 2')
+        ->set('turno', Turno::Manana->value)
+        ->call('guardar')
+        ->assertHasErrors(['grado']);
+});
+
+test('un alumno de nivel inicial no ofrece la seccion de libreta y generarBoletin no crea nada', function () {
+    $cobrador = User::factory()->create()->assignRole('cobrador');
+    PeriodoLectivo::factory()->activo()->create();
+    $alumno = Alumno::factory()->inicial()->create();
+
+    Livewire::actingAs($cobrador)->test(Formulario::class, ['alumno' => $alumno])
+        ->assertDontSee('Libreta')
+        ->assertDontSee('Generar libreta del período')
+        ->call('generarBoletin');
+
+    expect(Boletin::where('alumno_id', $alumno->id)->exists())->toBeFalse();
+});
+
 test('generar boletin sin plantilla activa muestra un mensaje claro, no un error', function () {
     $cobrador = User::factory()->create()->assignRole('cobrador');
     PeriodoLectivo::factory()->activo()->create();

@@ -12,7 +12,7 @@ beforeEach(function () {
     $this->seed(RoleSeeder::class);
 });
 
-test('crear un periodo lo guarda inactivo, redirige al listado y crea sus 4 aranceles', function () {
+test('crear un periodo lo guarda inactivo, redirige al listado y crea sus 6 aranceles', function () {
     $administrador = User::factory()->create()->assignRole('administrador');
 
     Livewire::actingAs($administrador)->test(Formulario::class)
@@ -20,6 +20,8 @@ test('crear un periodo lo guarda inactivo, redirige al listado y crea sus 4 aran
         ->set('fecha_inicio', '2027-03-01')
         ->set('fecha_fin', '2027-12-15')
         ->set('descuento_hermanos_pct', '10')
+        ->set('montos.inicial_matricula', '1300')
+        ->set('montos.inicial_mensualidad', '900')
         ->set('montos.primario_matricula', '1500')
         ->set('montos.primario_mensualidad', '1000')
         ->set('montos.secundario_matricula', '1800')
@@ -31,16 +33,22 @@ test('crear un periodo lo guarda inactivo, redirige al listado y crea sus 4 aran
     expect($periodo)->not->toBeNull()
         ->and($periodo->activo)->toBeFalse();
 
-    expect(Arancel::where('periodo_lectivo_id', $periodo->id)->count())->toBe(4);
+    expect(Arancel::where('periodo_lectivo_id', $periodo->id)->count())->toBe(6);
 
     $matriculaPrimario = Arancel::where('periodo_lectivo_id', $periodo->id)
         ->where('nivel', 'primario')->where('tipo', TipoCuota::Matricula)->first();
     expect($matriculaPrimario->monto)->toBe(150_000);
+
+    $matriculaInicial = Arancel::where('periodo_lectivo_id', $periodo->id)
+        ->where('nivel', 'inicial')->where('tipo', TipoCuota::Matricula)->first();
+    expect($matriculaInicial->monto)->toBe(130_000);
 });
 
 test('editar un periodo existente precarga sus datos y sus aranceles, y actualiza los montos', function () {
     $administrador = User::factory()->create()->assignRole('administrador');
     $periodo = PeriodoLectivo::factory()->create(['nombre' => '2026']);
+    Arancel::factory()->matricula()->create(['periodo_lectivo_id' => $periodo->id, 'nivel' => 'inicial']);
+    Arancel::factory()->mensualidad()->create(['periodo_lectivo_id' => $periodo->id, 'nivel' => 'inicial']);
     Arancel::factory()->matricula()->create(['periodo_lectivo_id' => $periodo->id, 'nivel' => 'primario']);
     Arancel::factory()->mensualidad()->create(['periodo_lectivo_id' => $periodo->id, 'nivel' => 'primario']);
     Arancel::factory()->matricula()->create(['periodo_lectivo_id' => $periodo->id, 'nivel' => 'secundario']);
@@ -56,20 +64,22 @@ test('editar un periodo existente precarga sus datos y sus aranceles, y actualiz
         ->assertRedirect(route('periodos.index'));
 
     expect($periodo->fresh()->descuento_hermanos_pct)->toBe('20.00');
-    expect(Arancel::where('periodo_lectivo_id', $periodo->id)->count())->toBe(4);
+    expect(Arancel::where('periodo_lectivo_id', $periodo->id)->count())->toBe(6);
 
     $mensualidadPrimario = Arancel::where('periodo_lectivo_id', $periodo->id)
         ->where('nivel', 'primario')->where('tipo', TipoCuota::Mensualidad)->first();
     expect($mensualidadPrimario->monto)->toBe(110_000);
 });
 
-test('los 4 aranceles son obligatorios', function () {
+test('todos los aranceles son obligatorios', function () {
     $administrador = User::factory()->create()->assignRole('administrador');
 
     Livewire::actingAs($administrador)->test(Formulario::class)
         ->set('nombre', '2027')
         ->set('fecha_inicio', '2027-03-01')
         ->set('fecha_fin', '2027-12-15')
+        ->set('montos.inicial_matricula', '1300')
+        ->set('montos.inicial_mensualidad', '900')
         ->set('montos.primario_matricula', '1500')
         ->set('montos.primario_mensualidad', '1000')
         ->set('montos.secundario_matricula', '')
@@ -87,6 +97,8 @@ test('la fecha de fin no puede ser anterior a la de inicio', function () {
         ->set('nombre', '2027')
         ->set('fecha_inicio', '2027-03-01')
         ->set('fecha_fin', '2027-01-01')
+        ->set('montos.inicial_matricula', '1300')
+        ->set('montos.inicial_mensualidad', '900')
         ->set('montos.primario_matricula', '1500')
         ->set('montos.primario_mensualidad', '1000')
         ->set('montos.secundario_matricula', '1800')
@@ -103,6 +115,8 @@ test('el descuento por hermanos tiene que estar entre 0 y 100', function () {
         ->set('fecha_inicio', '2027-03-01')
         ->set('fecha_fin', '2027-12-15')
         ->set('descuento_hermanos_pct', '150')
+        ->set('montos.inicial_matricula', '1300')
+        ->set('montos.inicial_mensualidad', '900')
         ->set('montos.primario_matricula', '1500')
         ->set('montos.primario_mensualidad', '1000')
         ->set('montos.secundario_matricula', '1800')
