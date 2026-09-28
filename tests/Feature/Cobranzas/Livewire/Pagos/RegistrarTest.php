@@ -114,12 +114,11 @@ test('pago exacto de una cuota la deja pagada', function () {
         ->set("montos.{$cuota->id}", '1000.00')
         ->set('medio_pago', MedioPago::Efectivo->value)
         ->set('fecha', now()->format('Y-m-d'))
-        ->set('numero_recibo', 'R-000001')
         ->call('guardar')
         ->assertHasNoErrors();
 
     expect($cuota->fresh()->estado)->toBe(EstadoCuota::Pagada);
-    expect(Pago::where('numero_recibo', 'R-000001')->first()->monto)->toBe(100_000);
+    expect(Pago::where('tutor_id', $this->tutor->id)->first()->monto)->toBe(100_000);
 });
 
 test('pago parcial deja la cuota en estado parcial con el saldo correcto', function () {
@@ -142,7 +141,6 @@ test('pago parcial deja la cuota en estado parcial con el saldo correcto', funct
         ->set("montos.{$cuota->id}", '400.00')
         ->set('medio_pago', MedioPago::Efectivo->value)
         ->set('fecha', now()->format('Y-m-d'))
-        ->set('numero_recibo', 'R-000002')
         ->call('guardar')
         ->assertHasNoErrors();
 
@@ -185,17 +183,65 @@ test('un pago que tilda dos cuotas de meses distintos aplica ambas', function ()
 
     $componente->set('medio_pago', MedioPago::Transferencia->value)
         ->set('fecha', now()->format('Y-m-d'))
-        ->set('numero_recibo', 'R-000003')
         ->call('guardar')
         ->assertHasNoErrors();
 
     expect($cuotaMarzo->fresh()->estado)->toBe(EstadoCuota::Pagada);
     expect($cuotaAbril->fresh()->estado)->toBe(EstadoCuota::Pagada);
-    expect(Pago::where('numero_recibo', 'R-000003')->first()->monto)->toBe(200_000);
+    expect(Pago::where('tutor_id', $this->tutor->id)->first()->monto)->toBe(200_000);
 });
 
 test('profesor no puede montar el componente', function () {
     $profesor = User::factory()->create()->assignRole('profesor');
 
     Livewire::actingAs($profesor)->test(Registrar::class)->assertForbidden();
+});
+
+test('el numero de recibo lo asigna el sistema, correlativo y con ceros a la izquierda', function () {
+    $cobrador = User::factory()->create()->assignRole('cobrador');
+    $alumno = Alumno::factory()->primario()->create();
+    vincularAlumnoATutor($this->tutor, $alumno);
+
+    $cuota1 = Cuota::factory()->create([
+        'alumno_id' => $alumno->id,
+        'periodo_lectivo_id' => $this->periodo->id,
+        'mes' => 3,
+        'monto_base' => 100_000,
+        'monto' => 100_000,
+        'estado' => EstadoCuota::Pendiente,
+    ]);
+    $cuota2 = Cuota::factory()->create([
+        'alumno_id' => $alumno->id,
+        'periodo_lectivo_id' => $this->periodo->id,
+        'mes' => 4,
+        'monto_base' => 100_000,
+        'monto' => 100_000,
+        'estado' => EstadoCuota::Pendiente,
+    ]);
+
+    Livewire::actingAs($cobrador)->test(Registrar::class)
+        ->set('busquedaTutor', $this->tutor->dni)
+        ->call('buscarTutor')
+        ->set("cuotasSeleccionadas.{$cuota1->id}", true)
+        ->set("montos.{$cuota1->id}", '1000.00')
+        ->set('medio_pago', MedioPago::Efectivo->value)
+        ->set('fecha', now()->format('Y-m-d'))
+        ->call('guardar')
+        ->assertHasNoErrors();
+
+    Livewire::actingAs($cobrador)->test(Registrar::class)
+        ->set('busquedaTutor', $this->tutor->dni)
+        ->call('buscarTutor')
+        ->set("cuotasSeleccionadas.{$cuota2->id}", true)
+        ->set("montos.{$cuota2->id}", '1000.00')
+        ->set('medio_pago', MedioPago::Efectivo->value)
+        ->set('fecha', now()->format('Y-m-d'))
+        ->call('guardar')
+        ->assertHasNoErrors();
+
+    $numeros = Pago::where('tutor_id', $this->tutor->id)->orderBy('id')->pluck('numero_recibo');
+
+    expect($numeros)->toHaveCount(2)
+        ->and($numeros[1])->toBe(str_pad((string) ((int) $numeros[0] + 1), 6, '0', STR_PAD_LEFT))
+        ->and(strlen($numeros[0]))->toBe(6);
 });

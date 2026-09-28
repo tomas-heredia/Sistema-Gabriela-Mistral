@@ -51,8 +51,6 @@ class Registrar extends Component
 
     public string $fecha = '';
 
-    public string $numero_recibo = '';
-
     public ?string $observaciones = null;
 
     public function mount(): void
@@ -134,7 +132,6 @@ class Registrar extends Component
         $this->validate([
             'medio_pago' => ['required', Rule::enum(MedioPago::class)],
             'fecha' => ['required', 'date'],
-            'numero_recibo' => ['required', 'string', 'max:255', 'unique:pagos,numero_recibo'],
         ]);
 
         $asignaciones = [];
@@ -157,14 +154,18 @@ class Registrar extends Component
             return;
         }
 
+        $numeroRecibo = null;
+
         try {
-            DB::transaction(function () use ($asignaciones, $asignador) {
+            DB::transaction(function () use ($asignaciones, $asignador, &$numeroRecibo) {
+                $numeroRecibo = $this->siguienteNumeroRecibo();
+
                 $pago = Pago::create([
                     'tutor_id' => $this->tutorEncontrado->id,
                     'monto' => array_sum($asignaciones),
                     'medio_pago' => $this->medio_pago,
                     'fecha' => $this->fecha,
-                    'numero_recibo' => $this->numero_recibo,
+                    'numero_recibo' => $numeroRecibo,
                     'cobrador_id' => auth()->id(),
                     'observaciones' => $this->observaciones,
                 ]);
@@ -177,8 +178,23 @@ class Registrar extends Component
             return;
         }
 
-        session()->flash('mensaje', 'Pago registrado correctamente.');
+        session()->flash('mensaje', "Pago registrado correctamente. Recibo N° {$numeroRecibo}.");
         $this->redirectRoute('pagos.index', navigate: true);
+    }
+
+    /**
+     * El número de recibo ya no lo carga el cobrador: lo da el sistema,
+     * correlativo con ceros a la izquierda (000001, 000002…). Se calcula
+     * con un lock sobre la tabla dentro de la misma transacción del pago,
+     * para que dos registros simultáneos nunca terminen con el mismo
+     * número (el CAST ignora recibos viejos con formato no numérico,
+     * los trata como 0 en vez de romper).
+     */
+    private function siguienteNumeroRecibo(): string
+    {
+        $maximo = (int) (Pago::query()->lockForUpdate()->max(DB::raw('CAST(numero_recibo AS UNSIGNED)')) ?? 0);
+
+        return str_pad((string) ($maximo + 1), 6, '0', STR_PAD_LEFT);
     }
 
     /**

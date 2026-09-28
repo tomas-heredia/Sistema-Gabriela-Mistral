@@ -105,12 +105,6 @@
                 </div>
 
                 <div>
-                    <x-input-label for="numero_recibo" value="Número de recibo" />
-                    <x-text-input id="numero_recibo" type="text" class="mt-1 block w-full" wire:model="numero_recibo" />
-                    <x-input-error :messages="$errors->get('numero_recibo')" class="mt-1" />
-                </div>
-
-                <div>
                     <x-input-label for="observaciones" value="Observaciones (opcional)" />
                     <textarea id="observaciones" wire:model="observaciones" rows="2" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"></textarea>
                 </div>
