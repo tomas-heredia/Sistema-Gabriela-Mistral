@@ -38,12 +38,18 @@
                 </select>
             </div>
 
-            <a
-                href="{{ route('pagos.pdf', ['desde' => $pdfDesde, 'hasta' => $pdfHasta, 'periodo_lectivo_id' => $pdfPeriodoLectivoId]) }}"
-                target="_blank"
-            >
-                <x-secondary-button type="button">Generar PDF</x-secondary-button>
-            </a>
+            @if ($pagos->isEmpty())
+                <x-secondary-button type="button" disabled title="No hay pagos en la tabla para generar el PDF.">
+                    Generar PDF
+                </x-secondary-button>
+            @else
+                <a
+                    href="{{ route('pagos.pdf', ['desde' => $pdfDesde, 'hasta' => $pdfHasta, 'periodo_lectivo_id' => $pdfPeriodoLectivoId]) }}"
+                    target="_blank"
+                >
+                    <x-secondary-button type="button">Generar PDF</x-secondary-button>
+                </a>
+            @endif
         </div>
 
         <div class="bg-white shadow-sm rounded-lg overflow-hidden">

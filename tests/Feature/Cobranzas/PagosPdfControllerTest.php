@@ -59,3 +59,13 @@ test('un profesor no puede generar el pdf de pagos', function () {
 
     $this->actingAs($profesor)->get(route('pagos.pdf'))->assertForbidden();
 });
+
+test('sin pagos que coincidan con los filtros, redirige con un error en vez de generar un pdf vacio', function () {
+    $cobrador = User::factory()->create()->assignRole('cobrador');
+    pagoConAlumno('000001', 100_000, '2026-03-10');
+
+    $response = $this->actingAs($cobrador)->get(route('pagos.pdf', ['desde' => '2020-01-01', 'hasta' => '2020-01-31']));
+
+    $response->assertRedirect(route('pagos.index'));
+    expect(session('error'))->not->toBeNull();
+});

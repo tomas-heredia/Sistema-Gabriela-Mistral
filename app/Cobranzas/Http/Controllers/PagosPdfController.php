@@ -52,6 +52,10 @@ class PagosPdfController extends Controller
             ->orderBy('pagos.numero_recibo')
             ->get();
 
+        if ($filas->isEmpty()) {
+            return redirect()->route('pagos.index')->with('error', 'No hay pagos para generar el PDF con esos filtros.');
+        }
+
         $periodo = $periodoLectivoId ? PeriodoLectivo::find($periodoLectivoId) : null;
 
         $pdf = Pdf::loadView('pagos.pdf', [

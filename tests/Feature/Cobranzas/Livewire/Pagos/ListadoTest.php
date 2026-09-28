@@ -79,6 +79,23 @@ test('la busqueda encuentra un pago por el nombre del alumno del tutor', functio
         ->assertDontSee($otroPago->numero_recibo);
 });
 
+test('sin pagos, el boton de generar pdf aparece deshabilitado', function () {
+    $cobrador = User::factory()->create()->assignRole('cobrador');
+
+    Livewire::actingAs($cobrador)->test(Listado::class)
+        ->assertSeeHtml('No hay pagos en la tabla para generar el PDF.')
+        ->assertDontSeeHtml(route('pagos.pdf'));
+});
+
+test('con pagos en la tabla, el boton de generar pdf esta habilitado', function () {
+    $cobrador = User::factory()->create()->assignRole('cobrador');
+    Pago::factory()->create();
+
+    Livewire::actingAs($cobrador)->test(Listado::class)
+        ->assertSeeHtml(route('pagos.pdf'))
+        ->assertDontSeeHtml('No hay pagos en la tabla para generar el PDF.');
+});
+
 test('profesor no puede montar el componente', function () {
     $profesor = User::factory()->create()->assignRole('profesor');
 
