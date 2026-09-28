@@ -1,6 +1,6 @@
 <div>
     <div class="max-w-6xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
-        <div class="flex items-center justify-between gap-4 mb-6">
+        <div class="flex flex-wrap items-center justify-between gap-4 mb-6">
             <div class="w-full max-w-sm">
                 <label for="busqueda" class="sr-only">Buscar por número de recibo o tutor</label>
                 <input
@@ -14,6 +14,35 @@
 
             <a href="{{ route('pagos.registrar') }}" wire:navigate>
                 <x-primary-button>Registrar pago</x-primary-button>
+            </a>
+        </div>
+
+        <div class="bg-white shadow-sm rounded-lg p-4 mb-6 flex flex-wrap items-end gap-3">
+            <div>
+                <x-input-label for="pdfDesde" value="Desde" />
+                <input type="date" id="pdfDesde" wire:model.live="pdfDesde" class="mt-1 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+            </div>
+
+            <div>
+                <x-input-label for="pdfHasta" value="Hasta" />
+                <input type="date" id="pdfHasta" wire:model.live="pdfHasta" class="mt-1 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+            </div>
+
+            <div>
+                <x-input-label for="pdfPeriodoLectivoId" value="Período" />
+                <select id="pdfPeriodoLectivoId" wire:model.live="pdfPeriodoLectivoId" class="mt-1 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                    <option value="">Todos los períodos</option>
+                    @foreach ($periodos as $periodo)
+                        <option value="{{ $periodo->id }}">{{ $periodo->nombre }}</option>
+                    @endforeach
+                </select>
+            </div>
+
+            <a
+                href="{{ route('pagos.pdf', ['desde' => $pdfDesde, 'hasta' => $pdfHasta, 'periodo_lectivo_id' => $pdfPeriodoLectivoId]) }}"
+                target="_blank"
+            >
+                <x-secondary-button type="button">Generar PDF</x-secondary-button>
             </a>
         </div>
 

@@ -3,6 +3,7 @@
 namespace App\Cobranzas\Livewire\Pagos;
 
 use App\Cobranzas\Models\Pago;
+use App\Core\Models\PeriodoLectivo;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
 use Livewire\WithPagination;
@@ -17,6 +18,17 @@ class Listado extends Component
     public ?int $pagoAAnularId = null;
 
     public string $motivoAnulacion = '';
+
+    /**
+     * Filtros del PDF -- independientes de $busqueda (que filtra la tabla
+     * en pantalla). Se pueden combinar fechas y período, o dejar todo vacío
+     * para incluir todos los pagos.
+     */
+    public string $pdfDesde = '';
+
+    public string $pdfHasta = '';
+
+    public string $pdfPeriodoLectivoId = '';
 
     public function mount(): void
     {
@@ -68,6 +80,9 @@ class Listado extends Component
             ->latest('fecha')
             ->paginate(15);
 
-        return view('livewire.cobranzas.pagos.listado', ['pagos' => $pagos]);
+        return view('livewire.cobranzas.pagos.listado', [
+            'pagos' => $pagos,
+            'periodos' => PeriodoLectivo::orderByDesc('fecha_inicio')->get(),
+        ]);
     }
 }
