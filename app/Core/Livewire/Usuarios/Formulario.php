@@ -14,7 +14,7 @@ class Formulario extends Component
         'administrador' => 'Administrador',
         'cobrador' => 'Cobrador',
         'profesor' => 'Profesor',
-        'docente' => 'Docente (solo carga de libretas)',
+        'administra_alumnos' => 'Administra alumnos (solo carga de libretas)',
     ];
 
     public ?User $usuario = null;

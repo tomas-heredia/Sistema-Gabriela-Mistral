@@ -10,11 +10,11 @@ class RoleSeeder extends Seeder
     /**
      * Roles definidos en CLAUDE.md: administrador (acceso total),
      * cobrador (cobranzas y avisos), profesor (solo sus propios recibos de
-     * sueldo), docente (solo cargar y enviar libretas).
+     * sueldo), administra_alumnos (solo cargar y enviar libretas).
      */
     public function run(): void
     {
-        foreach (['administrador', 'cobrador', 'profesor', 'docente'] as $role) {
+        foreach (['administrador', 'cobrador', 'profesor', 'administra_alumnos'] as $role) {
             Role::firstOrCreate(['name' => $role, 'guard_name' => 'web']);
         }
     }

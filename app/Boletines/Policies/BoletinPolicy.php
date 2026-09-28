@@ -9,12 +9,12 @@ class BoletinPolicy
 {
     public function viewAny(User $user): bool
     {
-        return $user->hasAnyRole(['administrador', 'cobrador', 'docente']);
+        return $user->hasAnyRole(['administrador', 'cobrador', 'administra_alumnos']);
     }
 
     public function view(User $user, Boletin $boletin): bool
     {
-        return $user->hasAnyRole(['administrador', 'cobrador', 'docente']);
+        return $user->hasAnyRole(['administrador', 'cobrador', 'administra_alumnos']);
     }
 
     public function create(User $user): bool
@@ -24,7 +24,7 @@ class BoletinPolicy
 
     public function update(User $user, Boletin $boletin): bool
     {
-        return $user->hasAnyRole(['administrador', 'cobrador', 'docente']);
+        return $user->hasAnyRole(['administrador', 'cobrador', 'administra_alumnos']);
     }
 
     public function delete(User $user, Boletin $boletin): bool

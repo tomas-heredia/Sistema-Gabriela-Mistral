@@ -230,21 +230,21 @@ test('profesor no puede montar el componente', function () {
     Livewire::actingAs($profesor)->test(Cargar::class, ['boletinTrimestre' => $trimestre])->assertForbidden();
 });
 
-test('docente puede cargar un borrador y confirmar y enviar el trimestre', function () {
+test('administra_alumnos puede cargar un borrador y confirmar y enviar el trimestre', function () {
     Queue::fake();
 
-    $docente = User::factory()->create()->assignRole('docente');
+    $administraAlumnos = User::factory()->create()->assignRole('administra_alumnos');
     $boletin = Boletin::factory()->create(['plantilla_id' => $this->plantilla->id]);
     $trimestre1 = BoletinTrimestre::factory()->create(['boletin_id' => $boletin->id, 'trimestre' => 1]);
 
-    Livewire::actingAs($docente)->test(Cargar::class, ['boletinTrimestre' => $trimestre1])
+    Livewire::actingAs($administraAlumnos)->test(Cargar::class, ['boletinTrimestre' => $trimestre1])
         ->set('datos.espacios_curriculares.0.trimestre_1', '9')
         ->call('guardarBorrador');
 
     expect($trimestre1->refresh()->estado)->toBe(EstadoTrimestre::Cargado)
-        ->and($trimestre1->cargado_por_id)->toBe($docente->id);
+        ->and($trimestre1->cargado_por_id)->toBe($administraAlumnos->id);
 
-    Livewire::actingAs($docente)->test(Cargar::class, ['boletinTrimestre' => $trimestre1])
+    Livewire::actingAs($administraAlumnos)->test(Cargar::class, ['boletinTrimestre' => $trimestre1])
         ->call('confirmarYEnviar')
         ->assertRedirect(route('boletines.index'));
 

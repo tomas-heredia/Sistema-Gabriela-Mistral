@@ -53,12 +53,12 @@ test('profesor no puede montar el componente', function () {
     Livewire::actingAs($profesor)->test(Listado::class)->assertForbidden();
 });
 
-test('docente puede montar el componente y ver los boletines del periodo activo', function () {
-    $docente = User::factory()->create()->assignRole('docente');
+test('administra_alumnos puede montar el componente y ver los boletines del periodo activo', function () {
+    $administraAlumnos = User::factory()->create()->assignRole('administra_alumnos');
     $periodo = PeriodoLectivo::factory()->activo()->create();
     $alumno = Alumno::factory()->primario()->create(['nombre' => 'Elena Ruiz']);
     Boletin::factory()->create(['alumno_id' => $alumno->id, 'periodo_lectivo_id' => $periodo->id]);
 
-    Livewire::actingAs($docente)->test(Listado::class)
+    Livewire::actingAs($administraAlumnos)->test(Listado::class)
         ->assertSee('Elena Ruiz');
 });
