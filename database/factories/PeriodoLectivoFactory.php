@@ -20,7 +20,6 @@ class PeriodoLectivoFactory extends Factory
             'nombre' => (string) $anio,
             'fecha_inicio' => "{$anio}-03-01",
             'fecha_fin' => "{$anio}-12-15",
-            'descuento_hermanos_pct' => 15.00,
             'activo' => false,
         ];
     }

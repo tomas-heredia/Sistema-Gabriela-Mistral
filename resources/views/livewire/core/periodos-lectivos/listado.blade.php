@@ -20,7 +20,6 @@
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nombre</th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Inicio</th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fin</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Desc. hermanos</th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
                             <th class="px-6 py-3"></th>
                         </tr>
@@ -31,7 +30,6 @@
                                 <td class="px-6 py-3 text-sm text-gray-900">{{ $periodo->nombre }}</td>
                                 <td class="px-6 py-3 text-sm text-gray-600">{{ $periodo->fecha_inicio->format('d/m/Y') }}</td>
                                 <td class="px-6 py-3 text-sm text-gray-600">{{ $periodo->fecha_fin->format('d/m/Y') }}</td>
-                                <td class="px-6 py-3 text-sm text-gray-600">{{ number_format($periodo->descuento_hermanos_pct, 2) }}%</td>
                                 <td class="px-6 py-3 text-sm">
                                     <x-pill :color="$periodo->activo ? 'green' : 'gray'">
                                         {{ $periodo->activo ? 'Activo' : 'Inactivo' }}

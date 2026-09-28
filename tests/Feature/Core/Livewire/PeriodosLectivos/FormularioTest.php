@@ -19,7 +19,6 @@ test('crear un periodo lo guarda inactivo, redirige al listado y crea sus 6 aran
         ->set('nombre', '2027')
         ->set('fecha_inicio', '2027-03-01')
         ->set('fecha_fin', '2027-12-15')
-        ->set('descuento_hermanos_pct', '10')
         ->set('montos.inicial_matricula', '1300')
         ->set('montos.inicial_mensualidad', '900')
         ->set('montos.primario_matricula', '1500')
@@ -58,12 +57,10 @@ test('editar un periodo existente precarga sus datos y sus aranceles, y actualiz
         ->assertSet('nombre', '2026')
         ->assertSet('montos.primario_matricula', '1500.00')
         ->assertSet('montos.primario_mensualidad', '1000.00')
-        ->set('descuento_hermanos_pct', '20')
         ->set('montos.primario_mensualidad', '1100')
         ->call('guardar')
         ->assertRedirect(route('periodos.index'));
 
-    expect($periodo->fresh()->descuento_hermanos_pct)->toBe('20.00');
     expect(Arancel::where('periodo_lectivo_id', $periodo->id)->count())->toBe(6);
 
     $mensualidadPrimario = Arancel::where('periodo_lectivo_id', $periodo->id)
@@ -105,24 +102,6 @@ test('la fecha de fin no puede ser anterior a la de inicio', function () {
         ->set('montos.secundario_mensualidad', '1200')
         ->call('guardar')
         ->assertHasErrors(['fecha_fin' => 'after']);
-});
-
-test('el descuento por hermanos tiene que estar entre 0 y 100', function () {
-    $administrador = User::factory()->create()->assignRole('administrador');
-
-    Livewire::actingAs($administrador)->test(Formulario::class)
-        ->set('nombre', '2027')
-        ->set('fecha_inicio', '2027-03-01')
-        ->set('fecha_fin', '2027-12-15')
-        ->set('descuento_hermanos_pct', '150')
-        ->set('montos.inicial_matricula', '1300')
-        ->set('montos.inicial_mensualidad', '900')
-        ->set('montos.primario_matricula', '1500')
-        ->set('montos.primario_mensualidad', '1000')
-        ->set('montos.secundario_matricula', '1800')
-        ->set('montos.secundario_mensualidad', '1200')
-        ->call('guardar')
-        ->assertHasErrors(['descuento_hermanos_pct' => 'max']);
 });
 
 test('un cobrador no puede montar el formulario', function () {

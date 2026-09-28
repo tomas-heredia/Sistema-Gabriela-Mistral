@@ -17,25 +17,19 @@ use Illuminate\Support\Collection;
 /**
  * Genera de una sola vez todas las cuotas de un alumno para un período
  * lectivo (matrícula + una mensualidad por cada mes del período), aplicando
- * descuento por hermanos o exención por beca. Se generan todas juntas — no
- * mes a mes — para que siempre exista una cuota futura donde aplicar un
- * pago adelantado (ver AsignadorDePagos).
+ * beca completa por hermano o por beca propiamente dicha. Se generan todas
+ * juntas — no mes a mes — para que siempre exista una cuota futura donde
+ * aplicar un pago adelantado (ver AsignadorDePagos).
  */
 class GeneradorDeCuotas
 {
-    /**
-     * Umbral a partir del cual se activa el descuento por hermanos: con 1 o 2
-     * hermanos matriculados no hay descuento; al llegar a 3 se aplica a los 3
-     * (o más), incluidos el 1º y 2º.
-     */
-    private const UMBRAL_HERMANOS = 3;
-
     public function generar(Alumno $alumno, PeriodoLectivo $periodo): Collection
     {
         $arancelMatricula = $this->arancel($periodo, $alumno, TipoCuota::Matricula);
         $arancelMensualidad = $this->arancel($periodo, $alumno, TipoCuota::Mensualidad);
 
-        [$descuentoTipo, $descuentoPct] = $this->descuentoAplicable($alumno, $periodo);
+        $descuentoTipo = $this->descuentoAplicable($alumno, $periodo);
+        $descuentoPct = $descuentoTipo === DescuentoTipo::Ninguno ? 0.0 : 100.0;
 
         $cuotas = collect();
 
@@ -63,94 +57,10 @@ class GeneradorDeCuotas
             ));
         }
 
-        if ($descuentoTipo === DescuentoTipo::Hermanos) {
-            $this->actualizarHermanosYaMatriculados($alumno, $periodo);
-        }
-
         return $cuotas;
     }
 
-    /**
-     * Al matricular al alumno que hace cruzar el umbral, los hermanos que ya
-     * estaban cargados quedaron con cuotas generadas *antes* de llegar a 3 --
-     * su descuento_tipo quedó fijo en "ninguno" para siempre, aunque ahora sí
-     * corresponda. Se corrige hacia adelante: solo las cuotas del mismo
-     * período que todavía no vencieron (una cuota ya vencida es un monto ya
-     * facturado, no se toca retroactivamente — mismo criterio que el resto
-     * del sistema). Un hermano con beca no se toca: la beca sigue ganando.
-     */
-    private function actualizarHermanosYaMatriculados(Alumno $alumnoRecienMatriculado, PeriodoLectivo $periodo): void
-    {
-        $tutorIds = $alumnoRecienMatriculado->tutores()
-            ->wherePivot('responsable_pago', true)
-            ->pluck('tutores.id');
-
-        $hermanos = Alumno::query()
-            ->where('id', '!=', $alumnoRecienMatriculado->id)
-            ->where('activo', true)
-            ->whereHas('tutores', function ($query) use ($tutorIds) {
-                $query->whereIn('tutores.id', $tutorIds)->where('alumno_tutor.responsable_pago', true);
-            })
-            ->get();
-
-        foreach ($hermanos as $hermano) {
-            [$descuentoTipo, $descuentoPct] = $this->descuentoAplicable($hermano, $periodo);
-
-            if ($descuentoTipo !== DescuentoTipo::Hermanos) {
-                continue;
-            }
-
-            Cuota::query()
-                ->where('alumno_id', $hermano->id)
-                ->where('periodo_lectivo_id', $periodo->id)
-                ->where('fecha_vencimiento', '>=', today())
-                ->where('estado', '!=', EstadoCuota::Anulada)
-                ->get()
-                ->each(function (Cuota $cuota) use ($descuentoTipo, $descuentoPct) {
-                    $descuentoMonto = (int) round($cuota->monto_base * $descuentoPct / 100);
-
-                    $cuota->forceFill([
-                        'descuento_tipo' => $descuentoTipo,
-                        'descuento_monto' => $descuentoMonto,
-                        'monto' => max(0, $cuota->monto_base - $descuentoMonto),
-                    ])->save();
-
-                    $cuota->recalcularEstado();
-                });
-        }
-    }
-
-    /**
-     * Hermanos matriculados = alumnos activos que comparten con este alumno
-     * un tutor marcado `responsable_pago`, contándose a sí mismo. Si el
-     * alumno no tiene tutor responsable de pago, nunca puede llegar al
-     * umbral (queda solo).
-     */
-    public function hermanosMatriculados(Alumno $alumno): int
-    {
-        $tutorIds = $alumno->tutores()
-            ->wherePivot('responsable_pago', true)
-            ->pluck('tutores.id');
-
-        if ($tutorIds->isEmpty()) {
-            return 1;
-        }
-
-        return Alumno::query()
-            ->where('activo', true)
-            ->whereHas('tutores', function ($query) use ($tutorIds) {
-                // wherePivot() no existe acá: el closure de whereHas recibe
-                // un query builder sobre el modelo relacionado con el join a
-                // la tabla pivote ya aplicado, no la relación BelongsToMany.
-                $query->whereIn('tutores.id', $tutorIds)->where('alumno_tutor.responsable_pago', true);
-            })
-            ->count();
-    }
-
-    /**
-     * @return array{0: DescuentoTipo, 1: float}
-     */
-    private function descuentoAplicable(Alumno $alumno, PeriodoLectivo $periodo): array
+    private function descuentoAplicable(Alumno $alumno, PeriodoLectivo $periodo): DescuentoTipo
     {
         $tieneBeca = Beca::query()
             ->where('alumno_id', $alumno->id)
@@ -158,14 +68,49 @@ class GeneradorDeCuotas
             ->exists();
 
         if ($tieneBeca) {
-            return [DescuentoTipo::Beca, 100.0];
+            return DescuentoTipo::Beca;
         }
 
-        if ($this->hermanosMatriculados($alumno) >= self::UMBRAL_HERMANOS) {
-            return [DescuentoTipo::Hermanos, (float) $periodo->descuento_hermanos_pct];
+        return $this->esElTercerHermano($alumno) ? DescuentoTipo::Hermanos : DescuentoTipo::Ninguno;
+    }
+
+    /**
+     * Promoción por hermano (pedido del cliente, reemplaza el descuento
+     * porcentual anterior): no escala con la cantidad de hermanos -- es
+     * siempre exactamente uno con beca completa, el 3ro matriculado en
+     * orden de alta en el sistema (único orden que existe; no hay fecha de
+     * nacimiento por hermano). Con 3, 4 o 6 hermanos activos que comparten
+     * un tutor responsable de pago, ese 3ro no paga nada y el resto paga
+     * el 100% -- nunca hay un 4to o 6to becado.
+     *
+     * Al ser un cálculo por orden de alta (no por orden en que se generan
+     * las cuotas de cada uno), da el mismo resultado sin importar en qué
+     * orden el cobrador vaya generando las cuotas de cada hermano -- no
+     * hace falta recalcular retroactivamente a nadie cuando se matricula
+     * un hermano nuevo.
+     */
+    private function esElTercerHermano(Alumno $alumno): bool
+    {
+        $tutorIds = $alumno->tutores()
+            ->wherePivot('responsable_pago', true)
+            ->pluck('tutores.id');
+
+        if ($tutorIds->isEmpty()) {
+            return false;
         }
 
-        return [DescuentoTipo::Ninguno, 0.0];
+        $hermanos = Alumno::query()
+            ->where('activo', true)
+            ->whereHas('tutores', function ($query) use ($tutorIds) {
+                // wherePivot() no existe acá: el closure de whereHas recibe
+                // un query builder sobre el modelo relacionado con el join a
+                // la tabla pivote ya aplicado, no la relación BelongsToMany.
+                $query->whereIn('tutores.id', $tutorIds)->where('alumno_tutor.responsable_pago', true);
+            })
+            ->orderBy('id')
+            ->pluck('id');
+
+        return $hermanos->count() >= 3 && $hermanos->get(2) === $alumno->id;
     }
 
     private function crearCuota(

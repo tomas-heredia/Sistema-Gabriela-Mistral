@@ -36,7 +36,6 @@ class DatabaseSeeder extends Seeder
             'nombre' => '2026',
             'fecha_inicio' => '2026-03-01',
             'fecha_fin' => '2026-12-15',
-            'descuento_hermanos_pct' => 15,
         ]);
 
         foreach (Nivel::cases() as $nivel) {

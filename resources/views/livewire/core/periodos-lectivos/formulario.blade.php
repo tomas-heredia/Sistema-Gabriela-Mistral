@@ -33,14 +33,8 @@
         </div>
 
         <div>
-            <x-input-label for="descuento_hermanos_pct" value="Descuento por hermanos (%)" />
-            <x-text-input id="descuento_hermanos_pct" type="number" step="0.01" min="0" max="100" class="mt-1 block w-full" wire:model="descuento_hermanos_pct" />
-            <x-input-error :messages="$errors->get('descuento_hermanos_pct')" class="mt-1" />
-        </div>
-
-        <div>
             <x-input-label value="Aranceles" />
-            <p class="text-sm text-gray-500 mb-2">Montos en pesos. Hacen falta los 4 para poder generar cuotas en este período.</p>
+            <p class="text-sm text-gray-500 mb-2">Montos en pesos. Hacen falta todos para poder generar cuotas en este período.</p>
 
             <table class="min-w-full">
                 <thead>

@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-#[Fillable(['nombre', 'fecha_inicio', 'fecha_fin', 'descuento_hermanos_pct', 'activo'])]
+#[Fillable(['nombre', 'fecha_inicio', 'fecha_fin', 'activo'])]
 class PeriodoLectivo extends Model
 {
     use HasFactory;
@@ -24,7 +24,6 @@ class PeriodoLectivo extends Model
         return [
             'fecha_inicio' => 'date',
             'fecha_fin' => 'date',
-            'descuento_hermanos_pct' => 'decimal:2',
             'activo' => 'boolean',
         ];
     }

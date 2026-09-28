@@ -12,10 +12,10 @@ use Livewire\Attributes\Layout;
 use Livewire\Component;
 
 /**
- * Los aranceles (matrícula/mensualidad × primario/secundario, 4 filas fijas
- * por período) se cargan acá mismo, no en una pantalla propia: no tienen
- * identidad ni búsqueda propia, son una matriz de configuración atada 1 a 1
- * a un período. Son obligatorios para no volver a depender del
+ * Los aranceles (matrícula/mensualidad × un nivel, filas fijas por período
+ * según Nivel::cases()) se cargan acá mismo, no en una pantalla propia: no
+ * tienen identidad ni búsqueda propia, son una matriz de configuración
+ * atada 1 a 1 a un período. Son obligatorios para no volver a depender del
  * ModelNotFoundException que atrapa Alumnos\Formulario::generarCuotas()
  * cuando falta uno.
  */
@@ -30,8 +30,6 @@ class Formulario extends Component
 
     public string $fecha_fin = '';
 
-    public string $descuento_hermanos_pct = '0';
-
     /** @var array<string, string> ["{nivel}_{tipo}" => monto en pesos, como texto] */
     public array $montos = [];
 
@@ -44,7 +42,6 @@ class Formulario extends Component
             $this->nombre = $periodoLectivo->nombre;
             $this->fecha_inicio = $periodoLectivo->fecha_inicio->format('Y-m-d');
             $this->fecha_fin = $periodoLectivo->fecha_fin->format('Y-m-d');
-            $this->descuento_hermanos_pct = (string) $periodoLectivo->descuento_hermanos_pct;
         } else {
             $this->authorize('create', PeriodoLectivo::class);
         }
@@ -68,7 +65,6 @@ class Formulario extends Component
             'nombre' => ['required', 'string', 'max:255'],
             'fecha_inicio' => ['required', 'date'],
             'fecha_fin' => ['required', 'date', 'after:fecha_inicio'],
-            'descuento_hermanos_pct' => ['required', 'numeric', 'min:0', 'max:100'],
             'montos.*' => ['required', 'numeric', 'min:0'],
         ];
     }
@@ -79,7 +75,6 @@ class Formulario extends Component
             'nombre' => 'nombre',
             'fecha_inicio' => 'fecha de inicio',
             'fecha_fin' => 'fecha de fin',
-            'descuento_hermanos_pct' => 'descuento por hermanos',
         ];
 
         foreach (Nivel::cases() as $nivel) {
