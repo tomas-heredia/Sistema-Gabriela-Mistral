@@ -53,6 +53,32 @@ test('administrador puede anular un pago y la cuota afectada recalcula su estado
     expect($cuota->fresh()->estado)->toBe(EstadoCuota::Pendiente);
 });
 
+test('la busqueda encuentra un pago por el nombre del tutor', function () {
+    $cobrador = User::factory()->create()->assignRole('cobrador');
+    $tutor = Tutor::factory()->create(['nombre' => 'Marta Gómez']);
+    $pago = Pago::factory()->create(['tutor_id' => $tutor->id]);
+    $otroPago = Pago::factory()->create();
+
+    Livewire::actingAs($cobrador)->test(Listado::class)
+        ->set('busqueda', 'Gómez')
+        ->assertSee($pago->numero_recibo)
+        ->assertDontSee($otroPago->numero_recibo);
+});
+
+test('la busqueda encuentra un pago por el nombre del alumno del tutor', function () {
+    $cobrador = User::factory()->create()->assignRole('cobrador');
+    $tutor = Tutor::factory()->create();
+    $alumno = Alumno::factory()->primario()->create(['nombre' => 'Lucas Peralta']);
+    $tutor->alumnos()->attach($alumno->id, ['vinculo' => 'Madre', 'responsable_pago' => true]);
+    $pago = Pago::factory()->create(['tutor_id' => $tutor->id]);
+    $otroPago = Pago::factory()->create();
+
+    Livewire::actingAs($cobrador)->test(Listado::class)
+        ->set('busqueda', 'Peralta')
+        ->assertSee($pago->numero_recibo)
+        ->assertDontSee($otroPago->numero_recibo);
+});
+
 test('profesor no puede montar el componente', function () {
     $profesor = User::factory()->create()->assignRole('profesor');
 

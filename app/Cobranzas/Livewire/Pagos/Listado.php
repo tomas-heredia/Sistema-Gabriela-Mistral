@@ -61,7 +61,8 @@ class Listado extends Component
             ->when($this->busqueda, function ($query) {
                 $query->where(function ($subquery) {
                     $subquery->where('numero_recibo', 'like', "%{$this->busqueda}%")
-                        ->orWhereHas('tutor', fn ($q) => $q->where('nombre', 'like', "%{$this->busqueda}%"));
+                        ->orWhereHas('tutor', fn ($q) => $q->where('nombre', 'like', "%{$this->busqueda}%"))
+                        ->orWhereHas('tutor.alumnos', fn ($q) => $q->where('nombre', 'like', "%{$this->busqueda}%"));
                 });
             })
             ->latest('fecha')

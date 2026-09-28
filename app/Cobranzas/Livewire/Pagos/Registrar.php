@@ -26,11 +26,20 @@ use Livewire\Component;
 #[Layout('layouts.app')]
 class Registrar extends Component
 {
-    public string $dniTutorBuscado = '';
+    public string $busquedaTutor = '';
 
     public ?Tutor $tutorEncontrado = null;
 
     public bool $buscoTutor = false;
+
+    /**
+     * Coincidencias cuando la búsqueda por nombre trae más de un tutor --
+     * hay que elegir cuál antes de ver sus cuotas. Queda vacío apenas hay
+     * un único resultado (se selecciona solo) o ninguno.
+     *
+     * @var array<int, array{id:int, nombre:string, dni:string}>
+     */
+    public array $resultadosBusqueda = [];
 
     /** @var array<int, bool> [cuota_id => seleccionada] */
     public array $cuotasSeleccionadas = [];
@@ -52,10 +61,49 @@ class Registrar extends Component
         $this->fecha = now()->format('Y-m-d');
     }
 
+    /**
+     * Busca por DNI exacto, o por coincidencia parcial en el nombre del
+     * tutor o en el de alguno de sus alumnos -- el cobrador no siempre
+     * tiene el DNI a mano, pero sabe el apellido de la familia o del
+     * chico. Con un único resultado se selecciona solo; con varios, hay
+     * que elegir cuál antes de ver sus cuotas.
+     */
     public function buscarTutor(): void
     {
         $this->buscoTutor = true;
-        $this->tutorEncontrado = Tutor::where('dni', $this->dniTutorBuscado)->first();
+        $this->tutorEncontrado = null;
+        $this->resultadosBusqueda = [];
+        $this->cuotasSeleccionadas = [];
+        $this->montos = [];
+
+        if ($this->busquedaTutor === '') {
+            return;
+        }
+
+        $coincidencias = Tutor::query()
+            ->where(function ($query) {
+                $query->where('dni', $this->busquedaTutor)
+                    ->orWhere('nombre', 'like', "%{$this->busquedaTutor}%")
+                    ->orWhereHas('alumnos', fn ($q) => $q->where('nombre', 'like', "%{$this->busquedaTutor}%"));
+            })
+            ->orderBy('nombre')
+            ->get();
+
+        if ($coincidencias->count() === 1) {
+            $this->seleccionarTutor($coincidencias->first()->id);
+
+            return;
+        }
+
+        $this->resultadosBusqueda = $coincidencias
+            ->map(fn (Tutor $tutor) => ['id' => $tutor->id, 'nombre' => $tutor->nombre, 'dni' => $tutor->dni])
+            ->all();
+    }
+
+    public function seleccionarTutor(int $tutorId): void
+    {
+        $this->tutorEncontrado = Tutor::find($tutorId);
+        $this->resultadosBusqueda = [];
         $this->cuotasSeleccionadas = [];
         $this->montos = [];
 

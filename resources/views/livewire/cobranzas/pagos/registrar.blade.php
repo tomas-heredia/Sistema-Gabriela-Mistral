@@ -3,15 +3,30 @@
 
     <div class="bg-white shadow-sm rounded-lg p-6 space-y-4">
         <div class="flex items-end gap-3">
-            <div class="flex-1 max-w-xs">
-                <x-input-label for="dniTutorBuscado" value="DNI del tutor que paga" />
-                <x-text-input id="dniTutorBuscado" type="text" class="mt-1 block w-full" wire:model="dniTutorBuscado" />
+            <div class="flex-1 max-w-sm">
+                <x-input-label for="busquedaTutor" value="Buscar tutor por DNI, nombre o el de un alumno suyo" />
+                <x-text-input id="busquedaTutor" type="text" class="mt-1 block w-full" wire:model="busquedaTutor" />
             </div>
             <x-secondary-button type="button" wire:click="buscarTutor">Buscar</x-secondary-button>
         </div>
 
-        @if ($buscoTutor && ! $tutorEncontrado)
-            <p class="text-sm text-gray-500">No encontramos ningún tutor con ese DNI.</p>
+        @if ($buscoTutor && ! $tutorEncontrado && empty($resultadosBusqueda))
+            <p class="text-sm text-gray-500">No encontramos ningún tutor con esos datos.</p>
+        @endif
+
+        @if (! empty($resultadosBusqueda))
+            <div class="border border-gray-200 rounded-md divide-y divide-gray-100">
+                @foreach ($resultadosBusqueda as $resultado)
+                    <button
+                        type="button"
+                        wire:click="seleccionarTutor({{ $resultado['id'] }})"
+                        class="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 flex items-center justify-between"
+                    >
+                        <span class="text-gray-900">{{ $resultado['nombre'] }}</span>
+                        <span class="text-gray-500">DNI {{ $resultado['dni'] }}</span>
+                    </button>
+                @endforeach
+            </div>
         @endif
 
         @if ($tutorEncontrado)

@@ -42,10 +42,56 @@ test('buscar tutor lista las cuotas pendientes de sus alumnos en el periodo acti
     ]);
 
     Livewire::actingAs($cobrador)->test(Registrar::class)
-        ->set('dniTutorBuscado', $this->tutor->dni)
+        ->set('busquedaTutor', $this->tutor->dni)
         ->call('buscarTutor')
         ->assertSee($alumno->nombre)
         ->assertSee(number_format($cuotaPendiente->monto / 100, 2, ',', '.'));
+});
+
+test('buscar tutor por su nombre lo selecciona solo si es la unica coincidencia', function () {
+    $cobrador = User::factory()->create()->assignRole('cobrador');
+    $this->tutor->update(['nombre' => 'Marta Gómez']);
+    $alumno = Alumno::factory()->primario()->create();
+    vincularAlumnoATutor($this->tutor, $alumno);
+
+    Livewire::actingAs($cobrador)->test(Registrar::class)
+        ->set('busquedaTutor', 'Gómez')
+        ->call('buscarTutor')
+        ->assertSet('tutorEncontrado.id', $this->tutor->id)
+        ->assertSee('Marta Gómez');
+});
+
+test('buscar tutor por el nombre de su alumno lo encuentra', function () {
+    $cobrador = User::factory()->create()->assignRole('cobrador');
+    $alumno = Alumno::factory()->primario()->create(['nombre' => 'Lucas Peralta']);
+    vincularAlumnoATutor($this->tutor, $alumno);
+
+    Livewire::actingAs($cobrador)->test(Registrar::class)
+        ->set('busquedaTutor', 'Peralta')
+        ->call('buscarTutor')
+        ->assertSet('tutorEncontrado.id', $this->tutor->id);
+});
+
+test('buscar un nombre con varios tutores coincidentes muestra la lista para elegir', function () {
+    $cobrador = User::factory()->create()->assignRole('cobrador');
+    $this->tutor->update(['nombre' => 'Marta Gómez']);
+    $otroTutor = Tutor::factory()->create(['nombre' => 'Pedro Gómez']);
+    $alumno = Alumno::factory()->primario()->create();
+    vincularAlumnoATutor($this->tutor, $alumno);
+
+    $componente = Livewire::actingAs($cobrador)->test(Registrar::class)
+        ->set('busquedaTutor', 'Gómez')
+        ->call('buscarTutor')
+        ->assertSet('tutorEncontrado', null)
+        ->assertSee('Marta Gómez')
+        ->assertSee('Pedro Gómez');
+
+    expect($componente->get('resultadosBusqueda'))->toHaveCount(2);
+
+    $componente->call('seleccionarTutor', $otroTutor->id)
+        ->assertSet('tutorEncontrado.id', $otroTutor->id);
+
+    expect($componente->get('resultadosBusqueda'))->toBe([]);
 });
 
 test('pago exacto de una cuota la deja pagada', function () {
@@ -62,7 +108,7 @@ test('pago exacto de una cuota la deja pagada', function () {
     ]);
 
     Livewire::actingAs($cobrador)->test(Registrar::class)
-        ->set('dniTutorBuscado', $this->tutor->dni)
+        ->set('busquedaTutor', $this->tutor->dni)
         ->call('buscarTutor')
         ->set("cuotasSeleccionadas.{$cuota->id}", true)
         ->set("montos.{$cuota->id}", '1000.00')
@@ -90,7 +136,7 @@ test('pago parcial deja la cuota en estado parcial con el saldo correcto', funct
     ]);
 
     Livewire::actingAs($cobrador)->test(Registrar::class)
-        ->set('dniTutorBuscado', $this->tutor->dni)
+        ->set('busquedaTutor', $this->tutor->dni)
         ->call('buscarTutor')
         ->set("cuotasSeleccionadas.{$cuota->id}", true)
         ->set("montos.{$cuota->id}", '400.00')
@@ -128,7 +174,7 @@ test('un pago que tilda dos cuotas de meses distintos aplica ambas', function ()
     ]);
 
     $componente = Livewire::actingAs($cobrador)->test(Registrar::class)
-        ->set('dniTutorBuscado', $this->tutor->dni)
+        ->set('busquedaTutor', $this->tutor->dni)
         ->call('buscarTutor')
         ->set("cuotasSeleccionadas.{$cuotaMarzo->id}", true)
         ->set("cuotasSeleccionadas.{$cuotaAbril->id}", true)
