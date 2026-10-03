@@ -4,11 +4,13 @@ namespace App\Alumnos\Models;
 
 use App\Alumnos\Models\Enums\Nivel;
 use App\Alumnos\Models\Enums\Turno;
+use App\Boletines\Models\Boletin;
 use Database\Factories\AlumnoFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 #[Fillable(['nombre', 'dni', 'fecha_nacimiento', 'nivel', 'grado', 'anio_secundaria', 'division', 'libro_folio', 'turno', 'activo'])]
 class Alumno extends Model
@@ -37,6 +39,11 @@ class Alumno extends Model
         return $this->belongsToMany(Tutor::class, 'alumno_tutor')
             ->withPivot('vinculo', 'responsable_pago')
             ->withTimestamps();
+    }
+
+    public function boletines(): HasMany
+    {
+        return $this->hasMany(Boletin::class);
     }
 
     /**

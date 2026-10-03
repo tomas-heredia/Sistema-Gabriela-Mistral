@@ -4,6 +4,7 @@ use App\Alumnos\Models\Alumno;
 use App\Boletines\Livewire\Boletines\Listado;
 use App\Boletines\Models\Boletin;
 use App\Boletines\Models\BoletinTrimestre;
+use App\Boletines\Models\PlantillaBoletin;
 use App\Core\Models\PeriodoLectivo;
 use App\Core\Models\User;
 use Database\Seeders\RoleSeeder;
@@ -61,4 +62,54 @@ test('administra_alumnos puede montar el componente y ver los boletines del peri
 
     Livewire::actingAs($administraAlumnos)->test(Listado::class)
         ->assertSee('Elena Ruiz');
+});
+
+test('la busqueda encuentra tambien a un alumno sin libreta todavia', function () {
+    $cobrador = User::factory()->create()->assignRole('cobrador');
+    PeriodoLectivo::factory()->activo()->create();
+    Alumno::factory()->primario()->create(['nombre' => 'Hugo Flores', 'dni' => '40555666']);
+
+    Livewire::actingAs($cobrador)->test(Listado::class)
+        ->set('busqueda', 'Hugo Flores')
+        ->assertSee('Hugo Flores')
+        ->assertSee('Todavía no tiene libreta')
+        ->assertSee('Crear libreta');
+});
+
+test('crearLibreta genera la libreta del alumno encontrado por busqueda', function () {
+    $cobrador = User::factory()->create()->assignRole('cobrador');
+    $periodo = PeriodoLectivo::factory()->activo()->create();
+    $alumno = Alumno::factory()->primario()->create(['nombre' => 'Hugo Flores']);
+    PlantillaBoletin::factory()->create(['nivel' => $alumno->nivel, 'anio' => null]);
+
+    Livewire::actingAs($cobrador)->test(Listado::class)
+        ->set('busqueda', 'Hugo Flores')
+        ->call('crearLibreta', $alumno->id)
+        ->assertSee('Libreta generada correctamente');
+
+    expect(Boletin::where('alumno_id', $alumno->id)->where('periodo_lectivo_id', $periodo->id)->exists())->toBeTrue();
+});
+
+test('crearLibreta no hace nada para un alumno de nivel inicial', function () {
+    $cobrador = User::factory()->create()->assignRole('cobrador');
+    $periodo = PeriodoLectivo::factory()->activo()->create();
+    $alumno = Alumno::factory()->inicial()->create(['nombre' => 'Ines Castro']);
+
+    Livewire::actingAs($cobrador)->test(Listado::class)
+        ->set('busqueda', 'Ines Castro')
+        ->assertDontSee('Crear libreta')
+        ->call('crearLibreta', $alumno->id);
+
+    expect(Boletin::where('alumno_id', $alumno->id)->where('periodo_lectivo_id', $periodo->id)->exists())->toBeFalse();
+});
+
+test('administra_alumnos no ve el boton de crear libreta en la busqueda', function () {
+    $administraAlumnos = User::factory()->create()->assignRole('administra_alumnos');
+    PeriodoLectivo::factory()->activo()->create();
+    Alumno::factory()->primario()->create(['nombre' => 'Lucas Medina']);
+
+    Livewire::actingAs($administraAlumnos)->test(Listado::class)
+        ->set('busqueda', 'Lucas Medina')
+        ->assertSee('Lucas Medina')
+        ->assertDontSee('Crear libreta');
 });
