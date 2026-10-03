@@ -6,7 +6,7 @@
     <style>
         body { font-family: sans-serif; font-size: 11px; color: #1c2333; }
         h1 { font-size: 16px; margin-bottom: 0; }
-        h2 { font-size: 13px; margin-top: 22px; border-bottom: 1px solid #999; padding-bottom: 4px; }
+        h2 { font-size: 13px; margin-top: 10px; border-bottom: 1px solid #999; padding-bottom: 4px; }
         h3 { font-size: 11px; margin-top: 12px; margin-bottom: 4px; }
         .meta { color: #555; margin-bottom: 8px; }
         table { width: 100%; border-collapse: collapse; margin-bottom: 8px; }
@@ -19,16 +19,16 @@
 <body>
     <img class="logo-pagina" src="{{ public_path('images/logo.png') }}" alt="">
 
-    <h1>{{ $alumno->nombre }}</h1>
-    <p class="meta">
-        DNI: {{ $alumno->dni ?? '—' }} ·
-        Nivel: {{ $alumno->nivel->value }} ·
-        Grado: {{ $alumno->grado }} ·
-        Período: {{ $periodo->nombre }}
-    </p>
-
     @foreach ($trimestres as $trimestre)
         <div class="trimestre">
+            <h1>{{ $alumno->nombre }}</h1>
+            <p class="meta">
+                DNI: {{ $alumno->dni ?? '—' }} ·
+                Nivel: {{ $alumno->nivel->value }} ·
+                Grado: {{ $alumno->grado }} ·
+                Período: {{ $periodo->nombre }}
+            </p>
+
             <h2>
                 {{ $trimestre->trimestre === 4 ? 'Etapa de Apoyo' : "Trimestre {$trimestre->trimestre}" }}
             </h2>
