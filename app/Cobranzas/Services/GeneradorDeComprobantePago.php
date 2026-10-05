@@ -8,7 +8,6 @@ use App\Alumnos\Models\Enums\Turno;
 use App\Cobranzas\Models\PagoCuota;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Support\Facades\Storage;
-use NumberFormatter;
 
 /**
  * Genera el comprobante en PDF de una cuota pagada y lo deja guardado en
@@ -34,13 +33,13 @@ class GeneradorDeComprobantePago
             'alumnoDni' => $alumno->dni,
             'nivel' => ucfirst($alumno->nivel->value),
             'gradoLinea' => $this->gradoLinea($alumno),
-            'periodoLinea' => str_pad((string) $cuota->mes, 2, '0', STR_PAD_LEFT).'/'.$cuota->periodoLectivo->nombre,
+            'periodoLinea' => PeriodoDeCuotaEnTexto::calcular($cuota),
             'formaDePago' => $pago->medio_pago->label(),
             'subtotal' => $cuota->monto_base,
             'descuento' => $cuota->descuento_monto,
             'interes' => $pagoCuota->interes_aplicado,
             'total' => $pagoCuota->montoTotal(),
-            'totalEnLetras' => $this->montoEnLetras($pagoCuota->montoTotal()),
+            'totalEnLetras' => NumeroEnLetras::pesos($pagoCuota->montoTotal()),
         ]);
 
         $rutaRelativa = "pagos/comprobantes/{$pagoCuota->id}.pdf";
@@ -68,28 +67,5 @@ class GeneradorDeComprobantePago
             ->filter()
             ->map(fn ($valor) => is_string($valor) ? ucfirst($valor) : $valor)
             ->implode(' / ');
-    }
-
-    /**
-     * "SON: ..." en letras. `NumberFormatter::SPELLOUT` ya sabe números en
-     * español; solo hace falta la corrección de apócope (veintiuno ->
-     * veintiún) antes de "pesos" y separar pesos de centavos.
-     */
-    private function montoEnLetras(int $centavos): string
-    {
-        $pesos = intdiv($centavos, 100);
-        $centavosRestantes = $centavos % 100;
-
-        $formateador = new NumberFormatter('es', NumberFormatter::SPELLOUT);
-        $pesosEnLetras = preg_replace('/uno$/', 'un', $formateador->format($pesos));
-
-        $texto = mb_strtoupper($pesosEnLetras).' PESOS';
-
-        if ($centavosRestantes > 0) {
-            $centavosEnLetras = preg_replace('/uno$/', 'un', $formateador->format($centavosRestantes));
-            $texto .= ' CON '.mb_strtoupper($centavosEnLetras).' CENTAVOS';
-        }
-
-        return $texto;
     }
 }
