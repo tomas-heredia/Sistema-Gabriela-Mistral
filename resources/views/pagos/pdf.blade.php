@@ -1,72 +1,36 @@
 <!DOCTYPE html>
-<html>
+<html lang="es">
 <head>
     <meta charset="utf-8">
     <style>
-        body { font-family: Helvetica, Arial, sans-serif; font-size: 12px; color: #1f2937; }
-        h1 { font-size: 16px; margin-bottom: 4px; }
-        .meta { color: #6b7280; margin-bottom: 16px; }
-        table { width: 100%; border-collapse: collapse; }
-        th, td { padding: 6px 8px; text-align: left; border-bottom: 1px solid #e5e7eb; }
-        th { background: #f3f4f6; }
-        .total { margin-top: 12px; font-weight: bold; }
-        .encabezado td { border: none; padding: 0; vertical-align: top; }
-        .encabezado .logo { width: 90px; text-align: right; }
-        .encabezado .logo img { width: 70px; }
+        body { font-family: Helvetica, Arial, sans-serif; font-size: 12px; color: #1c2333; }
+        .membrete { width: 100%; border-collapse: collapse; margin-bottom: 14px; }
+        .membrete td { border: none; padding: 0; vertical-align: middle; }
+        .membrete .logo { width: 80px; }
+        .membrete .logo img { width: 64px; }
+        .membrete .datos { text-align: center; }
+        .membrete .datos .nombre-colegio { font-size: 15px; font-weight: bold; margin-bottom: 2px; }
+        .membrete .datos .linea { margin-bottom: 2px; }
+        .membrete .datos .de { font-style: italic; margin: 6px 0; }
+        hr { border: none; border-top: 1px solid #999; margin-bottom: 12px; }
+        .encabezado-recibo { width: 100%; border-collapse: collapse; margin-bottom: 10px; }
+        .encabezado-recibo td { border: none; padding: 0; }
+        .encabezado-recibo .fecha { text-align: right; }
+        .datos-pago p { margin: 4px 0; }
+        .label { color: #444; }
+        table.montos { width: 100%; border-collapse: collapse; margin-top: 14px; }
+        table.montos td { border: none; padding: 3px 0; }
+        table.montos .importe { text-align: right; }
+        table.montos .total td { border-top: 1px solid #999; padding-top: 6px; font-weight: bold; font-size: 13px; }
+        .son { margin-top: 14px; font-style: italic; }
+        .recibo + .recibo { page-break-before: always; }
     </style>
 </head>
 <body>
-    <table class="encabezado">
-        <tr>
-            <td>
-                <h1>Pagos</h1>
-                <p class="meta">
-                    @if ($desde || $hasta)
-                        Fecha: {{ $desde ? \Illuminate\Support\Carbon::parse($desde)->format('d/m/Y') : 'inicio' }}
-                        a {{ $hasta ? \Illuminate\Support\Carbon::parse($hasta)->format('d/m/Y') : 'hoy' }}
-                    @endif
-                    @if ($periodo)
-                        · Período: {{ $periodo->nombre }}
-                    @endif
-                    @if (! $desde && ! $hasta && ! $periodo)
-                        Todos los pagos
-                    @endif
-                    · Generado el {{ $generadoEl->format('d/m/Y H:i') }}
-                </p>
-            </td>
-            <td class="logo">
-                <img src="{{ public_path('images/logo.png') }}" alt="">
-            </td>
-        </tr>
-    </table>
-
-    <table>
-        <thead>
-            <tr>
-                <th>Fecha</th>
-                <th>N° recibo</th>
-                <th>DNI alumno</th>
-                <th>Apellido y Nombre</th>
-                <th>Interés</th>
-                <th>Importe</th>
-            </tr>
-        </thead>
-        <tbody>
-            @foreach ($filas as $fila)
-                <tr>
-                    <td>{{ \Illuminate\Support\Carbon::parse($fila->fecha)->format('d/m/Y') }}</td>
-                    <td>{{ $fila->numero_recibo }}</td>
-                    <td>{{ $fila->alumno_dni }}</td>
-                    <td>{{ $fila->alumno_nombre }}</td>
-                    <td>${{ number_format($fila->interes_aplicado / 100, 2, ',', '.') }}</td>
-                    <td>${{ number_format(($fila->monto_aplicado + $fila->interes_aplicado) / 100, 2, ',', '.') }}</td>
-                </tr>
-            @endforeach
-        </tbody>
-    </table>
-
-    <p class="total">
-        Total: ${{ number_format($filas->sum(fn ($fila) => $fila->monto_aplicado + $fila->interes_aplicado) / 100, 2, ',', '.') }} — {{ $filas->count() }} fila(s)
-    </p>
+    @foreach ($recibos as $recibo)
+        <div class="recibo">
+            @include('pagos.partials.recibo', $recibo)
+        </div>
+    @endforeach
 </body>
 </html>

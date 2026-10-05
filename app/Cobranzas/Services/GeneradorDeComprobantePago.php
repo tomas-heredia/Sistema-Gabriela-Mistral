@@ -19,12 +19,32 @@ class GeneradorDeComprobantePago
 {
     public function generar(PagoCuota $pagoCuota): PagoCuota
     {
-        $cuota = $pagoCuota->cuota()->with(['alumno.tutores', 'periodoLectivo'])->first();
+        $pagoCuota->loadMissing(['cuota.alumno.tutores', 'cuota.periodoLectivo', 'pago']);
+
+        $pdf = Pdf::loadView('pagos.comprobante', $this->datos($pagoCuota));
+
+        $rutaRelativa = "pagos/comprobantes/{$pagoCuota->id}.pdf";
+        Storage::disk('local')->put($rutaRelativa, $pdf->output());
+
+        $pagoCuota->forceFill(['pdf_path' => $rutaRelativa])->save();
+
+        return $pagoCuota;
+    }
+
+    /**
+     * Datos de un recibo en el formato que espera la vista -- se reutiliza
+     * tanto para el PDF individual (`generar()`) como para la recopilación
+     * de todos los recibos de un período (`PagosPdfController`), así ambos
+     * muestran exactamente el mismo contenido por cuota pagada.
+     */
+    public function datos(PagoCuota $pagoCuota): array
+    {
+        $cuota = $pagoCuota->cuota;
         $alumno = $cuota->alumno;
         $tutor = $alumno->tutores->firstWhere('pivot.responsable_pago', true) ?? $alumno->tutores->first();
         $pago = $pagoCuota->pago;
 
-        $pdf = Pdf::loadView('pagos.comprobante', [
+        return [
             'numeroRecibo' => $pagoCuota->numero_recibo,
             'fecha' => $pago->fecha,
             'tutorNombre' => $tutor->nombre,
@@ -40,14 +60,7 @@ class GeneradorDeComprobantePago
             'interes' => $pagoCuota->interes_aplicado,
             'total' => $pagoCuota->montoTotal(),
             'totalEnLetras' => NumeroEnLetras::pesos($pagoCuota->montoTotal()),
-        ]);
-
-        $rutaRelativa = "pagos/comprobantes/{$pagoCuota->id}.pdf";
-        Storage::disk('local')->put($rutaRelativa, $pdf->output());
-
-        $pagoCuota->forceFill(['pdf_path' => $rutaRelativa])->save();
-
-        return $pagoCuota;
+        ];
     }
 
     /**
