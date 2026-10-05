@@ -19,7 +19,7 @@ use Spatie\Activitylog\Traits\LogsActivity;
  * están en Fillable a propósito: solo se escriben desde Pago::anular(), que
  * usa forceFill() — nunca por asignación masiva normal.
  */
-#[Fillable(['tutor_id', 'monto', 'medio_pago', 'fecha', 'numero_recibo', 'cobrador_id', 'observaciones'])]
+#[Fillable(['tutor_id', 'monto', 'medio_pago', 'interes_porcentaje', 'fecha', 'cobrador_id', 'observaciones'])]
 class Pago extends Model
 {
     use HasFactory, LogsActivity;
@@ -30,6 +30,7 @@ class Pago extends Model
     {
         return [
             'medio_pago' => MedioPago::class,
+            'interes_porcentaje' => 'decimal:2',
             'fecha' => 'date',
             'anulado_at' => 'datetime',
         ];
@@ -89,7 +90,7 @@ class Pago extends Model
     public function getActivitylogOptions(): LogOptions
     {
         return LogOptions::defaults()
-            ->logOnly(['monto', 'medio_pago', 'fecha', 'numero_recibo', 'cobrador_id', 'anulado_at', 'anulado_por_id', 'motivo_anulacion'])
+            ->logOnly(['monto', 'medio_pago', 'interes_porcentaje', 'fecha', 'cobrador_id', 'anulado_at', 'anulado_por_id', 'motivo_anulacion'])
             ->logOnlyDirty()
             ->dontSubmitEmptyLogs();
     }

@@ -79,9 +79,21 @@
                             <tr wire:key="pago-{{ $pago->id }}">
                                 <td class="px-6 py-3 text-sm text-gray-900">{{ $pago->tutor->nombre }}</td>
                                 <td class="px-6 py-3 text-sm text-gray-600">${{ number_format($pago->monto / 100, 2, ',', '.') }}</td>
-                                <td class="px-6 py-3 text-sm text-gray-600">{{ ucfirst($pago->medio_pago->value) }}</td>
+                                <td class="px-6 py-3 text-sm text-gray-600">{{ $pago->medio_pago->label() }}</td>
                                 <td class="px-6 py-3 text-sm text-gray-600">{{ $pago->fecha->format('d/m/Y') }}</td>
-                                <td class="px-6 py-3 text-sm text-gray-600">{{ $pago->numero_recibo }}</td>
+                                <td class="px-6 py-3 text-sm text-gray-600">
+                                    <div class="flex flex-col gap-1">
+                                        @foreach ($pago->pagoCuotas as $pagoCuota)
+                                            <a
+                                                href="{{ route('pagos.comprobantes.descargar', $pagoCuota) }}"
+                                                target="_blank"
+                                                class="text-indigo-600 hover:text-indigo-500"
+                                            >
+                                                {{ $pagoCuota->numero_recibo }}
+                                            </a>
+                                        @endforeach
+                                    </div>
+                                </td>
                                 <td class="px-6 py-3 text-sm">
                                     @if ($pago->estaAnulado())
                                         <x-pill color="red">Anulado</x-pill>

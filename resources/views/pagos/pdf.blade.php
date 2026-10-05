@@ -47,6 +47,7 @@
                 <th>N° recibo</th>
                 <th>DNI alumno</th>
                 <th>Apellido y Nombre</th>
+                <th>Interés</th>
                 <th>Importe</th>
             </tr>
         </thead>
@@ -57,14 +58,15 @@
                     <td>{{ $fila->numero_recibo }}</td>
                     <td>{{ $fila->alumno_dni }}</td>
                     <td>{{ $fila->alumno_nombre }}</td>
-                    <td>${{ number_format($fila->importe / 100, 2, ',', '.') }}</td>
+                    <td>${{ number_format($fila->interes_aplicado / 100, 2, ',', '.') }}</td>
+                    <td>${{ number_format(($fila->monto_aplicado + $fila->interes_aplicado) / 100, 2, ',', '.') }}</td>
                 </tr>
             @endforeach
         </tbody>
     </table>
 
     <p class="total">
-        Total: ${{ number_format($filas->sum('importe') / 100, 2, ',', '.') }} — {{ $filas->count() }} fila(s)
+        Total: ${{ number_format($filas->sum(fn ($fila) => $fila->monto_aplicado + $fila->interes_aplicado) / 100, 2, ',', '.') }} — {{ $filas->count() }} fila(s)
     </p>
 </body>
 </html>

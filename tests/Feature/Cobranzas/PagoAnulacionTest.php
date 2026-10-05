@@ -11,7 +11,7 @@ use Database\Seeders\RoleSeeder;
 test('anular un pago recalcula el estado de las cuotas afectadas excluyendolo', function () {
     $cuota = Cuota::factory()->create(['monto' => 100_000, 'estado' => EstadoCuota::Pendiente]);
     $pagoMalCargado = Pago::factory()->create(['monto' => 100_000]);
-    app(AsignadorDePagos::class)->aplicar($pagoMalCargado, [$cuota->id => 100_000]);
+    app(AsignadorDePagos::class)->aplicar($pagoMalCargado, [$cuota->id => ['monto' => 100_000, 'interes' => 0]]);
 
     expect($cuota->fresh()->estado)->toBe(EstadoCuota::Pagada);
 
@@ -27,7 +27,7 @@ test('un pago anulado no se puede volver a aplicar', function () {
     $cuota = Cuota::factory()->create(['monto' => 100_000]);
     $pago = Pago::factory()->anulado()->create(['monto' => 100_000]);
 
-    app(AsignadorDePagos::class)->aplicar($pago, [$cuota->id => 100_000]);
+    app(AsignadorDePagos::class)->aplicar($pago, [$cuota->id => ['monto' => 100_000, 'interes' => 0]]);
 })->throws(AsignacionDePagoInvalidaException::class);
 
 test('solo administrador puede anular un pago, cobrador no', function () {

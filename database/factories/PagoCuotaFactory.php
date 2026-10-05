@@ -20,6 +20,8 @@ class PagoCuotaFactory extends Factory
             'pago_id' => Pago::factory(),
             'cuota_id' => Cuota::factory(),
             'monto_aplicado' => fake()->numberBetween(10_000, 100_000),
+            'numero_recibo' => fake()->unique()->numerify('######'),
+            'interes_aplicado' => 0,
         ];
     }
 }

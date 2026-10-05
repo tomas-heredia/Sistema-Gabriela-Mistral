@@ -4,11 +4,13 @@ namespace App\Cobranzas\Livewire\Pagos;
 
 use App\Alumnos\Models\Tutor;
 use App\Cobranzas\Exceptions\AsignacionDePagoInvalidaException;
+use App\Cobranzas\Jobs\EnviarComprobantePago;
 use App\Cobranzas\Models\Cuota;
 use App\Cobranzas\Models\Enums\EstadoCuota;
 use App\Cobranzas\Models\Enums\MedioPago;
 use App\Cobranzas\Models\Pago;
 use App\Cobranzas\Services\AsignadorDePagos;
+use App\Cobranzas\Services\GeneradorDeComprobantePago;
 use App\Core\Models\PeriodoLectivo;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -18,10 +20,10 @@ use Livewire\Component;
 
 /**
  * El monto del pago no se pide aparte: se calcula solo, como la suma de
- * las cuotas tildadas. Elimina de raíz la posibilidad de que "lo que se
- * cobró" y "lo aplicado a cuotas" no coincidan — resuelve, con la misma
- * pantalla, pago parcial (tildás una cuota y bajás el monto) y pago que
- * cubre más de un mes (tildás varias).
+ * las cuotas tildadas más el interés. Elimina de raíz la posibilidad de que
+ * "lo que se cobró" y "lo aplicado a cuotas" no coincidan — resuelve, con la
+ * misma pantalla, pago parcial (tildás una cuota y bajás el monto) y pago
+ * que cubre más de un mes (tildás varias).
  */
 #[Layout('layouts.app')]
 class Registrar extends Component
@@ -51,7 +53,22 @@ class Registrar extends Component
 
     public string $fecha = '';
 
+    /**
+     * Porcentaje único para toda la operación -- se aplica por separado
+     * sobre la deuda de cada cuota tildada, no sobre el total combinado.
+     */
+    public string $interesPorcentaje = '';
+
     public ?string $observaciones = null;
+
+    /**
+     * Comprobantes recién generados, para mostrar los links de descarga sin
+     * salir de la pantalla (el cobrador los necesita al toque, no puede
+     * esperar a buscarlos después en el listado).
+     *
+     * @var array<int, array{numeroRecibo: string, alumno: string, periodo: string, url: string}>
+     */
+    public array $comprobantesGenerados = [];
 
     public function mount(): void
     {
@@ -73,6 +90,7 @@ class Registrar extends Component
         $this->resultadosBusqueda = [];
         $this->cuotasSeleccionadas = [];
         $this->montos = [];
+        $this->comprobantesGenerados = [];
 
         if ($this->busquedaTutor === '') {
             return;
@@ -120,18 +138,20 @@ class Registrar extends Component
 
         foreach ($this->cuotasSeleccionadas as $cuotaId => $seleccionada) {
             if ($seleccionada) {
-                $total += $this->pesosACentavos($this->montos[$cuotaId] ?? '0');
+                $monto = $this->pesosACentavos($this->montos[$cuotaId] ?? '0');
+                $total += $monto + $this->interesSobre($monto);
             }
         }
 
         return $total;
     }
 
-    public function guardar(AsignadorDePagos $asignador): void
+    public function guardar(AsignadorDePagos $asignador, GeneradorDeComprobantePago $generador): void
     {
         $this->validate([
             'medio_pago' => ['required', Rule::enum(MedioPago::class)],
             'fecha' => ['required', 'date'],
+            'interesPorcentaje' => ['nullable', 'numeric', 'min:0', 'max:100'],
         ]);
 
         $asignaciones = [];
@@ -144,7 +164,7 @@ class Registrar extends Component
             $monto = $this->pesosACentavos($this->montos[$cuotaId] ?? '0');
 
             if ($monto > 0) {
-                $asignaciones[$cuotaId] = $monto;
+                $asignaciones[$cuotaId] = ['monto' => $monto, 'interes' => $this->interesSobre($monto)];
             }
         }
 
@@ -154,18 +174,18 @@ class Registrar extends Component
             return;
         }
 
-        $numeroRecibo = null;
+        $montoTotal = array_sum(array_map(fn ($a) => $a['monto'] + $a['interes'], $asignaciones));
+
+        $pago = null;
 
         try {
-            DB::transaction(function () use ($asignaciones, $asignador, &$numeroRecibo) {
-                $numeroRecibo = $this->siguienteNumeroRecibo();
-
+            DB::transaction(function () use ($asignaciones, $asignador, $montoTotal, &$pago) {
                 $pago = Pago::create([
                     'tutor_id' => $this->tutorEncontrado->id,
-                    'monto' => array_sum($asignaciones),
+                    'monto' => $montoTotal,
                     'medio_pago' => $this->medio_pago,
+                    'interes_porcentaje' => $this->interesPorcentaje !== '' ? $this->interesPorcentaje : 0,
                     'fecha' => $this->fecha,
-                    'numero_recibo' => $numeroRecibo,
                     'cobrador_id' => auth()->id(),
                     'observaciones' => $this->observaciones,
                 ]);
@@ -178,23 +198,39 @@ class Registrar extends Component
             return;
         }
 
-        session()->flash('mensaje', "Pago registrado correctamente. Recibo N° {$numeroRecibo}.");
-        $this->redirectRoute('pagos.index', navigate: true);
+        $pagoCuotas = $pago->pagoCuotas()->with(['cuota.alumno', 'cuota.periodoLectivo'])->get();
+
+        $this->comprobantesGenerados = $pagoCuotas->map(function ($pagoCuota) use ($generador) {
+            $generador->generar($pagoCuota);
+            EnviarComprobantePago::dispatch($pagoCuota);
+
+            return [
+                'numeroRecibo' => $pagoCuota->numero_recibo,
+                'alumno' => $pagoCuota->cuota->alumno->nombre,
+                'periodo' => str_pad((string) $pagoCuota->cuota->mes, 2, '0', STR_PAD_LEFT).'/'.$pagoCuota->cuota->periodoLectivo->nombre,
+                'url' => route('pagos.comprobantes.descargar', $pagoCuota),
+            ];
+        })->all();
+
+        session()->flash('mensaje', 'Pago registrado correctamente.');
+        $this->reset(['tutorEncontrado', 'cuotasSeleccionadas', 'montos', 'medio_pago', 'interesPorcentaje', 'observaciones', 'busquedaTutor', 'buscoTutor']);
     }
 
     /**
-     * El número de recibo ya no lo carga el cobrador: lo da el sistema,
-     * correlativo con ceros a la izquierda (000001, 000002…). Se calcula
-     * con un lock sobre la tabla dentro de la misma transacción del pago,
-     * para que dos registros simultáneos nunca terminen con el mismo
-     * número (el CAST ignora recibos viejos con formato no numérico,
-     * los trata como 0 en vez de romper).
+     * Vuelve a la búsqueda de tutor, limpiando los comprobantes del pago
+     * anterior -- para cuando el cobrador va a cargar el pago de otra
+     * familia sin salir de la pantalla.
      */
-    private function siguienteNumeroRecibo(): string
+    public function nuevoPago(): void
     {
-        $maximo = (int) (Pago::query()->lockForUpdate()->max(DB::raw('CAST(numero_recibo AS UNSIGNED)')) ?? 0);
+        $this->comprobantesGenerados = [];
+    }
 
-        return str_pad((string) ($maximo + 1), 6, '0', STR_PAD_LEFT);
+    private function interesSobre(int $monto): int
+    {
+        $porcentaje = $this->interesPorcentaje !== '' ? (float) $this->interesPorcentaje : 0.0;
+
+        return (int) round($monto * $porcentaje / 100);
     }
 
     /**

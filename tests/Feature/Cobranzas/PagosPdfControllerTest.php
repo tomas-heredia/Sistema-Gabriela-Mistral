@@ -32,7 +32,6 @@ function pagoConAlumno(string $numeroRecibo, int $importe, string $fecha, ?Perio
         'tutor_id' => $tutor->id,
         'monto' => $importe,
         'fecha' => $fecha,
-        'numero_recibo' => $numeroRecibo,
         'anulado_at' => $anulado ? now() : null,
     ]);
 
@@ -40,6 +39,7 @@ function pagoConAlumno(string $numeroRecibo, int $importe, string $fecha, ?Perio
         'pago_id' => $pago->id,
         'cuota_id' => $cuota->id,
         'monto_aplicado' => $importe,
+        'numero_recibo' => $numeroRecibo,
     ]);
 
     return $pago;

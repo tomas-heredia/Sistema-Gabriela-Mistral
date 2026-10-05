@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-#[Fillable(['pago_id', 'cuota_id', 'monto_aplicado'])]
+#[Fillable(['pago_id', 'cuota_id', 'monto_aplicado', 'numero_recibo', 'interes_aplicado', 'pdf_path'])]
 class PagoCuota extends Model
 {
     use HasFactory;
@@ -23,6 +23,17 @@ class PagoCuota extends Model
     public function cuota(): BelongsTo
     {
         return $this->belongsTo(Cuota::class);
+    }
+
+    /**
+     * Lo efectivamente cobrado por esta cuota en este pago: lo aplicado a
+     * la deuda más el interés, que es un recargo aparte y nunca cuenta para
+     * `Cuota::montoPagado()` (si contara, un pago con interés podría superar
+     * el saldo pendiente y romper esa validación).
+     */
+    public function montoTotal(): int
+    {
+        return $this->monto_aplicado + $this->interes_aplicado;
     }
 
     /**

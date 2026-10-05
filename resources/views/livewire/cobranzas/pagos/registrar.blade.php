@@ -34,7 +34,33 @@
         @endif
     </div>
 
-    @if ($tutorEncontrado)
+    @if (! empty($comprobantesGenerados))
+        <div class="bg-white shadow-sm rounded-lg p-6 space-y-4">
+            <p class="text-sm font-medium text-green-700">
+                Pago registrado correctamente. Se generó un comprobante por cada mes pagado y se envió por mail al tutor.
+            </p>
+
+            <div class="border border-gray-200 rounded-md divide-y divide-gray-100">
+                @foreach ($comprobantesGenerados as $comprobante)
+                    <div class="px-4 py-3 flex items-center justify-between text-sm">
+                        <span class="text-gray-900">
+                            Recibo N° {{ $comprobante['numeroRecibo'] }} — {{ $comprobante['alumno'] }} — Período {{ $comprobante['periodo'] }}
+                        </span>
+                        <a href="{{ $comprobante['url'] }}" target="_blank" class="text-indigo-600 hover:text-indigo-500 font-medium">
+                            Descargar
+                        </a>
+                    </div>
+                @endforeach
+            </div>
+
+            <div class="flex items-center gap-3 pt-2">
+                <x-primary-button type="button" wire:click="nuevoPago">Registrar otro pago</x-primary-button>
+                <a href="{{ route('pagos.index') }}" wire:navigate class="text-sm text-gray-600 hover:text-gray-900">
+                    Ir al listado de pagos
+                </a>
+            </div>
+        </div>
+    @elseif ($tutorEncontrado)
         <form wire:submit="guardar" class="space-y-6">
             <div class="bg-white shadow-sm rounded-lg overflow-hidden">
                 @if ($cuotas->isEmpty())
@@ -85,13 +111,13 @@
                     Total a registrar: <strong>${{ number_format($this->montoTotal / 100, 2, ',', '.') }}</strong>
                 </p>
 
-                <div class="grid grid-cols-2 gap-4">
+                <div class="grid grid-cols-3 gap-4">
                     <div>
                         <x-input-label for="medio_pago" value="Medio de pago" />
                         <select id="medio_pago" wire:model="medio_pago" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
                             <option value="">Seleccioná…</option>
                             @foreach ($medios as $opcion)
-                                <option value="{{ $opcion->value }}">{{ ucfirst($opcion->value) }}</option>
+                                <option value="{{ $opcion->value }}">{{ $opcion->label() }}</option>
                             @endforeach
                         </select>
                         <x-input-error :messages="$errors->get('medio_pago')" class="mt-1" />
@@ -101,6 +127,19 @@
                         <x-input-label for="fecha" value="Fecha" />
                         <x-text-input id="fecha" type="date" class="mt-1 block w-full" wire:model="fecha" />
                         <x-input-error :messages="$errors->get('fecha')" class="mt-1" />
+                    </div>
+
+                    <div>
+                        <x-input-label for="interesPorcentaje" value="Interés (%, opcional)" />
+                        <input
+                            type="number" step="0.01" min="0" max="100"
+                            id="interesPorcentaje"
+                            wire:model.live="interesPorcentaje"
+                            placeholder="0"
+                            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                        >
+                        <p class="mt-1 text-xs text-gray-500">Se aplica por separado sobre la deuda de cada cuota tildada, no sobre el total.</p>
+                        <x-input-error :messages="$errors->get('interesPorcentaje')" class="mt-1" />
                     </div>
                 </div>
 
