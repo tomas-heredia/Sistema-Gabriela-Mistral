@@ -7,7 +7,7 @@
             <div class="nombre-colegio">COLEGIO PRIVADO GABRIELA MISTRAL</div>
             <div class="linea">Adscripto a la Enseñanza Oficial</div>
             <div class="linea">Decretos N° 1189, 1037 y 417</div>
-            <div class="linea">Niveles Inicial - EGB y Polimodal</div>
+            <div class="linea">Nivel Inicial - Primario - Secundario</div>
             <div class="linea">Cuit: 20179395593 &nbsp;&nbsp;&nbsp; Ingreso Bruto: 58389</div>
             <div class="de">De: HEREDIA OMAR EDUARDO</div>
             <div class="linea">VICENTE LOPEZ S/N &nbsp;&nbsp;&nbsp; Tel: 03835-423003</div>
