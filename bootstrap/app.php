@@ -1,5 +1,6 @@
 <?php
 
+use App\Core\Http\Middleware\RestringirAccesoPorRed;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -17,7 +18,9 @@ return Application::configure(basePath: dirname(__DIR__))
         __DIR__.'/../app/Mora/Console/Commands',
     ])
     ->withMiddleware(function (Middleware $middleware): void {
-        //
+        $middleware->web(append: [
+            RestringirAccesoPorRed::class,
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(
