@@ -76,6 +76,17 @@ test('confia en el X-Forwarded-For de tailscale serve, que reenvia por loopback'
     $response->assertOk();
 });
 
+test('confia en el X-Forwarded-For aunque docker lo reescriba al gateway interno', function () {
+    $cobrador = User::factory()->create()->assignRole('cobrador');
+
+    $response = $this->actingAs($cobrador)
+        ->withServerVariables(['REMOTE_ADDR' => '172.16.1.1'])
+        ->withHeaders(['X-Forwarded-For' => '100.69.170.0'])
+        ->get(route('dashboard'));
+
+    $response->assertOk();
+});
+
 test('un X-Forwarded-For que no viene de loopback se ignora', function () {
     $cobrador = User::factory()->create()->assignRole('cobrador');
 
