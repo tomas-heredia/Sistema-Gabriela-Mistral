@@ -4,6 +4,8 @@ namespace App\Core\Http\Middleware;
 
 use Closure;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Session;
 use Symfony\Component\HttpFoundation\IpUtils;
 
 /**
@@ -31,7 +33,17 @@ class RestringirAccesoPorRed
         $user = $request->user();
 
         if ($user?->hasAnyRole(self::ROLES_RESTRINGIDOS) && ! $this->accedeDesdeLaRedDelColegio($request)) {
-            abort(403, 'Este usuario solo puede acceder al sistema conectado a la red del colegio.');
+            // Desloguea en vez de solo devolver 403 -- si no, un usuario
+            // restringido que quedó autenticado se queda trabado viendo el
+            // error en cada pantalla, sin forma de volver al login para
+            // entrar con otra cuenta (ej. un administrador, sin esta
+            // restricción) desde el mismo dispositivo/red.
+            Auth::guard('web')->logout();
+            Session::invalidate();
+            Session::regenerateToken();
+
+            return redirect()->route('login')
+                ->with('error', 'Este usuario solo puede acceder al sistema conectado a la red del colegio.');
         }
 
         return $next($request);

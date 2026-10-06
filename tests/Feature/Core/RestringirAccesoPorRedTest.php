@@ -8,14 +8,16 @@ beforeEach(function () {
     config(['acceso.restriccion_de_red_habilitada' => true]);
 });
 
-test('un cobrador fuera de la red del colegio recibe 403', function () {
+test('un cobrador fuera de la red del colegio es deslogueado y mandado al login', function () {
     $cobrador = User::factory()->create()->assignRole('cobrador');
 
     $response = $this->actingAs($cobrador)
         ->withServerVariables(['REMOTE_ADDR' => '190.191.10.20'])
         ->get(route('dashboard'));
 
-    $response->assertForbidden();
+    $response->assertRedirect(route('login'));
+    expect(session('error'))->not->toBeNull();
+    $this->assertGuest();
 });
 
 test('un cobrador conectado por la VPN de Tailscale entra sin problema', function () {
@@ -28,14 +30,15 @@ test('un cobrador conectado por la VPN de Tailscale entra sin problema', functio
     $response->assertOk();
 });
 
-test('un administra_alumnos fuera de la red del colegio recibe 403', function () {
+test('un administra_alumnos fuera de la red del colegio es deslogueado y mandado al login', function () {
     $gestor = User::factory()->create()->assignRole('administra_alumnos');
 
     $response = $this->actingAs($gestor)
         ->withServerVariables(['REMOTE_ADDR' => '190.191.10.20'])
         ->get(route('dashboard'));
 
-    $response->assertForbidden();
+    $response->assertRedirect(route('login'));
+    $this->assertGuest();
 });
 
 test('un administrador no tiene restriccion de red', function () {
@@ -95,7 +98,25 @@ test('un X-Forwarded-For que no viene de loopback se ignora', function () {
         ->withHeaders(['X-Forwarded-For' => '100.69.170.0'])
         ->get(route('dashboard'));
 
-    $response->assertForbidden();
+    $response->assertRedirect(route('login'));
+    $this->assertGuest();
+});
+
+test('un cobrador bloqueado puede volver a entrar como otro usuario sin restriccion', function () {
+    $cobrador = User::factory()->create()->assignRole('cobrador');
+    $admin = User::factory()->create()->assignRole('administrador');
+
+    $this->actingAs($cobrador)
+        ->withServerVariables(['REMOTE_ADDR' => '190.191.10.20'])
+        ->get(route('dashboard'));
+
+    $this->assertGuest();
+
+    $response = $this->actingAs($admin)
+        ->withServerVariables(['REMOTE_ADDR' => '190.191.10.20'])
+        ->get(route('dashboard'));
+
+    $response->assertOk();
 });
 
 test('con la restriccion apagada, un cobrador entra desde cualquier red', function () {

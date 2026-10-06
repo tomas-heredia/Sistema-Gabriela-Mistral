@@ -25,6 +25,12 @@ new #[Layout('layouts.guest')] class extends Component
 }; ?>
 
 <div>
+    @if (session('error'))
+        <div class="mb-4 rounded-md bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-800">
+            {{ session('error') }}
+        </div>
+    @endif
+
     <!-- Session Status -->
     <x-auth-session-status class="mb-4" :status="session('status')" />
 
