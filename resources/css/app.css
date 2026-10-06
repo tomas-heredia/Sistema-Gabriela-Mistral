@@ -1,3 +1,19 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/*
+ * Borde de los controles de formulario (checkbox, select, inputs, textarea).
+ * Va después de las utilidades y sin `:where()` a propósito:
+ * - el gris 300 de Breeze casi no se distingue del fondo blanco en monitores con poco contraste;
+ * - @tailwindcss/forms define el borde con `:where()`, que los navegadores viejos descartan
+ *   enteros, dejando el `border-width: 0` del preflight (controles sin borde).
+ * La especificidad (0,1,1) queda por debajo de `focus:border-indigo-500` (0,2,0).
+ */
+input.border-gray-300,
+select.border-gray-300,
+textarea.border-gray-300 {
+    border-width: 1px;
+    border-style: solid;
+    border-color: #6b7280;
+}
