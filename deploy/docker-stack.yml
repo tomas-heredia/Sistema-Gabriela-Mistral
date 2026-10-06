@@ -34,6 +34,7 @@ services:
       MAIL_USERNAME: ${MAIL_USERNAME}
       MAIL_PASSWORD: ${MAIL_PASSWORD}
       MAIL_FROM_ADDRESS: ${MAIL_FROM_ADDRESS}
+      RESTRINGIR_ACCESO_RED: ${RESTRINGIR_ACCESO_RED}
     volumes:
       - app_storage:/var/www/html/storage/app
     networks:
