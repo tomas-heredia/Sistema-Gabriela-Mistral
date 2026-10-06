@@ -18,6 +18,18 @@ return Application::configure(basePath: dirname(__DIR__))
         __DIR__.'/../app/Mora/Console/Commands',
     ])
     ->withMiddleware(function (Middleware $middleware): void {
+        // "tailscale serve" reenvía el tráfico de la VPN hacia la app por
+        // loopback (ver RestringirAccesoPorRed) -- sin esto, $request->ip()
+        // vería siempre 127.0.0.1 en vez de la IP real del dispositivo
+        // conectado por Tailscale.
+        $middleware->trustProxies(
+            at: ['127.0.0.1'],
+            headers: Request::HEADER_X_FORWARDED_FOR
+                | Request::HEADER_X_FORWARDED_HOST
+                | Request::HEADER_X_FORWARDED_PORT
+                | Request::HEADER_X_FORWARDED_PROTO,
+        );
+
         $middleware->web(append: [
             RestringirAccesoPorRed::class,
         ]);

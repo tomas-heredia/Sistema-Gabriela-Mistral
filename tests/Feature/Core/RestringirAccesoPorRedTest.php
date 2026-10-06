@@ -65,6 +65,28 @@ test('un invitado puede ver el login sin importar la red', function () {
     $response->assertOk();
 });
 
+test('confia en el X-Forwarded-For de tailscale serve, que reenvia por loopback', function () {
+    $cobrador = User::factory()->create()->assignRole('cobrador');
+
+    $response = $this->actingAs($cobrador)
+        ->withServerVariables(['REMOTE_ADDR' => '127.0.0.1'])
+        ->withHeaders(['X-Forwarded-For' => '100.69.170.0'])
+        ->get(route('dashboard'));
+
+    $response->assertOk();
+});
+
+test('un X-Forwarded-For que no viene de loopback se ignora', function () {
+    $cobrador = User::factory()->create()->assignRole('cobrador');
+
+    $response = $this->actingAs($cobrador)
+        ->withServerVariables(['REMOTE_ADDR' => '190.191.10.20'])
+        ->withHeaders(['X-Forwarded-For' => '100.69.170.0'])
+        ->get(route('dashboard'));
+
+    $response->assertForbidden();
+});
+
 test('con la restriccion apagada, un cobrador entra desde cualquier red', function () {
     config(['acceso.restriccion_de_red_habilitada' => false]);
     $cobrador = User::factory()->create()->assignRole('cobrador');
