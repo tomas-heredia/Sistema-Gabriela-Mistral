@@ -20,15 +20,25 @@ test('administrador y cobrador pueden viewAny y create sobre Boletin, profesor n
         ->and($profesor->can('viewAny', Boletin::class))->toBeFalse();
 });
 
-test('administra_alumnos puede viewAny/view/update sobre Boletin pero no create ni delete', function () {
-    $administraAlumnos = User::factory()->create()->assignRole('administra_alumnos');
+test('profesor con permiso cargar_boletines puede viewAny/view/update sobre Boletin pero no create ni delete', function () {
+    $profesor = User::factory()->create()->assignRole('profesor');
+    $profesor->givePermissionTo('cargar_boletines');
     $boletin = Boletin::factory()->create();
 
-    expect($administraAlumnos->can('viewAny', Boletin::class))->toBeTrue()
-        ->and($administraAlumnos->can('view', $boletin))->toBeTrue()
-        ->and($administraAlumnos->can('update', $boletin))->toBeTrue()
-        ->and($administraAlumnos->can('create', Boletin::class))->toBeFalse()
-        ->and($administraAlumnos->can('delete', $boletin))->toBeFalse();
+    expect($profesor->can('viewAny', Boletin::class))->toBeTrue()
+        ->and($profesor->can('view', $boletin))->toBeTrue()
+        ->and($profesor->can('update', $boletin))->toBeTrue()
+        ->and($profesor->can('create', Boletin::class))->toBeFalse()
+        ->and($profesor->can('delete', $boletin))->toBeFalse();
+});
+
+test('profesor sin permiso cargar_boletines no tiene acceso a Boletin', function () {
+    $profesor = User::factory()->create()->assignRole('profesor');
+    $boletin = Boletin::factory()->create();
+
+    expect($profesor->can('viewAny', Boletin::class))->toBeFalse()
+        ->and($profesor->can('view', $boletin))->toBeFalse()
+        ->and($profesor->can('update', $boletin))->toBeFalse();
 });
 
 test('solo administrador puede crear/editar/borrar una plantilla de boletin; cobrador solo la lee', function () {

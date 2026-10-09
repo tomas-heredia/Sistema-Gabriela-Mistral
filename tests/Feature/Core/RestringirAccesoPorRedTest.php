@@ -30,15 +30,15 @@ test('un cobrador conectado por la VPN de Tailscale entra sin problema', functio
     $response->assertOk();
 });
 
-test('un administra_alumnos fuera de la red del colegio es deslogueado y mandado al login', function () {
-    $gestor = User::factory()->create()->assignRole('administra_alumnos');
+test('un profesor con permiso de cargar boletines no tiene restriccion de red', function () {
+    $profesor = User::factory()->create()->assignRole('profesor');
+    $profesor->givePermissionTo('cargar_boletines');
 
-    $response = $this->actingAs($gestor)
+    $response = $this->actingAs($profesor)
         ->withServerVariables(['REMOTE_ADDR' => '190.191.10.20'])
         ->get(route('dashboard'));
 
-    $response->assertRedirect(route('login'));
-    $this->assertGuest();
+    $response->assertOk();
 });
 
 test('un administrador no tiene restriccion de red', function () {

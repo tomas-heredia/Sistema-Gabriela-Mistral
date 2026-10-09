@@ -27,7 +27,7 @@
 
         <div>
             <x-input-label for="rol" value="Rol" />
-            <select id="rol" wire:model="rol" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+            <select id="rol" wire:model.live="rol" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
                 <option value="">Seleccioná un rol…</option>
                 @foreach (self::ROLES as $valor => $etiqueta)
                     <option value="{{ $valor }}">{{ $etiqueta }}</option>
@@ -35,6 +35,16 @@
             </select>
             <x-input-error :messages="$errors->get('rol')" class="mt-1" />
         </div>
+
+        @if ($rol === 'profesor')
+            <div class="flex items-start gap-2">
+                <input wire:model="puedeCargarBoletines" id="puedeCargarBoletines" type="checkbox" class="mt-1 rounded border-gray-300 text-indigo-600 shadow-sm focus:ring-indigo-500">
+                <label for="puedeCargarBoletines" class="text-sm text-gray-700">
+                    Puede cargar libretas de alumnos
+                    <span class="block text-xs text-gray-500">Sin esto, el profesor solo puede ver sus propios recibos de sueldo.</span>
+                </label>
+            </div>
+        @endif
 
         <div class="flex items-center gap-3 pt-2">
             <x-primary-button type="submit">Guardar</x-primary-button>

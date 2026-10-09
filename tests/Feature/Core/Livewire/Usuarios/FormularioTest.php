@@ -65,17 +65,47 @@ test('cobrador y profesor no pueden montar el componente', function () {
     Livewire::actingAs($profesor)->test(Formulario::class)->assertForbidden();
 });
 
-test('se puede crear un usuario con el rol administra_alumnos', function () {
+test('se puede crear un profesor con permiso para cargar libretas', function () {
     $administrador = User::factory()->create()->assignRole('administrador');
 
     Livewire::actingAs($administrador)->test(Formulario::class)
         ->set('name', 'Elena Ruiz')
         ->set('email', 'elena@example.com')
         ->set('password', '123456')
-        ->set('rol', 'administra_alumnos')
+        ->set('rol', 'profesor')
+        ->set('puedeCargarBoletines', true)
         ->call('guardar')
         ->assertRedirect(route('usuarios.index'));
 
     $nuevo = User::where('email', 'elena@example.com')->firstOrFail();
-    expect($nuevo->hasRole('administra_alumnos'))->toBeTrue();
+    expect($nuevo->hasRole('profesor'))->toBeTrue()
+        ->and($nuevo->hasPermissionTo('cargar_boletines'))->toBeTrue();
+});
+
+test('un profesor sin tildar el checkbox no recibe el permiso de cargar libretas', function () {
+    $administrador = User::factory()->create()->assignRole('administrador');
+
+    Livewire::actingAs($administrador)->test(Formulario::class)
+        ->set('name', 'Elena Ruiz')
+        ->set('email', 'elena@example.com')
+        ->set('password', '123456')
+        ->set('rol', 'profesor')
+        ->call('guardar')
+        ->assertRedirect(route('usuarios.index'));
+
+    $nuevo = User::where('email', 'elena@example.com')->firstOrFail();
+    expect($nuevo->hasPermissionTo('cargar_boletines'))->toBeFalse();
+});
+
+test('al cambiar a un usuario de profesor con permiso de libretas a otro rol, se le quita el permiso', function () {
+    $administrador = User::factory()->create()->assignRole('administrador');
+    $usuario = User::factory()->create()->assignRole('profesor');
+    $usuario->givePermissionTo('cargar_boletines');
+
+    Livewire::actingAs($administrador)->test(Formulario::class, ['usuario' => $usuario])
+        ->set('rol', 'cobrador')
+        ->call('guardar')
+        ->assertRedirect(route('usuarios.index'));
+
+    expect($usuario->refresh()->hasPermissionTo('cargar_boletines'))->toBeFalse();
 });

@@ -14,7 +14,6 @@ class Formulario extends Component
         'administrador' => 'Administrador',
         'cobrador' => 'Cobrador',
         'profesor' => 'Profesor',
-        'administra_alumnos' => 'Administra alumnos (solo carga de libretas)',
     ];
 
     public ?User $usuario = null;
@@ -27,6 +26,8 @@ class Formulario extends Component
 
     public string $rol = '';
 
+    public bool $puedeCargarBoletines = false;
+
     public function mount(?User $usuario = null): void
     {
         if ($usuario?->exists) {
@@ -36,6 +37,7 @@ class Formulario extends Component
             $this->name = $usuario->name;
             $this->email = $usuario->email;
             $this->rol = $usuario->roles->first()?->name ?? '';
+            $this->puedeCargarBoletines = $usuario->hasPermissionTo('cargar_boletines');
         } else {
             $this->authorize('create', User::class);
         }
@@ -68,6 +70,7 @@ class Formulario extends Component
         if ($this->usuario) {
             $this->usuario->update(['name' => $datos['name'], 'email' => $datos['email']]);
             $this->usuario->syncRoles([$datos['rol']]);
+            $this->sincronizarPermisoDeBoletines($this->usuario, $datos['rol']);
             session()->flash('mensaje', 'Usuario actualizado correctamente.');
         } else {
             $nuevo = User::create([
@@ -77,10 +80,25 @@ class Formulario extends Component
                 'email_verified_at' => now(),
             ]);
             $nuevo->assignRole($datos['rol']);
+            $this->sincronizarPermisoDeBoletines($nuevo, $datos['rol']);
             session()->flash('mensaje', 'Usuario creado correctamente.');
         }
 
         $this->redirectRoute('usuarios.index', navigate: true);
+    }
+
+    /**
+     * 'cargar_boletines' solo tiene sentido sobre profesor -- si el checkbox
+     * quedó tildado pero el rol elegido no es profesor (o cambió a otro
+     * rol), no se le deja el permiso colgado.
+     */
+    private function sincronizarPermisoDeBoletines(User $usuario, string $rol): void
+    {
+        if ($rol === 'profesor' && $this->puedeCargarBoletines) {
+            $usuario->givePermissionTo('cargar_boletines');
+        } else {
+            $usuario->revokePermissionTo('cargar_boletines');
+        }
     }
 
     public function render()

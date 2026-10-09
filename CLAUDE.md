@@ -78,11 +78,10 @@ php artisan migrate:fresh --seed # resetear DB con datos de prueba
 ## Roles
 
 - **Administrador**: acceso total al sistema.
-- **Cobrador**: cobranzas (matrícula, cuotas, mora), gestión de avisos, y carga/envío de boletines. Sin acceso a recibos de sueldo.
-- **Profesor**: solo consulta de sus propios recibos de sueldo. Sin acceso a cobranzas ni a boletines.
-- **Administra alumnos** (`administra_alumnos`): solo carga y envío de boletines (misma pantalla y flujo que usa el cobrador para esa tarea, ver regla 3). Sin acceso a cobranzas, mora, sueldos, usuarios, ni a crear/eliminar alumnos o boletines.
+- **Cobrador**: cobranzas (matrícula, cuotas, mora), gestión de avisos, y carga/envío de boletines. Sin acceso a recibos de sueldo. Es el único rol sujeto a la restricción de red (ver `RestringirAccesoPorRed`).
+- **Profesor**: consulta de sus propios recibos de sueldo. Opcionalmente, con el permiso `cargar_boletines` asignado a mano (no es un rol aparte), puede además cargar y enviar boletines (misma pantalla y flujo que usa el cobrador para esa tarea, ver regla 3) -- sin ese permiso, solo ve sus recibos. Sin acceso a cobranzas en ningún caso.
 
-Los cuatro roles se crean vía `database/seeders/RoleSeeder.php` (nombres: `administrador`, `cobrador`, `profesor`, `administra_alumnos`). Se asignan a un `User` con `$user->assignRole('...')`.
+Los tres roles se crean vía `database/seeders/RoleSeeder.php` (nombres: `administrador`, `cobrador`, `profesor`), junto con el permiso `cargar_boletines`. Se asignan a un `User` con `$user->assignRole('...')` y `$user->givePermissionTo('cargar_boletines')`.
 
 ## Convenciones de código
 
@@ -102,4 +101,4 @@ Los cuatro roles se crean vía `database/seeders/RoleSeeder.php` (nombres: `admi
 2. **Todo cambio de dinero queda auditado.** Pagos, cuotas, matrícula, promociones y recibos de sueldo registran quién hizo el cambio, cuándo, y el valor anterior/nuevo. No se permiten updates directos a estos modelos sin pasar por el log de auditoría.
 3. **Los boletines no son visibles para tutores hasta que el cobrador confirma el envío del trimestre.** Flujo mínimo: pendiente → cargado (borrador editable) → enviado. No hay aprobación de un segundo actor — quien carga el trimestre es quien confirma su envío — pero el paso de "confirmar y enviar" es explícito, nunca automático al guardar.
 4. **La tabla `outbox` es una interfaz mínima hacia n8n.** Solo debe contener los datos estrictamente necesarios para enviar el aviso de mora (destinatario, mensaje, estado de envío) — nunca datos sensibles adicionales del alumno/tutor que n8n no necesite. El usuario de MySQL que usa n8n debe tener permisos acotados a esa tabla (no acceso de lectura/escritura al resto de la base).
-5. **El cobrador no tiene acceso a recibos de sueldo; el profesor no tiene acceso a cobranzas ni a boletines.** Estos límites se implementan con Policies/roles de Spatie, no ocultando menús.
+5. **El cobrador no tiene acceso a recibos de sueldo; el profesor no tiene acceso a cobranzas, y a boletines solo si tiene el permiso `cargar_boletines`.** Estos límites se implementan con Policies/roles/permisos de Spatie, no ocultando menús.

@@ -222,7 +222,7 @@ test('las opciones de una escala muestran su significado completo', function () 
         ->assertSee('N — Nunca');
 });
 
-test('profesor no puede montar el componente', function () {
+test('profesor sin permiso de cargar boletines no puede montar el componente', function () {
     $profesor = User::factory()->create()->assignRole('profesor');
     $boletin = Boletin::factory()->create(['plantilla_id' => $this->plantilla->id]);
     $trimestre = BoletinTrimestre::factory()->create(['boletin_id' => $boletin->id, 'trimestre' => 1]);
@@ -230,21 +230,22 @@ test('profesor no puede montar el componente', function () {
     Livewire::actingAs($profesor)->test(Cargar::class, ['boletinTrimestre' => $trimestre])->assertForbidden();
 });
 
-test('administra_alumnos puede cargar un borrador y confirmar y enviar el trimestre', function () {
+test('profesor con permiso de cargar boletines puede cargar un borrador y confirmar y enviar el trimestre', function () {
     Queue::fake();
 
-    $administraAlumnos = User::factory()->create()->assignRole('administra_alumnos');
+    $profesor = User::factory()->create()->assignRole('profesor');
+    $profesor->givePermissionTo('cargar_boletines');
     $boletin = Boletin::factory()->create(['plantilla_id' => $this->plantilla->id]);
     $trimestre1 = BoletinTrimestre::factory()->create(['boletin_id' => $boletin->id, 'trimestre' => 1]);
 
-    Livewire::actingAs($administraAlumnos)->test(Cargar::class, ['boletinTrimestre' => $trimestre1])
+    Livewire::actingAs($profesor)->test(Cargar::class, ['boletinTrimestre' => $trimestre1])
         ->set('datos.espacios_curriculares.0.trimestre_1', '9')
         ->call('guardarBorrador');
 
     expect($trimestre1->refresh()->estado)->toBe(EstadoTrimestre::Cargado)
-        ->and($trimestre1->cargado_por_id)->toBe($administraAlumnos->id);
+        ->and($trimestre1->cargado_por_id)->toBe($profesor->id);
 
-    Livewire::actingAs($administraAlumnos)->test(Cargar::class, ['boletinTrimestre' => $trimestre1])
+    Livewire::actingAs($profesor)->test(Cargar::class, ['boletinTrimestre' => $trimestre1])
         ->call('confirmarYEnviar')
         ->assertRedirect(route('boletines.index'));
 

@@ -44,6 +44,9 @@
                                     }">
                                         {{ ucfirst($usuario->roles->first()?->name ?? 'Sin rol') }}
                                     </x-pill>
+                                    @if ($usuario->hasRole('profesor') && $usuario->hasPermissionTo('cargar_boletines'))
+                                        <x-pill color="indigo">Libretas</x-pill>
+                                    @endif
                                 </td>
                                 <td class="px-6 py-3 text-right text-sm space-x-3 whitespace-nowrap">
                                     <a href="{{ route('usuarios.editar', $usuario) }}" wire:navigate class="text-indigo-600 hover:text-indigo-800">

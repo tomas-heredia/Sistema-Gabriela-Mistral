@@ -48,19 +48,20 @@ test('busca por nombre o dni del alumno', function () {
         ->assertSee('Carla Díaz');
 });
 
-test('profesor no puede montar el componente', function () {
+test('profesor sin permiso de cargar boletines no puede montar el componente', function () {
     $profesor = User::factory()->create()->assignRole('profesor');
 
     Livewire::actingAs($profesor)->test(Listado::class)->assertForbidden();
 });
 
-test('administra_alumnos puede montar el componente y ver los boletines del periodo activo', function () {
-    $administraAlumnos = User::factory()->create()->assignRole('administra_alumnos');
+test('profesor con permiso de cargar boletines puede montar el componente y ver los boletines del periodo activo', function () {
+    $profesor = User::factory()->create()->assignRole('profesor');
+    $profesor->givePermissionTo('cargar_boletines');
     $periodo = PeriodoLectivo::factory()->activo()->create();
     $alumno = Alumno::factory()->primario()->create(['nombre' => 'Elena Ruiz']);
     Boletin::factory()->create(['alumno_id' => $alumno->id, 'periodo_lectivo_id' => $periodo->id]);
 
-    Livewire::actingAs($administraAlumnos)->test(Listado::class)
+    Livewire::actingAs($profesor)->test(Listado::class)
         ->assertSee('Elena Ruiz');
 });
 
@@ -103,12 +104,13 @@ test('crearLibreta no hace nada para un alumno de nivel inicial', function () {
     expect(Boletin::where('alumno_id', $alumno->id)->where('periodo_lectivo_id', $periodo->id)->exists())->toBeFalse();
 });
 
-test('administra_alumnos no ve el boton de crear libreta en la busqueda', function () {
-    $administraAlumnos = User::factory()->create()->assignRole('administra_alumnos');
+test('profesor con permiso de cargar boletines no ve el boton de crear libreta en la busqueda', function () {
+    $profesor = User::factory()->create()->assignRole('profesor');
+    $profesor->givePermissionTo('cargar_boletines');
     PeriodoLectivo::factory()->activo()->create();
     Alumno::factory()->primario()->create(['nombre' => 'Lucas Medina']);
 
-    Livewire::actingAs($administraAlumnos)->test(Listado::class)
+    Livewire::actingAs($profesor)->test(Listado::class)
         ->set('busqueda', 'Lucas Medina')
         ->assertSee('Lucas Medina')
         ->assertDontSee('Crear libreta');

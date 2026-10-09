@@ -6,6 +6,7 @@ $colores = [
     'amber' => 'bg-amber-100 text-amber-800',
     'red' => 'bg-red-100 text-red-800',
     'gray' => 'bg-gray-100 text-gray-700',
+    'indigo' => 'bg-indigo-100 text-indigo-800',
 ];
 @endphp
 
