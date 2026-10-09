@@ -19,26 +19,37 @@ use Illuminate\Support\Facades\Storage;
  * manda solo al tutor responsable de pago, a diferencia de las libretas
  * (información académica, va a todos los tutores) -- esto es un
  * comprobante de algo que pagó una persona puntual.
+ *
+ * Recibe el numero_recibo, no un PagoCuota puntual: ese número puede estar
+ * en varias filas (un pago que cubrió varios meses del mismo alumno), todas
+ * comparten el mismo PDF -- alcanza con mandarlo una sola vez.
  */
 class EnviarComprobantePago implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     public function __construct(
-        public PagoCuota $pagoCuota,
+        public string $numeroRecibo,
     ) {}
 
     public function handle(): void
     {
-        $tutor = $this->pagoCuota->cuota->alumno->tutores()->wherePivot('responsable_pago', true)->first()
-            ?? $this->pagoCuota->cuota->alumno->tutores()->first();
+        $pagoCuota = PagoCuota::where('numero_recibo', $this->numeroRecibo)->with('cuota.alumno.tutores')->first();
+
+        if (! $pagoCuota) {
+            return;
+        }
+
+        $alumno = $pagoCuota->cuota->alumno;
+        $tutor = $alumno->tutores()->wherePivot('responsable_pago', true)->first()
+            ?? $alumno->tutores()->first();
 
         if (! $tutor) {
             return;
         }
 
         Mail::to($tutor->correo)->send(
-            new ComprobantePagoEnviado($this->pagoCuota, Storage::disk('local')->path($this->pagoCuota->pdf_path))
+            new ComprobantePagoEnviado($alumno, $this->numeroRecibo, Storage::disk('local')->path($pagoCuota->pdf_path))
         );
     }
 }

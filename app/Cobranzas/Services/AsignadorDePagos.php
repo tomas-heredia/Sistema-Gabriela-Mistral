@@ -16,9 +16,13 @@ use Illuminate\Support\Facades\DB;
  * año se generó de una vez con GeneradorDeCuotas).
  *
  * El interés es un recargo aparte de la deuda de la cuota (nunca cuenta
- * para `Cuota::montoPagado()` ni su saldo pendiente) -- cada cuota paga
- * emite su propio comprobante, así que también se numera por separado,
- * igual que un talonario de recibos de papel.
+ * para `Cuota::montoPagado()` ni su saldo pendiente).
+ *
+ * El número de recibo se numera por alumno, no por cuota: si este pago
+ * cubre varios meses del mismo alumno, todas esas filas de pago_cuota
+ * comparten un único numero_recibo (un solo comprobante que los junta,
+ * ver GeneradorDeComprobantePago). Si además cubre a un hermano, ese
+ * hermano se numera aparte -- cada alumno tiene su propio comprobante.
  */
 class AsignadorDePagos
 {
@@ -69,25 +73,36 @@ class AsignadorDePagos
             }
         }
 
-        DB::transaction(function () use ($pago, $asignaciones) {
+        DB::transaction(function () use ($pago, $asignaciones, $cuotas) {
+            $cuotaIdsPorAlumno = [];
+
             foreach ($asignaciones as $cuotaId => $datos) {
-                PagoCuota::create([
-                    'pago_id' => $pago->id,
-                    'cuota_id' => $cuotaId,
-                    'monto_aplicado' => $datos['monto'],
-                    'interes_aplicado' => $datos['interes'],
-                    'numero_recibo' => $this->siguienteNumeroRecibo(),
-                ]);
+                $cuotaIdsPorAlumno[$cuotas->get($cuotaId)->alumno_id][] = $cuotaId;
+            }
+
+            foreach ($cuotaIdsPorAlumno as $cuotaIdsDelAlumno) {
+                $numeroRecibo = $this->siguienteNumeroRecibo();
+
+                foreach ($cuotaIdsDelAlumno as $cuotaId) {
+                    $datos = $asignaciones[$cuotaId];
+
+                    PagoCuota::create([
+                        'pago_id' => $pago->id,
+                        'cuota_id' => $cuotaId,
+                        'monto_aplicado' => $datos['monto'],
+                        'interes_aplicado' => $datos['interes'],
+                        'numero_recibo' => $numeroRecibo,
+                    ]);
+                }
             }
         });
     }
 
     /**
-     * Correlativo con ceros a la izquierda (000001, 000002…), igual que el
-     * que ya usaba `Pago.numero_recibo` -- ahora uno por cuota en vez de uno
-     * por operación de pago. El lock se vuelve a tomar en cada vuelta del
-     * loop de `aplicar()` para que dos recibos de la misma operación nunca
-     * salgan con el mismo número.
+     * Correlativo con ceros a la izquierda (000001, 000002…) -- uno por
+     * alumno dentro de la operación, no uno por cuota ni uno por pago. El
+     * lock se vuelve a tomar en cada vuelta del loop de `aplicar()` para que
+     * dos alumnos de la misma operación nunca salgan con el mismo número.
      */
     private function siguienteNumeroRecibo(): string
     {

@@ -21,7 +21,7 @@ class PagoFactory extends Factory
             'tutor_id' => Tutor::factory(),
             'monto' => fake()->numberBetween(50_000, 200_000),
             'medio_pago' => fake()->randomElement(MedioPago::cases()),
-            'interes_porcentaje' => 0,
+            'interes_indice' => 1,
             'fecha' => fake()->dateTimeBetween('-3 months', 'now'),
             'cobrador_id' => User::factory(),
         ];

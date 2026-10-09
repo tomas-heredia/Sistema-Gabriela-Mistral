@@ -83,13 +83,13 @@
                                 <td class="px-6 py-3 text-sm text-gray-600">{{ $pago->fecha->format('d/m/Y') }}</td>
                                 <td class="px-6 py-3 text-sm text-gray-600">
                                     <div class="flex flex-col gap-1">
-                                        @foreach ($pago->pagoCuotas as $pagoCuota)
+                                        @foreach ($pago->pagoCuotas->groupBy('numero_recibo') as $grupoRecibo)
                                             <a
-                                                href="{{ route('pagos.comprobantes.descargar', $pagoCuota) }}"
+                                                href="{{ route('pagos.comprobantes.descargar', $grupoRecibo->first()->numero_recibo) }}"
                                                 target="_blank"
                                                 class="text-indigo-600 hover:text-indigo-500"
                                             >
-                                                {{ $pagoCuota->numero_recibo }}
+                                                {{ $grupoRecibo->first()->numero_recibo }}
                                             </a>
                                         @endforeach
                                     </div>

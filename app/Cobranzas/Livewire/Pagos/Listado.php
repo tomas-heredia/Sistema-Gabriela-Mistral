@@ -69,7 +69,7 @@ class Listado extends Component
     public function render()
     {
         $pagos = Pago::query()
-            ->with(['tutor', 'pagoCuotas'])
+            ->with(['tutor', 'pagoCuotas.cuota.alumno', 'pagoCuotas.cuota.periodoLectivo'])
             ->when($this->busqueda, function ($query) {
                 $query->where(function ($subquery) {
                     $subquery->whereHas('pagoCuotas', fn ($q) => $q->where('numero_recibo', 'like', "%{$this->busqueda}%"))

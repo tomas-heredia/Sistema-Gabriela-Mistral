@@ -37,18 +37,23 @@
     @if (! empty($comprobantesGenerados))
         <div class="bg-white shadow-sm rounded-lg p-6 space-y-4">
             <p class="text-sm font-medium text-green-700">
-                Pago registrado correctamente. Se generó un comprobante por cada mes pagado y se envió por mail al tutor.
+                Pago registrado correctamente. Se generó un comprobante por cada alumno (con todos los meses pagados juntos) y se envió por mail al tutor.
             </p>
 
             <div class="border border-gray-200 rounded-md divide-y divide-gray-100">
                 @foreach ($comprobantesGenerados as $comprobante)
                     <div class="px-4 py-3 flex items-center justify-between text-sm">
                         <span class="text-gray-900">
-                            Recibo N° {{ $comprobante['numeroRecibo'] }} — {{ $comprobante['alumno'] }} — Período {{ $comprobante['periodo'] }}
+                            Recibo N° {{ $comprobante['numeroRecibo'] }} — {{ $comprobante['alumno'] }} — Período {{ $comprobante['periodos'] }}
                         </span>
-                        <a href="{{ $comprobante['url'] }}" target="_blank" class="text-indigo-600 hover:text-indigo-500 font-medium">
-                            Descargar
-                        </a>
+                        <div class="flex items-center gap-3">
+                            <a href="{{ $comprobante['urlImprimir'] }}" target="_blank" class="text-indigo-600 hover:text-indigo-500 font-medium">
+                                Imprimir
+                            </a>
+                            <a href="{{ $comprobante['urlDescargar'] }}" target="_blank" class="text-indigo-600 hover:text-indigo-500 font-medium">
+                                Descargar
+                            </a>
+                        </div>
                     </div>
                 @endforeach
             </div>
@@ -138,16 +143,16 @@
                     </div>
 
                     <div>
-                        <x-input-label for="interesPorcentaje" value="Interés (%, opcional)" />
+                        <x-input-label for="interesIndice" value="Índice de interés (opcional)" />
                         <input
-                            type="number" step="0.01" min="0" max="100"
-                            id="interesPorcentaje"
-                            wire:model.live="interesPorcentaje"
-                            placeholder="0"
+                            type="number" step="0.01" min="1" max="2"
+                            id="interesIndice"
+                            wire:model.live="interesIndice"
+                            placeholder="1"
                             class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
                         >
-                        <p class="mt-1 text-xs text-gray-500">Se aplica por separado sobre la deuda de cada cuota tildada, no sobre el total.</p>
-                        <x-input-error :messages="$errors->get('interesPorcentaje')" class="mt-1" />
+                        <p class="mt-1 text-xs text-gray-500">Ej.: 1.40 = 40% de recargo. Se aplica por separado sobre la deuda de cada cuota tildada, no sobre el total.</p>
+                        <x-input-error :messages="$errors->get('interesIndice')" class="mt-1" />
                     </div>
                 </div>
 
@@ -194,13 +199,14 @@
                                     <td class="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{{ $pago->medio_pago->label() }}</td>
                                     <td class="px-4 py-3 text-sm text-gray-600">
                                         <div class="flex flex-col gap-1">
-                                            @foreach ($pago->pagoCuotas as $pagoCuota)
+                                            @foreach ($pago->pagoCuotas->groupBy('numero_recibo') as $grupoRecibo)
+                                                @php $primeraCuota = $grupoRecibo->first(); @endphp
                                                 <a
-                                                    href="{{ route('pagos.comprobantes.descargar', $pagoCuota) }}"
+                                                    href="{{ route('pagos.comprobantes.descargar', $primeraCuota->numero_recibo) }}"
                                                     target="_blank"
                                                     class="text-indigo-600 hover:text-indigo-500"
                                                 >
-                                                    {{ $pagoCuota->cuota->alumno->nombre }} — {{ str_pad((string) $pagoCuota->cuota->mes, 2, '0', STR_PAD_LEFT) }}/{{ $pagoCuota->cuota->periodoLectivo->nombre }} (recibo {{ $pagoCuota->numero_recibo }})
+                                                    {{ $primeraCuota->cuota->alumno->nombre }} — {{ $grupoRecibo->map(fn ($pc) => \App\Cobranzas\Services\PeriodoDeCuotaEnTexto::calcular($pc->cuota))->implode(', ') }} (recibo {{ $primeraCuota->numero_recibo }})
                                                 </a>
                                             @endforeach
                                         </div>

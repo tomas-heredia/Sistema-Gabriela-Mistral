@@ -8,13 +8,16 @@ use App\Cobranzas\Services\GeneradorDeComprobantePago;
 use App\Core\Http\Controllers\Controller;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Gate;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
- * Una recopilación, en un solo PDF, del recibo de cada cuota pagada en el
- * período -- no un resumen tabular, sino los mismos comprobantes que recibe
- * cada tutor, uno por página, en el orden en que se cobraron.
+ * Una recopilación, en un solo PDF, del comprobante de cada alumno pagado
+ * en el período -- no un resumen tabular, sino los mismos comprobantes que
+ * recibe cada tutor, uno por página, en el orden en que se cobraron. Si un
+ * pago cubrió varios meses del mismo alumno, es una sola página (un solo
+ * comprobante), igual que lo que descarga el tutor.
  *
  * Los pagos anulados quedan afuera: este reporte es "lo efectivamente
  * cobrado", y un pago anulado ya no representa dinero recibido.
@@ -49,7 +52,9 @@ class PagosPdfController extends Controller
             ->get()
             ->sortBy(fn (PagoCuota $pagoCuota) => $idsEnOrden->search($pagoCuota->id));
 
-        $recibos = $pagoCuotas->map(fn (PagoCuota $pagoCuota) => $generador->datos($pagoCuota));
+        $recibos = $pagoCuotas->groupBy('numero_recibo')
+            ->map(fn (Collection $grupo) => $generador->datos($grupo))
+            ->values();
 
         $pdf = Pdf::loadView('pagos.pdf', [
             'recibos' => $recibos,

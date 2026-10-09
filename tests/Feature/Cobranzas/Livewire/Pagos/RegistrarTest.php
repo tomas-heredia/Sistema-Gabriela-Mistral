@@ -418,11 +418,11 @@ test('el interes se aplica a cada cuota por separado, no sobre el total combinad
         ->set("montos.{$cuotaMarzo->id}", '1000.00')
         ->set("montos.{$cuotaAbril->id}", '500.00')
         ->set('medio_pago', MedioPago::Transferencia->value)
-        ->set('interesPorcentaje', '10')
+        ->set('interesIndice', '1.10')
         ->set('fecha', now()->format('Y-m-d'))
         ->call('guardar')
         ->assertHasNoErrors()
-        ->assertCount('comprobantesGenerados', 2);
+        ->assertCount('comprobantesGenerados', 1);
 
     $pago = Pago::where('tutor_id', $this->tutor->id)->first();
     $pagoCuotaMarzo = $pago->pagoCuotas()->where('cuota_id', $cuotaMarzo->id)->first();
@@ -430,18 +430,20 @@ test('el interes se aplica a cada cuota por separado, no sobre el total combinad
 
     // 10% sobre cada cuota por separado (10.000 y 5.000), no sobre el
     // combinado (150.000) -- si se aplicara sobre el total, cualquiera de
-    // los dos números saldría distinto.
+    // los dos números saldría distinto. Mismo alumno, mismo pago: un solo
+    // recibo compartido para ambos meses.
     expect($pagoCuotaMarzo->interes_aplicado)->toBe(10_000)
         ->and($pagoCuotaAbril->interes_aplicado)->toBe(5_000)
         ->and($pago->monto)->toBe(100_000 + 10_000 + 50_000 + 5_000)
-        ->and((float) $pago->interes_porcentaje)->toBe(10.0);
+        ->and((float) $pago->interes_indice)->toBe(1.1)
+        ->and($pagoCuotaMarzo->numero_recibo)->toBe($pagoCuotaAbril->numero_recibo);
 
     // El interés no es parte de la deuda de la cuota: paga el saldo
     // completo igual, sin que el recargo la deje "sobrepagada".
     expect($cuotaMarzo->fresh()->estado)->toBe(EstadoCuota::Pagada);
 });
 
-test('genera un comprobante descargable por cada mes pagado y lo envia por mail', function () {
+test('un pago de varios meses del mismo alumno genera un solo comprobante y un solo mail', function () {
     Mail::fake();
 
     $cobrador = User::factory()->create()->assignRole('cobrador');
@@ -478,15 +480,17 @@ test('genera un comprobante descargable por cada mes pagado y lo envia por mail'
         ->assertHasNoErrors();
 
     $comprobantes = $componente->get('comprobantesGenerados');
-    expect($comprobantes)->toHaveCount(2);
+    expect($comprobantes)->toHaveCount(1)
+        ->and($comprobantes[0]['periodos'])->toBe('03/'.$this->periodo->nombre.', 04/'.$this->periodo->nombre);
 
     $pagoCuotas = PagoCuota::whereHas('pago', fn ($q) => $q->where('tutor_id', $this->tutor->id))->get();
-    expect($pagoCuotas)->toHaveCount(2);
+    expect($pagoCuotas)->toHaveCount(2)
+        ->and($pagoCuotas->pluck('numero_recibo')->unique())->toHaveCount(1);
 
     foreach ($pagoCuotas as $pagoCuota) {
         expect($pagoCuota->pdf_path)->not->toBeNull();
         Storage::disk('local')->assertExists($pagoCuota->pdf_path);
     }
 
-    Mail::assertSent(ComprobantePagoEnviado::class, 2);
+    Mail::assertSent(ComprobantePagoEnviado::class, 1);
 });

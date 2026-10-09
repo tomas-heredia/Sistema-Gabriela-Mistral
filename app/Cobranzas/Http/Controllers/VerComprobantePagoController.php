@@ -8,13 +8,13 @@ use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Storage;
 use Symfony\Component\HttpFoundation\Response;
 
-class ComprobantePagoController extends Controller
+/**
+ * Igual que ComprobantePagoController pero con Content-Disposition inline
+ * en vez de attachment -- el navegador lo muestra con su visor de PDF en
+ * vez de forzar la descarga. Lo usa el iframe de ImprimirComprobantePagoController.
+ */
+class VerComprobantePagoController extends Controller
 {
-    /**
-     * Un numero_recibo puede estar en varias filas de pago_cuota (un pago
-     * que cubrió varios meses del mismo alumno, ver AsignadorDePagos) --
-     * todas comparten el mismo pdf_path, alcanza con la primera.
-     */
     public function __invoke(string $numeroRecibo): Response
     {
         $pagoCuota = PagoCuota::where('numero_recibo', $numeroRecibo)->with('pago')->first();
@@ -29,6 +29,6 @@ class ComprobantePagoController extends Controller
             abort(404);
         }
 
-        return Storage::disk('local')->download($pagoCuota->pdf_path, "recibo-{$numeroRecibo}.pdf");
+        return Storage::disk('local')->response($pagoCuota->pdf_path, "recibo-{$numeroRecibo}.pdf");
     }
 }

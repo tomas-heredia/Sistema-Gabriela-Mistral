@@ -18,9 +18,10 @@ beforeEach(function () {
 test('cobrador ve el listado pero no la accion de anular', function () {
     $cobrador = User::factory()->create()->assignRole('cobrador');
     $pago = Pago::factory()->create();
+    $pagoCuota = PagoCuota::factory()->create(['pago_id' => $pago->id]);
 
     Livewire::actingAs($cobrador)->test(Listado::class)
-        ->assertSee($pago->numero_recibo)
+        ->assertSee($pagoCuota->numero_recibo)
         ->assertDontSee("prepararAnulacion({$pago->id})", false);
 });
 
@@ -38,7 +39,7 @@ test('administrador puede anular un pago y la cuota afectada recalcula su estado
     ]);
 
     $pago = Pago::factory()->create(['tutor_id' => $tutor->id, 'monto' => 100_000]);
-    PagoCuota::create(['pago_id' => $pago->id, 'cuota_id' => $cuota->id, 'monto_aplicado' => 100_000]);
+    PagoCuota::create(['pago_id' => $pago->id, 'cuota_id' => $cuota->id, 'monto_aplicado' => 100_000, 'numero_recibo' => '000777']);
 
     expect($cuota->fresh()->estado)->toBe(EstadoCuota::Pagada);
 
@@ -57,12 +58,14 @@ test('la busqueda encuentra un pago por el nombre del tutor', function () {
     $cobrador = User::factory()->create()->assignRole('cobrador');
     $tutor = Tutor::factory()->create(['nombre' => 'Marta Gómez']);
     $pago = Pago::factory()->create(['tutor_id' => $tutor->id]);
+    $pagoCuota = PagoCuota::factory()->create(['pago_id' => $pago->id]);
     $otroPago = Pago::factory()->create();
+    $otroPagoCuota = PagoCuota::factory()->create(['pago_id' => $otroPago->id]);
 
     Livewire::actingAs($cobrador)->test(Listado::class)
         ->set('busqueda', 'Gómez')
-        ->assertSee($pago->numero_recibo)
-        ->assertDontSee($otroPago->numero_recibo);
+        ->assertSee($pagoCuota->numero_recibo)
+        ->assertDontSee($otroPagoCuota->numero_recibo);
 });
 
 test('la busqueda encuentra un pago por el nombre del alumno del tutor', function () {
@@ -71,12 +74,14 @@ test('la busqueda encuentra un pago por el nombre del alumno del tutor', functio
     $alumno = Alumno::factory()->primario()->create(['nombre' => 'Lucas Peralta']);
     $tutor->alumnos()->attach($alumno->id, ['vinculo' => 'Madre', 'responsable_pago' => true]);
     $pago = Pago::factory()->create(['tutor_id' => $tutor->id]);
+    $pagoCuota = PagoCuota::factory()->create(['pago_id' => $pago->id]);
     $otroPago = Pago::factory()->create();
+    $otroPagoCuota = PagoCuota::factory()->create(['pago_id' => $otroPago->id]);
 
     Livewire::actingAs($cobrador)->test(Listado::class)
         ->set('busqueda', 'Peralta')
-        ->assertSee($pago->numero_recibo)
-        ->assertDontSee($otroPago->numero_recibo);
+        ->assertSee($pagoCuota->numero_recibo)
+        ->assertDontSee($otroPagoCuota->numero_recibo);
 });
 
 test('sin pagos, el boton de generar pdf aparece deshabilitado', function () {

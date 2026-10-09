@@ -11,6 +11,7 @@ use App\Cobranzas\Models\Enums\MedioPago;
 use App\Cobranzas\Models\Pago;
 use App\Cobranzas\Services\AsignadorDePagos;
 use App\Cobranzas\Services\GeneradorDeComprobantePago;
+use App\Cobranzas\Services\PeriodoDeCuotaEnTexto;
 use App\Core\Models\PeriodoLectivo;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -54,19 +55,21 @@ class Registrar extends Component
     public string $fecha = '';
 
     /**
-     * Porcentaje único para toda la operación -- se aplica por separado
-     * sobre la deuda de cada cuota tildada, no sobre el total combinado.
+     * Índice único para toda la operación, no un porcentaje -- 1 = sin
+     * interés, 1.40 = 40% de recargo. Se aplica por separado sobre la deuda
+     * de cada cuota tildada, no sobre el total combinado.
      */
-    public string $interesPorcentaje = '';
+    public string $interesIndice = '';
 
     public ?string $observaciones = null;
 
     /**
      * Comprobantes recién generados, para mostrar los links de descarga sin
      * salir de la pantalla (el cobrador los necesita al toque, no puede
-     * esperar a buscarlos después en el listado).
+     * esperar a buscarlos después en el listado). Uno por alumno, no por
+     * mes -- ver guardar().
      *
-     * @var array<int, array{numeroRecibo: string, alumno: string, periodo: string, url: string}>
+     * @var array<int, array{numeroRecibo: string, alumno: string, periodos: string, urlDescargar: string, urlImprimir: string}>
      */
     public array $comprobantesGenerados = [];
 
@@ -177,7 +180,7 @@ class Registrar extends Component
         $this->validate([
             'medio_pago' => ['required', Rule::enum(MedioPago::class)],
             'fecha' => ['required', 'date'],
-            'interesPorcentaje' => ['nullable', 'numeric', 'min:0', 'max:100'],
+            'interesIndice' => ['nullable', 'numeric', 'min:1', 'max:2'],
         ]);
 
         $asignaciones = [];
@@ -210,7 +213,7 @@ class Registrar extends Component
                     'tutor_id' => $this->tutorEncontrado->id,
                     'monto' => $montoTotal,
                     'medio_pago' => $this->medio_pago,
-                    'interes_porcentaje' => $this->interesPorcentaje !== '' ? $this->interesPorcentaje : 0,
+                    'interes_indice' => $this->interesIndice !== '' ? $this->interesIndice : 1,
                     'fecha' => $this->fecha,
                     'cobrador_id' => auth()->id(),
                     'observaciones' => $this->observaciones,
@@ -226,20 +229,27 @@ class Registrar extends Component
 
         $pagoCuotas = $pago->pagoCuotas()->with(['cuota.alumno', 'cuota.periodoLectivo'])->get();
 
-        $this->comprobantesGenerados = $pagoCuotas->map(function ($pagoCuota) use ($generador) {
-            $generador->generar($pagoCuota);
-            EnviarComprobantePago::dispatch($pagoCuota);
+        // Agrupadas por número de recibo: AsignadorDePagos ya les asignó el
+        // mismo número a todas las cuotas del mismo alumno en este pago, así
+        // que acá alcanza con juntarlas para armar un solo comprobante por
+        // alumno en vez de uno por mes.
+        $this->comprobantesGenerados = $pagoCuotas->groupBy('numero_recibo')->map(function ($grupo) use ($generador) {
+            $generador->generar($grupo);
+            EnviarComprobantePago::dispatch($grupo->first()->numero_recibo);
+
+            $numeroRecibo = $grupo->first()->numero_recibo;
 
             return [
-                'numeroRecibo' => $pagoCuota->numero_recibo,
-                'alumno' => $pagoCuota->cuota->alumno->nombre,
-                'periodo' => str_pad((string) $pagoCuota->cuota->mes, 2, '0', STR_PAD_LEFT).'/'.$pagoCuota->cuota->periodoLectivo->nombre,
-                'url' => route('pagos.comprobantes.descargar', $pagoCuota),
+                'numeroRecibo' => $numeroRecibo,
+                'alumno' => $grupo->first()->cuota->alumno->nombre,
+                'periodos' => $grupo->map(fn ($pagoCuota) => PeriodoDeCuotaEnTexto::calcular($pagoCuota->cuota))->implode(', '),
+                'urlDescargar' => route('pagos.comprobantes.descargar', $numeroRecibo),
+                'urlImprimir' => route('pagos.comprobantes.imprimir', $numeroRecibo),
             ];
-        })->all();
+        })->values()->all();
 
         session()->flash('mensaje', 'Pago registrado correctamente.');
-        $this->reset(['tutorEncontrado', 'cuotasSeleccionadas', 'montos', 'medio_pago', 'interesPorcentaje', 'observaciones', 'busquedaTutor', 'buscoTutor']);
+        $this->reset(['tutorEncontrado', 'cuotasSeleccionadas', 'montos', 'medio_pago', 'interesIndice', 'observaciones', 'busquedaTutor', 'buscoTutor']);
     }
 
     /**
@@ -254,9 +264,9 @@ class Registrar extends Component
 
     private function interesSobre(int $monto): int
     {
-        $porcentaje = $this->interesPorcentaje !== '' ? (float) $this->interesPorcentaje : 0.0;
+        $indice = $this->interesIndice !== '' ? (float) $this->interesIndice : 1.0;
 
-        return (int) round($monto * $porcentaje / 100);
+        return (int) round($monto * ($indice - 1));
     }
 
     /**

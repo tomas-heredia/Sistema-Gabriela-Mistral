@@ -4,18 +4,18 @@ namespace App\Cobranzas\Http\Controllers;
 
 use App\Cobranzas\Models\PagoCuota;
 use App\Core\Http\Controllers\Controller;
+use Illuminate\Contracts\View\View;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Storage;
-use Symfony\Component\HttpFoundation\Response;
 
-class ComprobantePagoController extends Controller
+/**
+ * Una página mínima con el PDF en un iframe que se manda a imprimir solo
+ * al cargar -- abrir el PDF directo y confiar en que el navegador dispare
+ * su propio diálogo de impresión no es consistente entre navegadores.
+ */
+class ImprimirComprobantePagoController extends Controller
 {
-    /**
-     * Un numero_recibo puede estar en varias filas de pago_cuota (un pago
-     * que cubrió varios meses del mismo alumno, ver AsignadorDePagos) --
-     * todas comparten el mismo pdf_path, alcanza con la primera.
-     */
-    public function __invoke(string $numeroRecibo): Response
+    public function __invoke(string $numeroRecibo): View
     {
         $pagoCuota = PagoCuota::where('numero_recibo', $numeroRecibo)->with('pago')->first();
 
@@ -29,6 +29,8 @@ class ComprobantePagoController extends Controller
             abort(404);
         }
 
-        return Storage::disk('local')->download($pagoCuota->pdf_path, "recibo-{$numeroRecibo}.pdf");
+        return view('pagos.imprimir', [
+            'urlPdf' => route('pagos.comprobantes.ver', $numeroRecibo),
+        ]);
     }
 }

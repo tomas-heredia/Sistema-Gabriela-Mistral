@@ -30,27 +30,39 @@
     <p><span class="label">Alumno:</span> {{ $alumnoNombre }} - DNI: {{ $alumnoDni }}</p>
     <p><span class="label">Nivel:</span> {{ $nivel }}</p>
     <p><span class="label">Grado:</span> {{ $gradoLinea }}</p>
-    <p><span class="label">Período:</span> {{ $periodoLinea }}</p>
     <p><span class="label">Forma de Pago:</span> {{ $formaDePago }}</p>
 </div>
 
 <table class="montos">
-    <tr>
-        <td>SubTotal</td>
-        <td class="importe">${{ number_format($subtotal / 100, 2, ',', '.') }}</td>
-    </tr>
-    <tr>
-        <td>Desc.</td>
-        <td class="importe">${{ number_format($descuento / 100, 2, ',', '.') }}</td>
-    </tr>
-    <tr>
-        <td>Interés</td>
-        <td class="importe">${{ number_format($interes / 100, 2, ',', '.') }}</td>
-    </tr>
-    <tr class="total">
-        <td>TOTAL</td>
-        <td class="importe">${{ number_format($total / 100, 2, ',', '.') }}</td>
-    </tr>
+    <thead>
+        <tr>
+            <th>Período</th>
+            <th class="importe">SubTotal</th>
+            <th class="importe">Desc.</th>
+            <th class="importe">Interés</th>
+            <th class="importe">Total</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach ($lineas as $linea)
+            <tr>
+                <td>{{ $linea['periodo'] }}</td>
+                <td class="importe">${{ number_format($linea['subtotal'] / 100, 2, ',', '.') }}</td>
+                <td class="importe">${{ number_format($linea['descuento'] / 100, 2, ',', '.') }}</td>
+                <td class="importe">${{ number_format($linea['interes'] / 100, 2, ',', '.') }}</td>
+                <td class="importe">${{ number_format($linea['total'] / 100, 2, ',', '.') }}</td>
+            </tr>
+        @endforeach
+    </tbody>
+    <tfoot>
+        <tr class="total">
+            <td>TOTAL</td>
+            <td class="importe">${{ number_format($subtotal / 100, 2, ',', '.') }}</td>
+            <td class="importe">${{ number_format($descuento / 100, 2, ',', '.') }}</td>
+            <td class="importe">${{ number_format($interes / 100, 2, ',', '.') }}</td>
+            <td class="importe">${{ number_format($total / 100, 2, ',', '.') }}</td>
+        </tr>
+    </tfoot>
 </table>
 
 <p class="son">SON: {{ $totalEnLetras }}</p>

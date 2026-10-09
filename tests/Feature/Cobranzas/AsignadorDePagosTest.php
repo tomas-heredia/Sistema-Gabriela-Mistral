@@ -26,7 +26,7 @@ test('un pago parcial deja la cuota en parcial con el saldo correcto', function 
         ->and($cuota->fresh()->montoPagado())->toBe(60_000);
 });
 
-test('un pago puede cubrir dos cuotas (dos meses), una con su propio recibo', function () {
+test('un pago puede cubrir dos cuotas (dos meses) del mismo alumno, con un solo recibo compartido', function () {
     $alumno = Alumno::factory()->create();
     $marzo = Cuota::factory()->create(['alumno_id' => $alumno->id, 'mes' => 3, 'monto' => 100_000]);
     $abril = Cuota::factory()->create(['alumno_id' => $alumno->id, 'mes' => 4, 'monto' => 100_000]);
@@ -42,7 +42,24 @@ test('un pago puede cubrir dos cuotas (dos meses), una con su propio recibo', fu
     expect($pagoCuotas)->toHaveCount(2)
         ->and($marzo->fresh()->estado)->toBe(EstadoCuota::Pagada)
         ->and($abril->fresh()->estado)->toBe(EstadoCuota::Pagada)
-        ->and($pagoCuotas->pluck('numero_recibo')->unique())->toHaveCount(2);
+        ->and($pagoCuotas->pluck('numero_recibo')->unique())->toHaveCount(1);
+});
+
+test('un pago que cubre a dos alumnos distintos genera un recibo por cada uno', function () {
+    $hermanoA = Alumno::factory()->create();
+    $hermanoB = Alumno::factory()->create();
+    $cuotaA = Cuota::factory()->create(['alumno_id' => $hermanoA->id, 'monto' => 100_000]);
+    $cuotaB = Cuota::factory()->create(['alumno_id' => $hermanoB->id, 'monto' => 100_000]);
+    $pago = Pago::factory()->create(['monto' => 200_000]);
+
+    app(AsignadorDePagos::class)->aplicar($pago, [
+        $cuotaA->id => ['monto' => 100_000, 'interes' => 0],
+        $cuotaB->id => ['monto' => 100_000, 'interes' => 0],
+    ]);
+
+    $pagoCuotas = $pago->pagoCuotas()->get();
+
+    expect($pagoCuotas->pluck('numero_recibo')->unique())->toHaveCount(2);
 });
 
 test('el interes aplicado no cuenta para el saldo pendiente de la cuota', function () {

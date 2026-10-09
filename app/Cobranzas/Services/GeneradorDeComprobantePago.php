@@ -7,45 +7,66 @@ use App\Alumnos\Models\Enums\Nivel;
 use App\Alumnos\Models\Enums\Turno;
 use App\Cobranzas\Models\PagoCuota;
 use Barryvdh\DomPDF\Facade\Pdf;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Storage;
 
 /**
- * Genera el comprobante en PDF de una cuota pagada y lo deja guardado en
- * disco -- se llama una vez por cada cuota de la operación (un PDF por
- * mes, nunca uno combinado), igual que se haría con un talonario de recibos
- * de papel.
+ * Genera el comprobante en PDF de un alumno dentro de una operación de pago,
+ * y lo deja guardado en disco. Si ese pago cubre varios meses del mismo
+ * alumno, todas esas cuotas comparten un único comprobante (una sola fila
+ * por período dentro del mismo PDF) en vez de uno por mes -- quien paga
+ * varios meses juntos se lleva un solo papel, no un talonario.
  */
 class GeneradorDeComprobantePago
 {
-    public function generar(PagoCuota $pagoCuota): PagoCuota
+    /**
+     * @param  Collection<int, PagoCuota>  $pagoCuotas  Todas las filas que
+     *                                                  comparten un mismo numero_recibo (mismo pago, mismo alumno) -- ver
+     *                                                  AsignadorDePagos::aplicar().
+     */
+    public function generar(Collection $pagoCuotas): Collection
     {
-        $pagoCuota->loadMissing(['cuota.alumno.tutores', 'cuota.periodoLectivo', 'pago']);
+        $pagoCuotas->each->loadMissing(['cuota.alumno.tutores', 'cuota.periodoLectivo', 'pago']);
 
-        $pdf = Pdf::loadView('pagos.comprobante', $this->datos($pagoCuota));
+        $pdf = Pdf::loadView('pagos.comprobante', $this->datos($pagoCuotas));
 
-        $rutaRelativa = "pagos/comprobantes/{$pagoCuota->id}.pdf";
+        $numeroRecibo = $pagoCuotas->first()->numero_recibo;
+        $rutaRelativa = "pagos/comprobantes/{$numeroRecibo}.pdf";
         Storage::disk('local')->put($rutaRelativa, $pdf->output());
 
-        $pagoCuota->forceFill(['pdf_path' => $rutaRelativa])->save();
+        foreach ($pagoCuotas as $pagoCuota) {
+            $pagoCuota->forceFill(['pdf_path' => $rutaRelativa])->save();
+        }
 
-        return $pagoCuota;
+        return $pagoCuotas;
     }
 
     /**
      * Datos de un recibo en el formato que espera la vista -- se reutiliza
      * tanto para el PDF individual (`generar()`) como para la recopilación
      * de todos los recibos de un período (`PagosPdfController`), así ambos
-     * muestran exactamente el mismo contenido por cuota pagada.
+     * muestran exactamente el mismo contenido.
+     *
+     * @param  Collection<int, PagoCuota>  $pagoCuotas
      */
-    public function datos(PagoCuota $pagoCuota): array
+    public function datos(Collection $pagoCuotas): array
     {
-        $cuota = $pagoCuota->cuota;
+        $primera = $pagoCuotas->first();
+        $cuota = $primera->cuota;
         $alumno = $cuota->alumno;
         $tutor = $alumno->tutores->firstWhere('pivot.responsable_pago', true) ?? $alumno->tutores->first();
-        $pago = $pagoCuota->pago;
+        $pago = $primera->pago;
+
+        $lineas = $pagoCuotas->map(fn (PagoCuota $pagoCuota) => [
+            'periodo' => PeriodoDeCuotaEnTexto::calcular($pagoCuota->cuota),
+            'subtotal' => $pagoCuota->cuota->monto_base,
+            'descuento' => $pagoCuota->cuota->descuento_monto,
+            'interes' => $pagoCuota->interes_aplicado,
+            'total' => $pagoCuota->montoTotal(),
+        ]);
 
         return [
-            'numeroRecibo' => $pagoCuota->numero_recibo,
+            'numeroRecibo' => $primera->numero_recibo,
             'fecha' => $pago->fecha,
             'tutorNombre' => $tutor->nombre,
             'tutorDni' => $tutor->dni,
@@ -53,13 +74,13 @@ class GeneradorDeComprobantePago
             'alumnoDni' => $alumno->dni,
             'nivel' => ucfirst($alumno->nivel->value),
             'gradoLinea' => $this->gradoLinea($alumno),
-            'periodoLinea' => PeriodoDeCuotaEnTexto::calcular($cuota),
             'formaDePago' => $pago->medio_pago->label(),
-            'subtotal' => $cuota->monto_base,
-            'descuento' => $cuota->descuento_monto,
-            'interes' => $pagoCuota->interes_aplicado,
-            'total' => $pagoCuota->montoTotal(),
-            'totalEnLetras' => NumeroEnLetras::pesos($pagoCuota->montoTotal()),
+            'lineas' => $lineas,
+            'subtotal' => $lineas->sum('subtotal'),
+            'descuento' => $lineas->sum('descuento'),
+            'interes' => $lineas->sum('interes'),
+            'total' => $lineas->sum('total'),
+            'totalEnLetras' => NumeroEnLetras::pesos($lineas->sum('total')),
         ];
     }
 

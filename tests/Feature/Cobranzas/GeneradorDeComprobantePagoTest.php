@@ -51,7 +51,7 @@ function pagoCuotaParaComprobante(array $alumnoAtributos = [], int $interes = 0)
 test('genera el pdf y guarda la ruta en la cuota pagada', function () {
     $pagoCuota = pagoCuotaParaComprobante(interes: 5_000);
 
-    app(GeneradorDeComprobantePago::class)->generar($pagoCuota);
+    app(GeneradorDeComprobantePago::class)->generar(collect([$pagoCuota]));
 
     $pagoCuota->refresh();
 
@@ -64,8 +64,8 @@ test('infiere la division A/B por turno para nivel inicial, que no tiene divisio
     $pagoCuotaTarde = pagoCuotaParaComprobante(['nivel' => Nivel::Inicial, 'grado' => 'Sala de 4', 'division' => null, 'turno' => Turno::Tarde]);
 
     $generador = app(GeneradorDeComprobantePago::class);
-    $generador->generar($pagoCuotaManana);
-    $generador->generar($pagoCuotaTarde);
+    $generador->generar(collect([$pagoCuotaManana]));
+    $generador->generar(collect([$pagoCuotaTarde]));
 
     // No hay forma directa de inspeccionar el HTML ya renderizado a PDF
     // desde el test -- lo que sí se puede verificar es que ambos terminan
@@ -73,4 +73,28 @@ test('infiere la division A/B por turno para nivel inicial, que no tiene divisio
     // mejor visualmente, ver docs/reference/plantilla-recibo-pago.jpeg).
     expect($pagoCuotaManana->fresh()->pdf_path)->not->toBeNull()
         ->and($pagoCuotaTarde->fresh()->pdf_path)->not->toBeNull();
+});
+
+test('un pago que cubre varios meses del mismo alumno genera un solo pdf compartido', function () {
+    $periodo = PeriodoLectivo::factory()->activo()->create();
+    $tutor = Tutor::factory()->create();
+    $alumno = Alumno::factory()->primario()->create();
+    $tutor->alumnos()->attach($alumno->id, ['vinculo' => 'madre', 'responsable_pago' => true]);
+    $pago = Pago::factory()->create(['monto' => 200_000]);
+
+    $cuotaMarzo = Cuota::factory()->create(['alumno_id' => $alumno->id, 'periodo_lectivo_id' => $periodo->id, 'mes' => 3, 'monto_base' => 100_000, 'monto' => 100_000]);
+    $cuotaAbril = Cuota::factory()->create(['alumno_id' => $alumno->id, 'periodo_lectivo_id' => $periodo->id, 'mes' => 4, 'monto_base' => 100_000, 'monto' => 100_000]);
+
+    $pagoCuotaMarzo = PagoCuota::factory()->create(['pago_id' => $pago->id, 'cuota_id' => $cuotaMarzo->id, 'monto_aplicado' => 100_000, 'numero_recibo' => '000555']);
+    $pagoCuotaAbril = PagoCuota::factory()->create(['pago_id' => $pago->id, 'cuota_id' => $cuotaAbril->id, 'monto_aplicado' => 100_000, 'numero_recibo' => '000555']);
+
+    $datos = app(GeneradorDeComprobantePago::class)->datos(collect([$pagoCuotaMarzo, $pagoCuotaAbril]));
+
+    expect($datos['lineas'])->toHaveCount(2)
+        ->and($datos['subtotal'])->toBe(200_000)
+        ->and($datos['total'])->toBe(200_000);
+
+    app(GeneradorDeComprobantePago::class)->generar(collect([$pagoCuotaMarzo, $pagoCuotaAbril]));
+
+    expect($pagoCuotaMarzo->fresh()->pdf_path)->toBe($pagoCuotaAbril->fresh()->pdf_path);
 });

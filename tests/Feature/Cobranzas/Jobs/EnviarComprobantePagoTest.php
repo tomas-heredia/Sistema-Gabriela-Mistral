@@ -36,9 +36,9 @@ test('envia el comprobante solo al tutor responsable de pago', function () {
         'monto_aplicado' => 100_000,
     ]);
 
-    app(GeneradorDeComprobantePago::class)->generar($pagoCuota);
+    app(GeneradorDeComprobantePago::class)->generar(collect([$pagoCuota]));
 
-    (new EnviarComprobantePago($pagoCuota->fresh()))->handle();
+    (new EnviarComprobantePago($pagoCuota->fresh()->numero_recibo))->handle();
 
     Mail::assertSent(ComprobantePagoEnviado::class, fn ($mail) => $mail->hasTo('responsable@example.com'));
     Mail::assertNotSent(ComprobantePagoEnviado::class, fn ($mail) => $mail->hasTo('otro@example.com'));
@@ -71,9 +71,9 @@ test('el flujo completo genera el pdf real y lo adjunta al mail', function () {
         'interes_aplicado' => 5_000,
     ]);
 
-    app(GeneradorDeComprobantePago::class)->generar($pagoCuota);
+    app(GeneradorDeComprobantePago::class)->generar(collect([$pagoCuota]));
 
-    (new EnviarComprobantePago($pagoCuota->fresh()))->handle();
+    (new EnviarComprobantePago($pagoCuota->fresh()->numero_recibo))->handle();
 
     expect(true)->toBeTrue(); // No tiró ninguna excepción: el PDF y la vista de mail son reales y válidos.
 });

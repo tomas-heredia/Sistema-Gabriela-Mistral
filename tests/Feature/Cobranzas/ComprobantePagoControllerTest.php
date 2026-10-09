@@ -36,7 +36,7 @@ function pagoCuotaDescargable(): PagoCuota
         'monto_aplicado' => 100_000,
     ]);
 
-    app(GeneradorDeComprobantePago::class)->generar($pagoCuota);
+    app(GeneradorDeComprobantePago::class)->generar(collect([$pagoCuota]));
 
     return $pagoCuota->fresh();
 }
@@ -45,7 +45,7 @@ test('un cobrador puede descargar el comprobante', function () {
     $cobrador = User::factory()->create()->assignRole('cobrador');
     $pagoCuota = pagoCuotaDescargable();
 
-    $response = $this->actingAs($cobrador)->get(route('pagos.comprobantes.descargar', $pagoCuota));
+    $response = $this->actingAs($cobrador)->get(route('pagos.comprobantes.descargar', $pagoCuota->numero_recibo));
 
     $response->assertOk()->assertHeader('content-type', 'application/pdf');
 });
@@ -54,7 +54,7 @@ test('un profesor no puede descargar el comprobante', function () {
     $profesor = User::factory()->create()->assignRole('profesor');
     $pagoCuota = pagoCuotaDescargable();
 
-    $this->actingAs($profesor)->get(route('pagos.comprobantes.descargar', $pagoCuota))->assertForbidden();
+    $this->actingAs($profesor)->get(route('pagos.comprobantes.descargar', $pagoCuota->numero_recibo))->assertForbidden();
 });
 
 test('si todavia no se genero el pdf, devuelve 404 en vez de un archivo vacio', function () {
@@ -63,5 +63,42 @@ test('si todavia no se genero el pdf, devuelve 404 en vez de un archivo vacio', 
     $cuota = Cuota::factory()->create();
     $pagoCuota = PagoCuota::factory()->create(['pago_id' => $pago->id, 'cuota_id' => $cuota->id, 'pdf_path' => null]);
 
-    $this->actingAs($cobrador)->get(route('pagos.comprobantes.descargar', $pagoCuota))->assertNotFound();
+    $this->actingAs($cobrador)->get(route('pagos.comprobantes.descargar', $pagoCuota->numero_recibo))->assertNotFound();
+});
+
+test('un numero de recibo que no existe devuelve 404', function () {
+    $cobrador = User::factory()->create()->assignRole('cobrador');
+
+    $this->actingAs($cobrador)->get(route('pagos.comprobantes.descargar', '999999'))->assertNotFound();
+});
+
+test('un cobrador puede ver el comprobante inline, no forzado a descargar', function () {
+    $cobrador = User::factory()->create()->assignRole('cobrador');
+    $pagoCuota = pagoCuotaDescargable();
+
+    $response = $this->actingAs($cobrador)->get(route('pagos.comprobantes.ver', $pagoCuota->numero_recibo));
+
+    $response->assertOk()
+        ->assertHeader('content-type', 'application/pdf')
+        ->assertHeaderContains('content-disposition', 'inline');
+});
+
+test('la pagina de imprimir embebe el pdf en un iframe que se manda a imprimir solo', function () {
+    $cobrador = User::factory()->create()->assignRole('cobrador');
+    $pagoCuota = pagoCuotaDescargable();
+
+    $response = $this->actingAs($cobrador)->get(route('pagos.comprobantes.imprimir', $pagoCuota->numero_recibo));
+
+    $response->assertOk()
+        ->assertSee('<iframe', false)
+        ->assertSee('.print()', false)
+        ->assertSee(route('pagos.comprobantes.ver', $pagoCuota->numero_recibo), false);
+});
+
+test('un profesor no puede ver ni imprimir el comprobante', function () {
+    $profesor = User::factory()->create()->assignRole('profesor');
+    $pagoCuota = pagoCuotaDescargable();
+
+    $this->actingAs($profesor)->get(route('pagos.comprobantes.ver', $pagoCuota->numero_recibo))->assertForbidden();
+    $this->actingAs($profesor)->get(route('pagos.comprobantes.imprimir', $pagoCuota->numero_recibo))->assertForbidden();
 });

@@ -20,7 +20,8 @@
         .datos-pago p { margin: 4px 0; }
         .label { color: #444; }
         table.montos { width: 100%; border-collapse: collapse; margin-top: 14px; }
-        table.montos td { border: none; padding: 3px 0; }
+        table.montos th, table.montos td { border: none; padding: 3px 6px 3px 0; text-align: left; }
+        table.montos thead th { border-bottom: 1px solid #999; padding-bottom: 4px; }
         table.montos .importe { text-align: right; }
         table.montos .total td { border-top: 1px solid #999; padding-top: 6px; font-weight: bold; font-size: 13px; }
         .son { margin-top: 14px; font-style: italic; }

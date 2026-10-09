@@ -2,7 +2,7 @@
 
 namespace App\Cobranzas\Mail;
 
-use App\Cobranzas\Models\PagoCuota;
+use App\Alumnos\Models\Alumno;
 use Illuminate\Bus\Queueable;
 use Illuminate\Mail\Mailable;
 use Illuminate\Mail\Mailables\Attachment;
@@ -15,16 +15,15 @@ class ComprobantePagoEnviado extends Mailable
     use Queueable, SerializesModels;
 
     public function __construct(
-        public PagoCuota $pagoCuota,
+        public Alumno $alumno,
+        public string $numeroRecibo,
         public string $pdfAbsolutePath,
     ) {}
 
     public function envelope(): Envelope
     {
-        $alumno = $this->pagoCuota->cuota->alumno;
-
         return new Envelope(
-            subject: "Comprobante de pago de {$alumno->nombre}",
+            subject: "Comprobante de pago de {$this->alumno->nombre}",
         );
     }
 
@@ -33,8 +32,8 @@ class ComprobantePagoEnviado extends Mailable
         return new Content(
             view: 'pagos.mail.enviado',
             with: [
-                'alumno' => $this->pagoCuota->cuota->alumno,
-                'numeroRecibo' => $this->pagoCuota->numero_recibo,
+                'alumno' => $this->alumno,
+                'numeroRecibo' => $this->numeroRecibo,
             ],
         );
     }
@@ -43,7 +42,7 @@ class ComprobantePagoEnviado extends Mailable
     {
         return [
             Attachment::fromPath($this->pdfAbsolutePath)
-                ->as("recibo-{$this->pagoCuota->numero_recibo}.pdf")
+                ->as("recibo-{$this->numeroRecibo}.pdf")
                 ->withMime('application/pdf'),
         ];
     }
