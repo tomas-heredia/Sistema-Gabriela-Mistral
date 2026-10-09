@@ -77,11 +77,14 @@ class Registrar extends Component
     }
 
     /**
-     * Busca por DNI exacto, o por coincidencia parcial en el nombre del
-     * tutor o en el de alguno de sus alumnos -- el cobrador no siempre
-     * tiene el DNI a mano, pero sabe el apellido de la familia o del
-     * chico. Con un único resultado se selecciona solo; con varios, hay
-     * que elegir cuál antes de ver sus cuotas.
+     * Busca por DNI exacto (del tutor o de alguno de sus alumnos), o por
+     * coincidencia parcial en el nombre del tutor o en el de alguno de sus
+     * alumnos -- el cobrador no siempre tiene el DNI del tutor a mano, pero
+     * puede tener el del alumno, o solo el apellido de la familia o del
+     * chico. Encontrar por un alumno trae a su tutor con TODOS sus hijos
+     * (hermanos incluidos), no solo el que coincidió con la búsqueda --
+     * ver cuotasDelTutor(). Con un único resultado se selecciona solo; con
+     * varios, hay que elegir cuál antes de ver sus cuotas.
      */
     public function buscarTutor(): void
     {
@@ -100,7 +103,10 @@ class Registrar extends Component
             ->where(function ($query) {
                 $query->where('dni', $this->busquedaTutor)
                     ->orWhere('nombre', 'like', "%{$this->busquedaTutor}%")
-                    ->orWhereHas('alumnos', fn ($q) => $q->where('nombre', 'like', "%{$this->busquedaTutor}%"));
+                    ->orWhereHas('alumnos', function ($q) {
+                        $q->where('nombre', 'like', "%{$this->busquedaTutor}%")
+                            ->orWhere('dni', $this->busquedaTutor);
+                    });
             })
             ->orderBy('nombre')
             ->get();

@@ -4,7 +4,7 @@
     <div class="bg-white shadow-sm rounded-lg p-6 space-y-4">
         <div class="flex items-end gap-3">
             <div class="flex-1 max-w-sm">
-                <x-input-label for="busquedaTutor" value="Buscar tutor por DNI, nombre o el de un alumno suyo" />
+                <x-input-label for="busquedaTutor" value="Buscar por DNI o nombre del tutor, o por nombre/apellido o DNI de un alumno" />
                 <x-text-input id="busquedaTutor" type="text" class="mt-1 block w-full" wire:model="busquedaTutor" />
             </div>
             <x-secondary-button type="button" wire:click="buscarTutor">Buscar</x-secondary-button>

@@ -101,6 +101,67 @@ test('buscar tutor por el nombre de su alumno lo encuentra', function () {
         ->assertSet('tutorEncontrado.id', $this->tutor->id);
 });
 
+test('buscar por el dni de un alumno encuentra a su tutor', function () {
+    $cobrador = User::factory()->create()->assignRole('cobrador');
+    $alumno = Alumno::factory()->primario()->create(['dni' => '40123456']);
+    vincularAlumnoATutor($this->tutor, $alumno);
+
+    Livewire::actingAs($cobrador)->test(Registrar::class)
+        ->set('busquedaTutor', '40123456')
+        ->call('buscarTutor')
+        ->assertSet('tutorEncontrado.id', $this->tutor->id);
+});
+
+test('al encontrar un tutor por un alumno, se ven las cuotas pendientes de todos sus hermanos', function () {
+    $cobrador = User::factory()->create()->assignRole('cobrador');
+    $alumnoBuscado = Alumno::factory()->primario()->create(['nombre' => 'Lucas Peralta', 'dni' => '40123456']);
+    $hermano = Alumno::factory()->primario()->create(['nombre' => 'Marina Peralta']);
+    vincularAlumnoATutor($this->tutor, $alumnoBuscado);
+    vincularAlumnoATutor($this->tutor, $hermano);
+
+    Cuota::factory()->create([
+        'alumno_id' => $alumnoBuscado->id,
+        'periodo_lectivo_id' => $this->periodo->id,
+        'estado' => EstadoCuota::Pendiente,
+    ]);
+    Cuota::factory()->create([
+        'alumno_id' => $hermano->id,
+        'periodo_lectivo_id' => $this->periodo->id,
+        'estado' => EstadoCuota::Pendiente,
+    ]);
+
+    Livewire::actingAs($cobrador)->test(Registrar::class)
+        ->set('busquedaTutor', '40123456')
+        ->call('buscarTutor')
+        ->assertSee('Lucas Peralta')
+        ->assertSee('Marina Peralta');
+});
+
+test('un hijo del tutor sin ninguna cuota pendiente no aparece en la lista', function () {
+    $cobrador = User::factory()->create()->assignRole('cobrador');
+    $alumnoConDeuda = Alumno::factory()->primario()->create(['nombre' => 'Lucas Peralta']);
+    $alumnoAlDia = Alumno::factory()->primario()->create(['nombre' => 'Marina Peralta']);
+    vincularAlumnoATutor($this->tutor, $alumnoConDeuda);
+    vincularAlumnoATutor($this->tutor, $alumnoAlDia);
+
+    Cuota::factory()->create([
+        'alumno_id' => $alumnoConDeuda->id,
+        'periodo_lectivo_id' => $this->periodo->id,
+        'estado' => EstadoCuota::Pendiente,
+    ]);
+    Cuota::factory()->create([
+        'alumno_id' => $alumnoAlDia->id,
+        'periodo_lectivo_id' => $this->periodo->id,
+        'estado' => EstadoCuota::Pagada,
+    ]);
+
+    Livewire::actingAs($cobrador)->test(Registrar::class)
+        ->set('busquedaTutor', $this->tutor->dni)
+        ->call('buscarTutor')
+        ->assertSee('Lucas Peralta')
+        ->assertDontSee('Marina Peralta');
+});
+
 test('buscar un nombre con varios tutores coincidentes muestra la lista para elegir', function () {
     $cobrador = User::factory()->create()->assignRole('cobrador');
     $this->tutor->update(['nombre' => 'Marta Gómez']);
