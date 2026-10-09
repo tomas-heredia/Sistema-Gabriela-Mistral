@@ -152,6 +152,26 @@ class Registrar extends Component
         return $total;
     }
 
+    /**
+     * Pagos ya registrados de este tutor (de cualquier período, no solo el
+     * activo) -- contexto para el cobrador antes de registrar uno nuevo,
+     * incluidos los anulados (se ven marcados, no se ocultan).
+     *
+     * @return Collection<int, Pago>
+     */
+    public function getHistorialPagosProperty(): Collection
+    {
+        if (! $this->tutorEncontrado) {
+            return collect();
+        }
+
+        return Pago::where('tutor_id', $this->tutorEncontrado->id)
+            ->with(['pagoCuotas.cuota.alumno', 'pagoCuotas.cuota.periodoLectivo'])
+            ->orderByDesc('fecha')
+            ->orderByDesc('id')
+            ->get();
+    }
+
     public function guardar(AsignadorDePagos $asignador, GeneradorDeComprobantePago $generador): void
     {
         $this->validate([

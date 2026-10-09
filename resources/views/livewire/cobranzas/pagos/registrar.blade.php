@@ -165,4 +165,59 @@
             </div>
         </form>
     @endif
+
+    @if ($tutorEncontrado)
+        <div class="bg-white shadow-sm rounded-lg overflow-hidden">
+            <h2 class="px-6 py-3 text-sm font-semibold text-gray-900 border-b border-gray-200">
+                Historial de pagos de {{ $tutorEncontrado->nombre }}
+            </h2>
+
+            @if ($this->historialPagos->isEmpty())
+                <p class="text-center text-gray-500 py-8 text-sm">Este tutor todavía no tiene pagos registrados.</p>
+            @else
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha</th>
+                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Monto</th>
+                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Medio</th>
+                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Aplicado a</th>
+                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-100">
+                            @foreach ($this->historialPagos as $pago)
+                                <tr wire:key="historial-pago-{{ $pago->id }}">
+                                    <td class="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{{ $pago->fecha->format('d/m/Y') }}</td>
+                                    <td class="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">${{ number_format($pago->monto / 100, 2, ',', '.') }}</td>
+                                    <td class="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{{ $pago->medio_pago->label() }}</td>
+                                    <td class="px-4 py-3 text-sm text-gray-600">
+                                        <div class="flex flex-col gap-1">
+                                            @foreach ($pago->pagoCuotas as $pagoCuota)
+                                                <a
+                                                    href="{{ route('pagos.comprobantes.descargar', $pagoCuota) }}"
+                                                    target="_blank"
+                                                    class="text-indigo-600 hover:text-indigo-500"
+                                                >
+                                                    {{ $pagoCuota->cuota->alumno->nombre }} — {{ str_pad((string) $pagoCuota->cuota->mes, 2, '0', STR_PAD_LEFT) }}/{{ $pagoCuota->cuota->periodoLectivo->nombre }} (recibo {{ $pagoCuota->numero_recibo }})
+                                                </a>
+                                            @endforeach
+                                        </div>
+                                    </td>
+                                    <td class="px-4 py-3 text-sm whitespace-nowrap">
+                                        @if ($pago->estaAnulado())
+                                            <x-pill color="red">Anulado</x-pill>
+                                        @else
+                                            <x-pill color="green">Vigente</x-pill>
+                                        @endif
+                                    </td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+            @endif
+        </div>
+    @endif
 </div>

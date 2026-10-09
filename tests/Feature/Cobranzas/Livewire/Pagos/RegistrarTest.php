@@ -162,6 +162,56 @@ test('un hijo del tutor sin ninguna cuota pendiente no aparece en la lista', fun
         ->assertDontSee('Marina Peralta');
 });
 
+test('al encontrar un tutor se ve el historial de sus pagos ya realizados', function () {
+    $cobrador = User::factory()->create()->assignRole('cobrador');
+    $alumno = Alumno::factory()->primario()->create(['nombre' => 'Lucas Peralta']);
+    vincularAlumnoATutor($this->tutor, $alumno);
+
+    $cuota = Cuota::factory()->create([
+        'alumno_id' => $alumno->id,
+        'periodo_lectivo_id' => $this->periodo->id,
+        'mes' => 3,
+        'estado' => EstadoCuota::Pagada,
+    ]);
+    $pago = Pago::factory()->create(['tutor_id' => $this->tutor->id, 'monto' => 50000, 'medio_pago' => MedioPago::Efectivo]);
+    PagoCuota::factory()->create(['pago_id' => $pago->id, 'cuota_id' => $cuota->id, 'numero_recibo' => '000123']);
+
+    Livewire::actingAs($cobrador)->test(Registrar::class)
+        ->set('busquedaTutor', $this->tutor->dni)
+        ->call('buscarTutor')
+        ->assertSee('Historial de pagos')
+        ->assertSee('500,00')
+        ->assertSee('Lucas Peralta — 03/'.$this->periodo->nombre.' (recibo 000123)')
+        ->assertSee('Vigente');
+});
+
+test('el historial de pagos muestra un pago anulado como tal', function () {
+    $cobrador = User::factory()->create()->assignRole('cobrador');
+    $alumno = Alumno::factory()->primario()->create();
+    vincularAlumnoATutor($this->tutor, $alumno);
+
+    $cuota = Cuota::factory()->create(['alumno_id' => $alumno->id, 'periodo_lectivo_id' => $this->periodo->id]);
+    $pago = Pago::factory()->create(['tutor_id' => $this->tutor->id]);
+    PagoCuota::factory()->create(['pago_id' => $pago->id, 'cuota_id' => $cuota->id]);
+    $pago->anular('Pagó de más por error', User::factory()->create()->assignRole('administrador'));
+
+    Livewire::actingAs($cobrador)->test(Registrar::class)
+        ->set('busquedaTutor', $this->tutor->dni)
+        ->call('buscarTutor')
+        ->assertSee('Anulado');
+});
+
+test('un tutor sin pagos previos muestra el historial vacio', function () {
+    $cobrador = User::factory()->create()->assignRole('cobrador');
+    $alumno = Alumno::factory()->primario()->create();
+    vincularAlumnoATutor($this->tutor, $alumno);
+
+    Livewire::actingAs($cobrador)->test(Registrar::class)
+        ->set('busquedaTutor', $this->tutor->dni)
+        ->call('buscarTutor')
+        ->assertSee('todavía no tiene pagos registrados');
+});
+
 test('buscar un nombre con varios tutores coincidentes muestra la lista para elegir', function () {
     $cobrador = User::factory()->create()->assignRole('cobrador');
     $this->tutor->update(['nombre' => 'Marta Gómez']);
