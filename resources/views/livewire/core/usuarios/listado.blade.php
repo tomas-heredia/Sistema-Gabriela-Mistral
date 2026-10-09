@@ -7,6 +7,8 @@
                     type="text"
                     id="busqueda"
                     wire:model.live.debounce.400ms="busqueda"
+                    wire:keydown.enter.prevent="$set('busqueda', $event.target.value)"
+                    data-enter-busca
                     placeholder="Buscar por nombre o correo…"
                     class="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
                 >
@@ -27,6 +29,7 @@
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nombre</th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Correo</th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Rol</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
                             <th class="px-6 py-3"></th>
                         </tr>
                     </thead>
@@ -48,18 +51,25 @@
                                         <x-pill color="indigo">Libretas</x-pill>
                                     @endif
                                 </td>
+                                <td class="px-6 py-3 text-sm">
+                                    @if ($usuario->activo)
+                                        <x-pill color="green">Activo</x-pill>
+                                    @else
+                                        <x-pill color="gray">Inactivo</x-pill>
+                                    @endif
+                                </td>
                                 <td class="px-6 py-3 text-right text-sm space-x-3 whitespace-nowrap">
                                     <a href="{{ route('usuarios.editar', $usuario) }}" wire:navigate class="text-indigo-600 hover:text-indigo-800">
                                         Editar
                                     </a>
-                                    @if (! auth()->user()->is($usuario))
+                                    @if (! auth()->user()->is($usuario) && $usuario->activo)
                                         <button
                                             type="button"
                                             wire:click="eliminar({{ $usuario->id }})"
-                                            wire:confirm="¿Eliminar a {{ $usuario->name }}?"
+                                            wire:confirm="¿Seguro que querés desactivar a {{ $usuario->name }}? Sus datos no se borran, se puede reactivar editándolo."
                                             class="text-red-600 hover:text-red-800"
                                         >
-                                            Eliminar
+                                            Desactivar
                                         </button>
                                     @endif
                                 </td>

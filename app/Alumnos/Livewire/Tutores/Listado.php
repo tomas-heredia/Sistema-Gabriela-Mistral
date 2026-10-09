@@ -3,7 +3,6 @@
 namespace App\Alumnos\Livewire\Tutores;
 
 use App\Alumnos\Models\Tutor;
-use Illuminate\Database\QueryException;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
 use Livewire\WithPagination;
@@ -25,16 +24,16 @@ class Listado extends Component
         $this->resetPage();
     }
 
+    /**
+     * "Eliminar" desactiva, no borra -- mismo criterio que Alumno (ver
+     * Alumnos\Listado::eliminar()).
+     */
     public function eliminar(Tutor $tutor): void
     {
         $this->authorize('delete', $tutor);
 
-        try {
-            $tutor->delete();
-            session()->flash('mensaje', 'Tutor eliminado correctamente.');
-        } catch (QueryException) {
-            session()->flash('error', 'No se pudo eliminar: este tutor tiene pagos u otros registros asociados.');
-        }
+        $tutor->update(['activo' => false]);
+        session()->flash('mensaje', 'Tutor desactivado correctamente.');
     }
 
     public function render()

@@ -38,6 +38,15 @@ class LoginForm extends Form
             ]);
         }
 
+        if (! Auth::user()->activo) {
+            Auth::logout();
+            RateLimiter::hit($this->throttleKey());
+
+            throw ValidationException::withMessages([
+                'form.email' => 'Este usuario está desactivado.',
+            ]);
+        }
+
         RateLimiter::clear($this->throttleKey());
     }
 

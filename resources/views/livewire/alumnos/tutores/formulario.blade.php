@@ -34,6 +34,11 @@
             <x-input-error :messages="$errors->get('correo')" class="mt-1" />
         </div>
 
+        <label class="flex items-center gap-2">
+            <input type="checkbox" wire:model="activo" class="rounded border-gray-300 text-indigo-600 shadow-sm focus:ring-indigo-500">
+            <span class="text-sm text-gray-700">Tutor activo</span>
+        </label>
+
         <div class="flex items-center gap-3 pt-2">
             <x-primary-button type="submit">Guardar</x-primary-button>
             <a href="{{ route('tutores.index') }}" wire:navigate class="text-sm text-gray-600 hover:text-gray-900">

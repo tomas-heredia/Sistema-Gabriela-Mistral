@@ -23,13 +23,21 @@ test('un administrador no puede eliminarse a si mismo', function () {
     expect($administrador->can('delete', $administrador))->toBeFalse();
 });
 
-test('cobrador y profesor no tienen ningun acceso a la gestion de usuarios', function () {
+test('cobrador puede crear usuarios pero no ver, editar ni eliminar la gestion de usuarios', function () {
     $cobrador = User::factory()->create()->assignRole('cobrador');
-    $profesor = User::factory()->create()->assignRole('profesor');
     $otro = User::factory()->create()->assignRole('cobrador');
 
     expect($cobrador->can('viewAny', User::class))->toBeFalse()
-        ->and($cobrador->can('create', User::class))->toBeFalse()
-        ->and($profesor->can('viewAny', User::class))->toBeFalse()
+        ->and($cobrador->can('create', User::class))->toBeTrue()
+        ->and($cobrador->can('update', $otro))->toBeFalse()
+        ->and($cobrador->can('delete', $otro))->toBeFalse();
+});
+
+test('profesor no tiene ningun acceso a la gestion de usuarios', function () {
+    $profesor = User::factory()->create()->assignRole('profesor');
+    $otro = User::factory()->create()->assignRole('cobrador');
+
+    expect($profesor->can('viewAny', User::class))->toBeFalse()
+        ->and($profesor->can('create', User::class))->toBeFalse()
         ->and($profesor->can('update', $otro))->toBeFalse();
 });

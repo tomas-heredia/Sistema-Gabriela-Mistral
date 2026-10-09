@@ -16,9 +16,14 @@ class UserPolicy
         return $user->hasRole('administrador');
     }
 
+    /**
+     * Cobrador también puede crear usuarios, pero solo de tipo profesor --
+     * eso lo hace cumplir Usuarios\Formulario::rolesDisponibles(), no esta
+     * policy (acá solo se decide quién puede abrir el formulario de alta).
+     */
     public function create(User $user): bool
     {
-        return $user->hasRole('administrador');
+        return $user->hasAnyRole(['administrador', 'cobrador']);
     }
 
     public function update(User $user, User $model): bool

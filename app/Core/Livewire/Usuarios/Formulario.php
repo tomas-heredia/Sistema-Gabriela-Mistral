@@ -28,6 +28,8 @@ class Formulario extends Component
 
     public bool $puedeCargarBoletines = false;
 
+    public bool $activo = true;
+
     public function mount(?User $usuario = null): void
     {
         if ($usuario?->exists) {
@@ -38,9 +40,21 @@ class Formulario extends Component
             $this->email = $usuario->email;
             $this->rol = $usuario->roles->first()?->name ?? '';
             $this->puedeCargarBoletines = $usuario->hasPermissionTo('cargar_boletines');
+            $this->activo = $usuario->activo;
         } else {
             $this->authorize('create', User::class);
         }
+    }
+
+    /**
+     * Administrador puede crear/asignar cualquier rol; cobrador solo puede
+     * crear profesores (ver UserPolicy::create) -- esto es lo que de verdad
+     * lo hace cumplir, la lista de ROLES completa es solo para el <select>
+     * de un administrador.
+     */
+    public function rolesDisponibles(): array
+    {
+        return auth()->user()->hasRole('administrador') ? self::ROLES : ['profesor' => 'Profesor'];
     }
 
     protected function rules(): array
@@ -49,7 +63,8 @@ class Formulario extends Component
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'email', 'max:255', Rule::unique('users', 'email')->ignore($this->usuario?->id)],
             'password' => [$this->usuario ? 'nullable' : 'required', 'string', 'min:6'],
-            'rol' => ['required', Rule::in(array_keys(self::ROLES))],
+            'rol' => ['required', Rule::in(array_keys($this->rolesDisponibles()))],
+            'activo' => ['boolean'],
         ];
     }
 
@@ -68,7 +83,7 @@ class Formulario extends Component
         $datos = $this->validate();
 
         if ($this->usuario) {
-            $this->usuario->update(['name' => $datos['name'], 'email' => $datos['email']]);
+            $this->usuario->update(['name' => $datos['name'], 'email' => $datos['email'], 'activo' => $datos['activo']]);
             $this->usuario->syncRoles([$datos['rol']]);
             $this->sincronizarPermisoDeBoletines($this->usuario, $datos['rol']);
             session()->flash('mensaje', 'Usuario actualizado correctamente.');
@@ -84,7 +99,11 @@ class Formulario extends Component
             session()->flash('mensaje', 'Usuario creado correctamente.');
         }
 
-        $this->redirectRoute('usuarios.index', navigate: true);
+        // Un cobrador puede crear profesores pero no ve el listado de
+        // usuarios (ver UserPolicy::viewAny) -- mandarlo ahí lo dejaría
+        // frente a un 403 justo después de guardar con éxito.
+        $destino = auth()->user()->can('viewAny', User::class) ? 'usuarios.index' : 'dashboard';
+        $this->redirectRoute($destino, navigate: true);
     }
 
     /**

@@ -29,7 +29,7 @@
             <x-input-label for="rol" value="Rol" />
             <select id="rol" wire:model.live="rol" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
                 <option value="">Seleccioná un rol…</option>
-                @foreach (self::ROLES as $valor => $etiqueta)
+                @foreach ($this->rolesDisponibles() as $valor => $etiqueta)
                     <option value="{{ $valor }}">{{ $etiqueta }}</option>
                 @endforeach
             </select>
@@ -46,11 +46,25 @@
             </div>
         @endif
 
+        @if ($usuario)
+            <label class="flex items-center gap-2">
+                <input type="checkbox" wire:model="activo" class="rounded border-gray-300 text-indigo-600 shadow-sm focus:ring-indigo-500">
+                <span class="text-sm text-gray-700">Usuario activo</span>
+            </label>
+            <p class="text-xs text-gray-500 -mt-3">Un usuario inactivo no puede iniciar sesión, pero sus datos no se borran.</p>
+        @endif
+
         <div class="flex items-center gap-3 pt-2">
             <x-primary-button type="submit">Guardar</x-primary-button>
-            <a href="{{ route('usuarios.index') }}" wire:navigate class="text-sm text-gray-600 hover:text-gray-900">
-                Volver al listado
-            </a>
+            @can('viewAny', \App\Core\Models\User::class)
+                <a href="{{ route('usuarios.index') }}" wire:navigate class="text-sm text-gray-600 hover:text-gray-900">
+                    Volver al listado
+                </a>
+            @else
+                <a href="{{ route('dashboard') }}" wire:navigate class="text-sm text-gray-600 hover:text-gray-900">
+                    Volver al dashboard
+                </a>
+            @endcan
         </div>
     </form>
 </div>

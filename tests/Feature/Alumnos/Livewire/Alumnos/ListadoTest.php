@@ -16,6 +16,19 @@ test('un profesor no puede ver el listado de alumnos', function () {
     Livewire::actingAs($profesor)->test(Listado::class)->assertForbidden();
 });
 
+test('eliminar desactiva al alumno en vez de borrarlo', function () {
+    $cobrador = User::factory()->create()->assignRole('cobrador');
+    $alumno = Alumno::factory()->primario()->create(['activo' => true]);
+
+    Livewire::actingAs($cobrador)->test(Listado::class)
+        ->call('eliminar', $alumno)
+        ->assertOk();
+
+    expect($alumno->fresh())
+        ->activo->toBeFalse()
+        ->and(Alumno::find($alumno->id))->not->toBeNull();
+});
+
 test('el cobrador puede ver el listado y filtrar por nivel', function () {
     $cobrador = User::factory()->create()->assignRole('cobrador');
     $primario = Alumno::factory()->primario()->create(['nombre' => 'Ana Primaria']);

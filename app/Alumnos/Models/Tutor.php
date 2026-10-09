@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
-#[Fillable(['nombre', 'dni', 'domicilio', 'telefono', 'correo'])]
+#[Fillable(['nombre', 'dni', 'domicilio', 'telefono', 'correo', 'activo'])]
 class Tutor extends Model
 {
     use HasFactory;
@@ -18,6 +18,13 @@ class Tutor extends Model
      * asume inglés: "Tutor" adivinaría "tutors", no "tutores".
      */
     protected $table = 'tutores';
+
+    protected function casts(): array
+    {
+        return [
+            'activo' => 'boolean',
+        ];
+    }
 
     public function alumnos(): BelongsToMany
     {

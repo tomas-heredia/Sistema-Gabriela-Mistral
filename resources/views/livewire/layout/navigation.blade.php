@@ -80,6 +80,10 @@ new class extends Component
                         <x-nav-link :href="route('usuarios.index')" :active="request()->routeIs('usuarios.*')" wire:navigate>
                             {{ __('Usuarios') }}
                         </x-nav-link>
+                    @elsecan('create', \App\Core\Models\User::class)
+                        <x-nav-link :href="route('usuarios.crear')" :active="request()->routeIs('usuarios.crear')" wire:navigate>
+                            {{ __('Nuevo profesor') }}
+                        </x-nav-link>
                     @endcan
                 </div>
             </div>
@@ -178,6 +182,10 @@ new class extends Component
             @can('viewAny', \App\Core\Models\User::class)
                 <x-responsive-nav-link :href="route('usuarios.index')" :active="request()->routeIs('usuarios.*')" wire:navigate>
                     {{ __('Usuarios') }}
+                </x-responsive-nav-link>
+            @elsecan('create', \App\Core\Models\User::class)
+                <x-responsive-nav-link :href="route('usuarios.crear')" :active="request()->routeIs('usuarios.crear')" wire:navigate>
+                    {{ __('Nuevo profesor') }}
                 </x-responsive-nav-link>
             @endcan
         </div>

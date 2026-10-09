@@ -22,6 +22,8 @@ class Formulario extends Component
 
     public string $correo = '';
 
+    public bool $activo = true;
+
     public function mount(?Tutor $tutor = null): void
     {
         if ($tutor?->exists) {
@@ -33,6 +35,7 @@ class Formulario extends Component
             $this->domicilio = $tutor->domicilio;
             $this->telefono = $tutor->telefono;
             $this->correo = $tutor->correo;
+            $this->activo = $tutor->activo;
         } else {
             $this->authorize('create', Tutor::class);
         }
@@ -46,6 +49,7 @@ class Formulario extends Component
             'domicilio' => ['required', 'string', 'max:255'],
             'telefono' => ['required', 'digits_between:1,30'],
             'correo' => ['required', 'email', 'max:255'],
+            'activo' => ['boolean'],
         ];
     }
 

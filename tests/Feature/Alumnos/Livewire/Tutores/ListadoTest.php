@@ -29,12 +29,14 @@ test('el cobrador puede ver el listado y el buscador filtra por nombre', functio
         ->assertDontSee('Pedro López');
 });
 
-test('eliminar un tutor lo saca del listado', function () {
+test('eliminar desactiva al tutor en vez de borrarlo', function () {
     $cobrador = User::factory()->create()->assignRole('cobrador');
-    $tutor = Tutor::factory()->create();
+    $tutor = Tutor::factory()->create(['activo' => true]);
 
     Livewire::actingAs($cobrador)->test(Listado::class)
         ->call('eliminar', $tutor->id);
 
-    expect(Tutor::find($tutor->id))->toBeNull();
+    expect($tutor->fresh())
+        ->activo->toBeFalse()
+        ->and(Tutor::find($tutor->id))->not->toBeNull();
 });

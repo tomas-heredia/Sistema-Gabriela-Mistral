@@ -29,6 +29,28 @@ test('busca por nombre o correo', function () {
         ->assertDontSee('Bruno Pérez');
 });
 
+test('eliminar desactiva al usuario en vez de borrarlo', function () {
+    $administrador = User::factory()->create()->assignRole('administrador');
+    $cobrador = User::factory()->create()->assignRole('cobrador');
+
+    Livewire::actingAs($administrador)->test(Listado::class)
+        ->call('eliminar', $cobrador->id);
+
+    expect($cobrador->fresh())
+        ->activo->toBeFalse()
+        ->and(User::find($cobrador->id))->not->toBeNull();
+});
+
+test('un usuario desactivado no muestra el boton de desactivar, pero si el de editar', function () {
+    $administrador = User::factory()->create()->assignRole('administrador');
+    $inactivo = User::factory()->inactivo()->create(['name' => 'Usuario Inactivo'])->assignRole('cobrador');
+
+    Livewire::actingAs($administrador)->test(Listado::class)
+        ->assertSee('Inactivo')
+        ->assertDontSee("eliminar({$inactivo->id})", false)
+        ->assertSee(route('usuarios.editar', $inactivo), false);
+});
+
 test('un administrador no ve la opcion de eliminarse a si mismo', function () {
     $administrador = User::factory()->create()->assignRole('administrador');
 

@@ -4,7 +4,6 @@ namespace App\Alumnos\Livewire\Alumnos;
 
 use App\Alumnos\Models\Alumno;
 use App\Alumnos\Models\Enums\Nivel;
-use Illuminate\Database\QueryException;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
 use Livewire\WithPagination;
@@ -33,16 +32,17 @@ class Listado extends Component
         $this->resetPage();
     }
 
+    /**
+     * "Eliminar" desactiva, no borra -- un alumno tiene cuotas, pagos y
+     * libretas que son registros históricos del colegio, no algo que deba
+     * desaparecer porque se fue. Se puede reactivar editándolo.
+     */
     public function eliminar(Alumno $alumno): void
     {
         $this->authorize('delete', $alumno);
 
-        try {
-            $alumno->delete();
-            session()->flash('mensaje', 'Alumno eliminado correctamente.');
-        } catch (QueryException) {
-            session()->flash('error', 'No se pudo eliminar: este alumno tiene cuotas, libretas u otros registros asociados.');
-        }
+        $alumno->update(['activo' => false]);
+        session()->flash('mensaje', 'Alumno desactivado correctamente.');
     }
 
     public function render()

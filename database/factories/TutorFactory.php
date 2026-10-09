@@ -20,6 +20,7 @@ class TutorFactory extends Factory
             'domicilio' => fake()->address(),
             'telefono' => fake()->numerify('##########'),
             'correo' => fake()->safeEmail(),
+            'activo' => true,
         ];
     }
 }

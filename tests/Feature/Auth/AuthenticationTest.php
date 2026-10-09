@@ -27,6 +27,19 @@ test('users can authenticate using the login screen', function () {
     $this->assertAuthenticated();
 });
 
+test('un usuario desactivado no puede iniciar sesion aunque la contraseña sea correcta', function () {
+    $user = User::factory()->inactivo()->create();
+
+    $component = Volt::test('pages.auth.login')
+        ->set('form.email', $user->email)
+        ->set('form.password', 'password');
+
+    $component->call('login');
+
+    $component->assertHasErrors();
+    $this->assertGuest();
+});
+
 test('users can not authenticate with invalid password', function () {
     $user = User::factory()->create();
 

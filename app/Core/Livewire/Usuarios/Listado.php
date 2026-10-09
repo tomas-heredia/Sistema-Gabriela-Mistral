@@ -3,7 +3,6 @@
 namespace App\Core\Livewire\Usuarios;
 
 use App\Core\Models\User;
-use Illuminate\Database\QueryException;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
 use Livewire\WithPagination;
@@ -25,17 +24,20 @@ class Listado extends Component
         $this->resetPage();
     }
 
+    /**
+     * "Eliminar" desactiva, no borra -- un usuario queda referenciado desde
+     * pagos, boletines y recibos que cargó (quién hizo qué), así que no
+     * tiene sentido borrarlo del todo. Desactivado, no puede loguearse
+     * (ver LoginForm::authenticate()) pero sigue apareciendo donde ya
+     * estaba asociado.
+     */
     public function eliminar(int $usuarioId): void
     {
         $usuario = User::findOrFail($usuarioId);
         $this->authorize('delete', $usuario);
 
-        try {
-            $usuario->delete();
-            session()->flash('mensaje', 'Usuario eliminado correctamente.');
-        } catch (QueryException) {
-            session()->flash('error', 'No se pudo eliminar: este usuario tiene registros asociados (pagos, boletines, recibos, etc.).');
-        }
+        $usuario->update(['activo' => false]);
+        session()->flash('mensaje', 'Usuario desactivado correctamente.');
     }
 
     public function render()

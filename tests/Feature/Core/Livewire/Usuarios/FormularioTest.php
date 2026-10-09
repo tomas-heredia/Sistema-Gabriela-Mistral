@@ -57,12 +57,46 @@ test('editar un usuario cambia nombre, correo y rol sin pedir contraseña', func
         ->and($usuario->roles)->toHaveCount(1);
 });
 
-test('cobrador y profesor no pueden montar el componente', function () {
+test('profesor no puede montar el componente, pero cobrador si para crear', function () {
     $cobrador = User::factory()->create()->assignRole('cobrador');
     $profesor = User::factory()->create()->assignRole('profesor');
 
-    Livewire::actingAs($cobrador)->test(Formulario::class)->assertForbidden();
+    Livewire::actingAs($cobrador)->test(Formulario::class)->assertOk();
     Livewire::actingAs($profesor)->test(Formulario::class)->assertForbidden();
+});
+
+test('cobrador solo puede elegir el rol profesor, y crear con ese rol', function () {
+    $cobrador = User::factory()->create()->assignRole('cobrador');
+
+    $componente = Livewire::actingAs($cobrador)->test(Formulario::class)
+        ->assertDontSee('Administrador')
+        ->assertDontSee('Cobrador')
+        ->assertSee('Profesor')
+        ->set('name', 'Nuevo Profesor')
+        ->set('email', 'nuevo.profesor@example.com')
+        ->set('password', '123456')
+        ->set('rol', 'profesor')
+        ->call('guardar')
+        ->assertHasNoErrors();
+
+    $componente->assertRedirect(route('dashboard'));
+
+    $nuevo = User::where('email', 'nuevo.profesor@example.com')->firstOrFail();
+    expect($nuevo->hasRole('profesor'))->toBeTrue();
+});
+
+test('cobrador no puede crear un usuario con rol administrador o cobrador aunque lo mande a mano', function () {
+    $cobrador = User::factory()->create()->assignRole('cobrador');
+
+    Livewire::actingAs($cobrador)->test(Formulario::class)
+        ->set('name', 'Intento Admin')
+        ->set('email', 'intento@example.com')
+        ->set('password', '123456')
+        ->set('rol', 'administrador')
+        ->call('guardar')
+        ->assertHasErrors(['rol']);
+
+    expect(User::where('email', 'intento@example.com')->exists())->toBeFalse();
 });
 
 test('se puede crear un profesor con permiso para cargar libretas', function () {
@@ -95,6 +129,19 @@ test('un profesor sin tildar el checkbox no recibe el permiso de cargar libretas
 
     $nuevo = User::where('email', 'elena@example.com')->firstOrFail();
     expect($nuevo->hasPermissionTo('cargar_boletines'))->toBeFalse();
+});
+
+test('se puede reactivar a un usuario desactivado editandolo', function () {
+    $administrador = User::factory()->create()->assignRole('administrador');
+    $usuario = User::factory()->inactivo()->create()->assignRole('cobrador');
+
+    Livewire::actingAs($administrador)->test(Formulario::class, ['usuario' => $usuario])
+        ->assertSet('activo', false)
+        ->set('activo', true)
+        ->call('guardar')
+        ->assertRedirect(route('usuarios.index'));
+
+    expect($usuario->fresh()->activo)->toBeTrue();
 });
 
 test('al cambiar a un usuario de profesor con permiso de libretas a otro rol, se le quita el permiso', function () {
