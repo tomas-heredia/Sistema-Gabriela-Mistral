@@ -131,6 +131,22 @@ return [
             'handler' => NullHandler::class,
         ],
 
+        /*
+         * Accesos (login/logout) y acciones clave (cargar/confirmar un
+         * trimestre de libreta) -- interno, para consultar en caso de algún
+         * problema, no una pantalla del sistema. Escribe dentro de
+         * storage/app (no storage/logs) a propósito: en el VPS solo
+         * storage/app está en un volumen de Docker persistente entre
+         * deploys -- ver deploy/docker-stack.yml.
+         */
+        'actividad' => [
+            'driver' => 'daily',
+            'path' => storage_path('app/logs/actividad.log'),
+            'level' => 'info',
+            'max_files' => env('LOG_ACTIVIDAD_DIAS', 90),
+            'replace_placeholders' => true,
+        ],
+
         'emergency' => [
             'path' => storage_path('logs/laravel.log'),
         ],

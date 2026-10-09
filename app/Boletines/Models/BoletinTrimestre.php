@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Facades\Log;
 
 #[Fillable(['boletin_id', 'trimestre', 'datos', 'estado', 'cargado_por_id', 'fecha_enviado', 'pdf_path'])]
 class BoletinTrimestre extends Model
@@ -65,6 +66,12 @@ class BoletinTrimestre extends Model
             'estado' => EstadoTrimestre::Cargado,
             'cargado_por_id' => $usuario->id,
         ])->save();
+
+        Log::channel('actividad')->info("Cargó borrador del trimestre {$this->trimestre} — {$this->boletin->alumno->nombre}", [
+            'usuario_id' => $usuario->id,
+            'usuario' => $usuario->name,
+            'boletin_trimestre_id' => $this->id,
+        ]);
     }
 
     /**
@@ -79,6 +86,14 @@ class BoletinTrimestre extends Model
         }
 
         GenerarYEnviarBoletinPdf::dispatch($this);
+
+        $usuario = auth()->user();
+
+        Log::channel('actividad')->info("Confirmó y envió el trimestre {$this->trimestre} — {$this->boletin->alumno->nombre}", [
+            'usuario_id' => $usuario?->id,
+            'usuario' => $usuario?->name,
+            'boletin_trimestre_id' => $this->id,
+        ]);
     }
 
     /**

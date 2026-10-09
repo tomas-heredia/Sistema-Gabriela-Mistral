@@ -12,6 +12,8 @@ use App\Cobranzas\Livewire\Pagos\Listado as PagosListado;
 use App\Cobranzas\Livewire\Pagos\Registrar as PagosRegistrar;
 use App\Cobranzas\Models\Observers\PagoCuotaObserver;
 use App\Cobranzas\Models\PagoCuota;
+use App\Core\Listeners\RegistrarLogin;
+use App\Core\Listeners\RegistrarLogout;
 use App\Core\Livewire\PeriodosLectivos\Formulario as PeriodosLectivosFormulario;
 use App\Core\Livewire\PeriodosLectivos\Listado as PeriodosLectivosListado;
 use App\Core\Livewire\Usuarios\Formulario as UsuariosFormulario;
@@ -19,6 +21,9 @@ use App\Core\Livewire\Usuarios\Listado as UsuariosListado;
 use App\Mora\Livewire\NotificacionesMora\Listado as NotificacionesMoraListado;
 use App\Sueldos\Livewire\RecibosSueldo\Formulario as RecibosSueldoFormulario;
 use App\Sueldos\Livewire\RecibosSueldo\Listado as RecibosSueldoListado;
+use Illuminate\Auth\Events\Login;
+use Illuminate\Auth\Events\Logout;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\ServiceProvider;
 use Livewire\Livewire;
 
@@ -38,6 +43,9 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         PagoCuota::observe(PagoCuotaObserver::class);
+
+        Event::listen(Login::class, RegistrarLogin::class);
+        Event::listen(Logout::class, RegistrarLogout::class);
 
         Livewire::component('tutores.listado', TutoresListado::class);
         Livewire::component('tutores.formulario', TutoresFormulario::class);
