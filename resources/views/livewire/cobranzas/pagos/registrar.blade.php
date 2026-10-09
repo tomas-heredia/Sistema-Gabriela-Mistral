@@ -5,7 +5,7 @@
         <div class="flex items-end gap-3">
             <div class="flex-1 max-w-sm">
                 <x-input-label for="busquedaTutor" value="Buscar por DNI o nombre del tutor, o por nombre/apellido o DNI de un alumno" />
-                <x-text-input id="busquedaTutor" type="text" class="mt-1 block w-full" wire:model="busquedaTutor" />
+                <x-text-input id="busquedaTutor" type="text" class="mt-1 block w-full" wire:model="busquedaTutor" wire:keydown.enter.prevent="buscarTutor" data-enter-busca />
             </div>
             <x-secondary-button type="button" wire:click="buscarTutor">Buscar</x-secondary-button>
         </div>

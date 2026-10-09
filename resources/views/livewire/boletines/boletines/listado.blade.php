@@ -9,6 +9,8 @@
                     type="text"
                     id="busqueda"
                     wire:model.live.debounce.400ms="busqueda"
+                    wire:keydown.enter.prevent="$set('busqueda', $event.target.value)"
+                    data-enter-busca
                     placeholder="Buscar por nombre, apellido o DNI…"
                     class="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
                 >

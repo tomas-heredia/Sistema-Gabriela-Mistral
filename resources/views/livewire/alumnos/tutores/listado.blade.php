@@ -7,6 +7,8 @@
                     type="text"
                     id="busqueda"
                     wire:model.live.debounce.400ms="busqueda"
+                    wire:keydown.enter.prevent="$set('busqueda', $event.target.value)"
+                    data-enter-busca
                     placeholder="Buscar por nombre o DNI…"
                     class="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
                 >
@@ -34,6 +36,7 @@
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">DNI</th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Teléfono</th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Correo</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
                             <th class="px-6 py-3"></th>
                         </tr>
                     </thead>
@@ -44,16 +47,25 @@
                                 <td class="px-6 py-3 text-sm text-gray-600">{{ $tutor->dni }}</td>
                                 <td class="px-6 py-3 text-sm text-gray-600">{{ $tutor->telefono }}</td>
                                 <td class="px-6 py-3 text-sm text-gray-600">{{ $tutor->correo }}</td>
+                                <td class="px-6 py-3 text-sm">
+                                    @if ($tutor->activo)
+                                        <x-pill color="green">Activo</x-pill>
+                                    @else
+                                        <x-pill color="gray">Inactivo</x-pill>
+                                    @endif
+                                </td>
                                 <td class="px-6 py-3 text-right text-sm space-x-3 whitespace-nowrap">
                                     <a href="{{ route('tutores.editar', $tutor) }}" wire:navigate class="text-indigo-600 hover:text-indigo-800">Editar</a>
-                                    <button
-                                        type="button"
-                                        wire:click="eliminar({{ $tutor->id }})"
-                                        wire:confirm="¿Seguro que querés eliminar a {{ $tutor->nombre }}? Se va a desvincular de los alumnos que tenga a cargo."
-                                        class="text-red-600 hover:text-red-800"
-                                    >
-                                        Eliminar
-                                    </button>
+                                    @if ($tutor->activo)
+                                        <button
+                                            type="button"
+                                            wire:click="eliminar({{ $tutor->id }})"
+                                            wire:confirm="¿Seguro que querés desactivar a {{ $tutor->nombre }}? Sus datos no se borran, se puede reactivar editándolo."
+                                            class="text-red-600 hover:text-red-800"
+                                        >
+                                            Desactivar
+                                        </button>
+                                    @endif
                                 </td>
                             </tr>
                         @endforeach
