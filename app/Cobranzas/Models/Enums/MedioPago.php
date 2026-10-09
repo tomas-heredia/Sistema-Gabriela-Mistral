@@ -8,7 +8,6 @@ enum MedioPago: string
     case Debito = 'debito';
     case Transferencia = 'transferencia';
     case TarjetaCredito = 'tarjeta_credito';
-    case TarjetaDebito = 'tarjeta_debito';
     case DescuentoPlanilla = 'descuento_planilla';
 
     public function label(): string
@@ -18,7 +17,6 @@ enum MedioPago: string
             self::Debito => 'Débito',
             self::Transferencia => 'Transferencia',
             self::TarjetaCredito => 'Tarjeta de crédito',
-            self::TarjetaDebito => 'Tarjeta de débito',
             self::DescuentoPlanilla => 'Descuento por planilla',
         };
     }
