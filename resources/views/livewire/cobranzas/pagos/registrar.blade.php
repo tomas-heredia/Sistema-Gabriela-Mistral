@@ -1,4 +1,4 @@
-<div class="max-w-3xl mx-auto py-6 px-4 sm:px-6 lg:px-8 space-y-6">
+<div class="max-w-5xl mx-auto py-6 px-4 sm:px-6 lg:px-8 space-y-6">
     <h1 class="text-lg font-semibold text-gray-900">Registrar pago</h1>
 
     <div class="bg-white shadow-sm rounded-lg p-6 space-y-4">
@@ -68,11 +68,15 @@
                         Este tutor no tiene ninguna cuota pendiente en el período activo.
                     </p>
                 @else
+                    <div class="overflow-x-auto">
                     <table class="min-w-full divide-y divide-gray-200">
                         <thead class="bg-gray-50">
                             <tr>
                                 <th class="px-4 py-2"></th>
                                 <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Alumno</th>
+                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">DNI</th>
+                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nivel / Grado</th>
+                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Turno</th>
                                 <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Concepto</th>
                                 <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Saldo pendiente</th>
                                 <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Monto a aplicar</th>
@@ -86,6 +90,9 @@
                                         <input type="checkbox" wire:model.live="cuotasSeleccionadas.{{ $cuota->id }}" class="rounded border-gray-300 text-indigo-600 shadow-sm focus:ring-indigo-500">
                                     </td>
                                     <td class="px-4 py-3 text-sm text-gray-900">{{ $cuota->alumno->nombre }}</td>
+                                    <td class="px-4 py-3 text-sm text-gray-600">{{ $cuota->alumno->dni ?? '—' }}</td>
+                                    <td class="px-4 py-3 text-sm text-gray-600">{{ ucfirst($cuota->alumno->nivel->value) }} · {{ $cuota->alumno->grado }}</td>
+                                    <td class="px-4 py-3 text-sm text-gray-600">{{ ucfirst($cuota->alumno->turno->value) }}</td>
                                     <td class="px-4 py-3 text-sm text-gray-600">
                                         {{ $cuota->tipo->value === 'matricula' ? 'Matrícula' : "Mensualidad — mes {$cuota->mes}" }}
                                     </td>
@@ -101,6 +108,7 @@
                             @endforeach
                         </tbody>
                     </table>
+                    </div>
                 @endif
             </div>
 

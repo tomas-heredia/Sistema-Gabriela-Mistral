@@ -1,6 +1,7 @@
 <?php
 
 use App\Alumnos\Models\Alumno;
+use App\Alumnos\Models\Enums\Turno;
 use App\Alumnos\Models\Tutor;
 use App\Cobranzas\Livewire\Pagos\Registrar;
 use App\Cobranzas\Mail\ComprobantePagoEnviado;
@@ -51,6 +52,29 @@ test('buscar tutor lista las cuotas pendientes de sus alumnos en el periodo acti
         ->call('buscarTutor')
         ->assertSee($alumno->nombre)
         ->assertSee(number_format($cuotaPendiente->monto / 100, 2, ',', '.'));
+});
+
+test('buscar tutor muestra dni, nivel/grado y turno de cada alumno', function () {
+    $cobrador = User::factory()->create()->assignRole('cobrador');
+    $alumno = Alumno::factory()->primario()->create([
+        'dni' => '41222333',
+        'grado' => '3er grado',
+        'turno' => Turno::Tarde,
+    ]);
+    vincularAlumnoATutor($this->tutor, $alumno);
+
+    Cuota::factory()->create([
+        'alumno_id' => $alumno->id,
+        'periodo_lectivo_id' => $this->periodo->id,
+        'estado' => EstadoCuota::Pendiente,
+    ]);
+
+    Livewire::actingAs($cobrador)->test(Registrar::class)
+        ->set('busquedaTutor', $this->tutor->dni)
+        ->call('buscarTutor')
+        ->assertSee('41222333')
+        ->assertSee('Primario · 3er grado')
+        ->assertSee('Tarde');
 });
 
 test('buscar tutor por su nombre lo selecciona solo si es la unica coincidencia', function () {
