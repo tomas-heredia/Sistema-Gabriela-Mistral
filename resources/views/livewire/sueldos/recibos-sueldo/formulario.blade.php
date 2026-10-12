@@ -19,11 +19,51 @@
             <x-input-error :messages="$errors->get('periodo')" class="mt-1" />
         </div>
 
-        <div>
-            <x-input-label for="archivo" value="Archivo (PDF)" />
-            <input id="archivo" type="file" wire:model="archivo" accept="application/pdf" class="mt-1 block w-full text-sm text-gray-700">
-            <p wire:loading wire:target="archivo" class="text-xs text-gray-500 mt-1">Subiendo…</p>
-            <x-input-error :messages="$errors->get('archivo')" class="mt-1" />
+        <div
+            x-data="{
+                archivos: [],
+                agregar(event) {
+                    this.archivos = this.archivos.concat(Array.from(event.target.files));
+                    event.target.value = '';
+                    this.sincronizar();
+                },
+                quitar(indice) {
+                    this.archivos.splice(indice, 1);
+                    this.sincronizar();
+                },
+                sincronizar() {
+                    const datos = new DataTransfer();
+                    this.archivos.forEach((archivo) => datos.items.add(archivo));
+                    this.$refs.archivosLivewire.files = datos.files;
+                    this.$refs.archivosLivewire.dispatchEvent(new Event('change'));
+                },
+            }"
+        >
+            <x-input-label for="archivos_selector" value="Archivos (PDF)" />
+            <p class="text-xs text-gray-500 mt-1">Podés elegirlos todos juntos o agregarlos de a uno.</p>
+            <input
+                id="archivos_selector"
+                type="file"
+                multiple
+                accept="application/pdf"
+                x-on:change="agregar($event)"
+                class="mt-1 block w-full text-sm text-gray-700"
+            >
+            <input type="file" multiple x-ref="archivosLivewire" wire:model="archivos" class="hidden">
+
+            <p wire:loading wire:target="archivos" class="text-xs text-gray-500 mt-1">Subiendo…</p>
+
+            <ul class="mt-2 text-sm text-gray-600 divide-y divide-gray-100" x-show="archivos.length > 0">
+                <template x-for="(archivo, indice) in archivos" :key="indice">
+                    <li class="flex items-center justify-between py-1">
+                        <span x-text="archivo.name"></span>
+                        <button type="button" x-on:click="quitar(indice)" class="text-red-600 hover:text-red-800 text-xs">Quitar</button>
+                    </li>
+                </template>
+            </ul>
+
+            <x-input-error :messages="$errors->get('archivos')" class="mt-1" />
+            <x-input-error :messages="\Illuminate\Support\Arr::flatten($errors->get('archivos.*'))" class="mt-1" />
         </div>
 
         <div class="flex items-center gap-3 pt-2">

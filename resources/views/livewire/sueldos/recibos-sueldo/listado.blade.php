@@ -53,9 +53,11 @@
                                 <td class="px-6 py-3 text-sm text-gray-600">{{ $recibo->periodo }}</td>
                                 <td class="px-6 py-3 text-sm text-gray-600">{{ $recibo->fecha_carga->format('d/m/Y') }}</td>
                                 <td class="px-6 py-3 text-right text-sm space-x-3 whitespace-nowrap">
-                                    <a href="{{ route('recibos-sueldo.descargar', $recibo) }}" class="text-indigo-600 hover:text-indigo-800">
-                                        Descargar
-                                    </a>
+                                    @foreach ($recibo->archivos as $i => $archivo)
+                                        <a href="{{ route('recibos-sueldo.descargar', $archivo) }}" class="text-indigo-600 hover:text-indigo-800">
+                                            Descargar{{ $recibo->archivos->count() > 1 ? ' ('.($i + 1).')' : '' }}
+                                        </a>
+                                    @endforeach
                                     @if ($esAdministrador)
                                         <button
                                             type="button"

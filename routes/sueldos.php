@@ -7,4 +7,4 @@ use Illuminate\Support\Facades\Route;
 
 Route::get('recibos-sueldo', Listado::class)->name('recibos-sueldo.index');
 Route::get('recibos-sueldo/nuevo', Formulario::class)->name('recibos-sueldo.crear');
-Route::get('recibos-sueldo/{reciboSueldo}/descargar', ReciboSueldoDescargaController::class)->name('recibos-sueldo.descargar');
+Route::get('recibos-sueldo/archivos/{archivo}/descargar', ReciboSueldoDescargaController::class)->name('recibos-sueldo.descargar');

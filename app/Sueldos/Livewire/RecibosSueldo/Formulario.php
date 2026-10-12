@@ -7,6 +7,7 @@ use App\Sueldos\Models\ReciboSueldo;
 use Illuminate\Validation\Rule;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
+use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
 use Livewire\WithFileUploads;
 
 #[Layout('layouts.app')]
@@ -18,7 +19,8 @@ class Formulario extends Component
 
     public string $periodo = '';
 
-    public $archivo = null;
+    /** @var array<int, TemporaryUploadedFile> */
+    public array $archivos = [];
 
     public function mount(): void
     {
@@ -34,7 +36,8 @@ class Formulario extends Component
                 'date_format:Y-m',
                 Rule::unique('recibos_sueldo', 'periodo')->where(fn ($query) => $query->where('profesor_id', $this->profesor_id)),
             ],
-            'archivo' => ['required', 'file', 'mimes:pdf', 'max:5120'],
+            'archivos' => ['required', 'array', 'min:1'],
+            'archivos.*' => ['file', 'mimes:pdf', 'max:5120'],
         ];
     }
 
@@ -43,7 +46,8 @@ class Formulario extends Component
         return [
             'profesor_id' => 'profesor',
             'periodo' => 'período',
-            'archivo' => 'archivo',
+            'archivos' => 'archivos',
+            'archivos.*' => 'archivo',
         ];
     }
 
@@ -51,15 +55,18 @@ class Formulario extends Component
     {
         $datos = $this->validate();
 
-        $ruta = $this->archivo->storeAs("recibos-sueldo/{$datos['profesor_id']}", "{$datos['periodo']}.pdf", 'local');
-
-        ReciboSueldo::create([
+        $recibo = ReciboSueldo::create([
             'profesor_id' => $datos['profesor_id'],
             'periodo' => $datos['periodo'],
-            'archivo' => $ruta,
             'cargado_por_id' => auth()->id(),
             'fecha_carga' => now(),
         ]);
+
+        foreach ($datos['archivos'] as $archivo) {
+            $ruta = $archivo->store("recibos-sueldo/{$datos['profesor_id']}/{$datos['periodo']}", 'local');
+
+            $recibo->archivos()->create(['archivo' => $ruta]);
+        }
 
         session()->flash('mensaje', 'Recibo cargado correctamente.');
         $this->redirectRoute('recibos-sueldo.index', navigate: true);

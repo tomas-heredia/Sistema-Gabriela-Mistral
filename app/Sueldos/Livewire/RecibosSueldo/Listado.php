@@ -33,10 +33,13 @@ class Listado extends Component
 
     public function eliminar(int $reciboId): void
     {
-        $recibo = ReciboSueldo::findOrFail($reciboId);
+        $recibo = ReciboSueldo::with('archivos')->findOrFail($reciboId);
         $this->authorize('delete', $recibo);
 
-        Storage::disk('local')->delete($recibo->archivo);
+        foreach ($recibo->archivos as $archivo) {
+            Storage::disk('local')->delete($archivo->archivo);
+        }
+
         $recibo->delete();
 
         session()->flash('mensaje', 'Recibo eliminado correctamente.');
@@ -47,7 +50,7 @@ class Listado extends Component
         $esAdministrador = auth()->user()->hasRole('administrador');
 
         $recibos = ReciboSueldo::query()
-            ->with('profesor')
+            ->with('profesor', 'archivos')
             ->when(! $esAdministrador, fn ($query) => $query->where('profesor_id', auth()->id()))
             ->when($this->busqueda, function ($query) {
                 $query->whereHas('profesor', function ($subquery) {

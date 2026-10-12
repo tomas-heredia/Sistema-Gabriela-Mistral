@@ -2,6 +2,7 @@
 
 use App\Core\Models\User;
 use App\Sueldos\Models\ReciboSueldo;
+use App\Sueldos\Models\ReciboSueldoArchivo;
 use Database\Seeders\RoleSeeder;
 use Illuminate\Support\Facades\Storage;
 
@@ -12,33 +13,49 @@ beforeEach(function () {
 
 test('un profesor puede descargar su propio recibo', function () {
     $profesor = User::factory()->create()->assignRole('profesor');
-    Storage::disk('local')->put('recibos-sueldo/1/2026-03.pdf', 'contenido');
-    $recibo = ReciboSueldo::factory()->create(['profesor_id' => $profesor->id, 'archivo' => 'recibos-sueldo/1/2026-03.pdf']);
+    Storage::disk('local')->put('recibos-sueldo/1/2026-03/a.pdf', 'contenido');
+    $recibo = ReciboSueldo::factory()->create(['profesor_id' => $profesor->id]);
+    $archivo = ReciboSueldoArchivo::factory()->create(['recibo_sueldo_id' => $recibo->id, 'archivo' => 'recibos-sueldo/1/2026-03/a.pdf']);
 
-    $this->actingAs($profesor)->get(route('recibos-sueldo.descargar', $recibo))->assertOk();
+    $this->actingAs($profesor)->get(route('recibos-sueldo.descargar', $archivo))->assertOk();
 });
 
 test('un profesor no puede descargar el recibo de otro', function () {
     $profesor = User::factory()->create()->assignRole('profesor');
     $otroProfesor = User::factory()->create()->assignRole('profesor');
-    Storage::disk('local')->put('recibos-sueldo/2/2026-03.pdf', 'contenido');
-    $recibo = ReciboSueldo::factory()->create(['profesor_id' => $otroProfesor->id, 'archivo' => 'recibos-sueldo/2/2026-03.pdf']);
+    Storage::disk('local')->put('recibos-sueldo/2/2026-03/a.pdf', 'contenido');
+    $recibo = ReciboSueldo::factory()->create(['profesor_id' => $otroProfesor->id]);
+    $archivo = ReciboSueldoArchivo::factory()->create(['recibo_sueldo_id' => $recibo->id, 'archivo' => 'recibos-sueldo/2/2026-03/a.pdf']);
 
-    $this->actingAs($profesor)->get(route('recibos-sueldo.descargar', $recibo))->assertForbidden();
+    $this->actingAs($profesor)->get(route('recibos-sueldo.descargar', $archivo))->assertForbidden();
 });
 
 test('un administrador puede descargar cualquier recibo', function () {
     $administrador = User::factory()->create()->assignRole('administrador');
-    Storage::disk('local')->put('recibos-sueldo/3/2026-03.pdf', 'contenido');
-    $recibo = ReciboSueldo::factory()->create(['archivo' => 'recibos-sueldo/3/2026-03.pdf']);
+    Storage::disk('local')->put('recibos-sueldo/3/2026-03/a.pdf', 'contenido');
+    $recibo = ReciboSueldo::factory()->create();
+    $archivo = ReciboSueldoArchivo::factory()->create(['recibo_sueldo_id' => $recibo->id, 'archivo' => 'recibos-sueldo/3/2026-03/a.pdf']);
 
-    $this->actingAs($administrador)->get(route('recibos-sueldo.descargar', $recibo))->assertOk();
+    $this->actingAs($administrador)->get(route('recibos-sueldo.descargar', $archivo))->assertOk();
+});
+
+test('un administrador puede descargar cada archivo de un recibo con varios', function () {
+    $administrador = User::factory()->create()->assignRole('administrador');
+    Storage::disk('local')->put('recibos-sueldo/5/2026-03/a.pdf', 'contenido a');
+    Storage::disk('local')->put('recibos-sueldo/5/2026-03/b.pdf', 'contenido b');
+    $recibo = ReciboSueldo::factory()->create();
+    $archivoA = ReciboSueldoArchivo::factory()->create(['recibo_sueldo_id' => $recibo->id, 'archivo' => 'recibos-sueldo/5/2026-03/a.pdf']);
+    $archivoB = ReciboSueldoArchivo::factory()->create(['recibo_sueldo_id' => $recibo->id, 'archivo' => 'recibos-sueldo/5/2026-03/b.pdf']);
+
+    $this->actingAs($administrador)->get(route('recibos-sueldo.descargar', $archivoA))->assertOk();
+    $this->actingAs($administrador)->get(route('recibos-sueldo.descargar', $archivoB))->assertOk();
 });
 
 test('el cobrador no puede descargar ningun recibo', function () {
     $cobrador = User::factory()->create()->assignRole('cobrador');
-    Storage::disk('local')->put('recibos-sueldo/4/2026-03.pdf', 'contenido');
-    $recibo = ReciboSueldo::factory()->create(['archivo' => 'recibos-sueldo/4/2026-03.pdf']);
+    Storage::disk('local')->put('recibos-sueldo/4/2026-03/a.pdf', 'contenido');
+    $recibo = ReciboSueldo::factory()->create();
+    $archivo = ReciboSueldoArchivo::factory()->create(['recibo_sueldo_id' => $recibo->id, 'archivo' => 'recibos-sueldo/4/2026-03/a.pdf']);
 
-    $this->actingAs($cobrador)->get(route('recibos-sueldo.descargar', $recibo))->assertForbidden();
+    $this->actingAs($cobrador)->get(route('recibos-sueldo.descargar', $archivo))->assertForbidden();
 });

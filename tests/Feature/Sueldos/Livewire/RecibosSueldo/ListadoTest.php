@@ -3,6 +3,7 @@
 use App\Core\Models\User;
 use App\Sueldos\Livewire\RecibosSueldo\Listado;
 use App\Sueldos\Models\ReciboSueldo;
+use App\Sueldos\Models\ReciboSueldoArchivo;
 use Database\Seeders\RoleSeeder;
 use Illuminate\Support\Facades\Storage;
 use Livewire\Livewire;
@@ -44,18 +45,23 @@ test('un profesor no ve el boton de nuevo recibo ni eliminar', function () {
         ->assertDontSee('Eliminar');
 });
 
-test('un administrador puede eliminar un recibo, junto con su archivo', function () {
+test('un administrador puede eliminar un recibo, junto con todos sus archivos', function () {
     Storage::fake('local');
-    Storage::disk('local')->put('recibos-sueldo/1/2026-03.pdf', 'contenido');
+    Storage::disk('local')->put('recibos-sueldo/1/2026-03/a.pdf', 'contenido');
+    Storage::disk('local')->put('recibos-sueldo/1/2026-03/b.pdf', 'contenido');
 
     $administrador = User::factory()->create()->assignRole('administrador');
-    $recibo = ReciboSueldo::factory()->create(['archivo' => 'recibos-sueldo/1/2026-03.pdf']);
+    $recibo = ReciboSueldo::factory()->create();
+    ReciboSueldoArchivo::query()->where('recibo_sueldo_id', $recibo->id)->delete();
+    ReciboSueldoArchivo::factory()->create(['recibo_sueldo_id' => $recibo->id, 'archivo' => 'recibos-sueldo/1/2026-03/a.pdf']);
+    ReciboSueldoArchivo::factory()->create(['recibo_sueldo_id' => $recibo->id, 'archivo' => 'recibos-sueldo/1/2026-03/b.pdf']);
 
     Livewire::actingAs($administrador)->test(Listado::class)
         ->call('eliminar', $recibo->id);
 
     expect(ReciboSueldo::find($recibo->id))->toBeNull();
-    Storage::disk('local')->assertMissing('recibos-sueldo/1/2026-03.pdf');
+    Storage::disk('local')->assertMissing('recibos-sueldo/1/2026-03/a.pdf');
+    Storage::disk('local')->assertMissing('recibos-sueldo/1/2026-03/b.pdf');
 });
 
 test('el cobrador no puede montar el componente', function () {

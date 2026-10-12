@@ -18,9 +18,17 @@ class ReciboSueldoFactory extends Factory
         return [
             'profesor_id' => User::factory(),
             'periodo' => now()->format('Y-m'),
-            'archivo' => 'recibos-sueldo/'.fake()->uuid().'.pdf',
             'cargado_por_id' => User::factory(),
             'fecha_carga' => now(),
         ];
+    }
+
+    public function configure(): static
+    {
+        return $this->afterCreating(function (ReciboSueldo $recibo) {
+            if ($recibo->archivos()->doesntExist()) {
+                ReciboSueldoArchivoFactory::new()->create(['recibo_sueldo_id' => $recibo->id]);
+            }
+        });
     }
 }

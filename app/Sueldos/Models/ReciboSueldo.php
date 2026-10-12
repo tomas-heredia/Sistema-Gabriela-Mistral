@@ -8,10 +8,11 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Spatie\Activitylog\LogOptions;
 use Spatie\Activitylog\Traits\LogsActivity;
 
-#[Fillable(['profesor_id', 'periodo', 'archivo', 'cargado_por_id', 'fecha_carga'])]
+#[Fillable(['profesor_id', 'periodo', 'cargado_por_id', 'fecha_carga'])]
 class ReciboSueldo extends Model
 {
     use HasFactory, LogsActivity;
@@ -35,13 +36,18 @@ class ReciboSueldo extends Model
         return $this->belongsTo(User::class, 'cargado_por_id');
     }
 
+    public function archivos(): HasMany
+    {
+        return $this->hasMany(ReciboSueldoArchivo::class);
+    }
+
     /**
      * Regla de CLAUDE.md: todo recibo de sueldo queda auditado.
      */
     public function getActivitylogOptions(): LogOptions
     {
         return LogOptions::defaults()
-            ->logOnly(['profesor_id', 'periodo', 'archivo', 'cargado_por_id', 'fecha_carga'])
+            ->logOnly(['profesor_id', 'periodo', 'cargado_por_id', 'fecha_carga'])
             ->logOnlyDirty()
             ->dontSubmitEmptyLogs();
     }
