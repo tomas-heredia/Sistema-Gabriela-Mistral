@@ -29,3 +29,17 @@ docker exec "$CONTAINER_ID" sh -c "exec mysqldump -uroot -p'${MYSQL_ROOT_PASSWOR
 echo "Backup guardado en $FILE"
 
 ls -1t "$BACKUP_DIR"/*.sql.gz 2>/dev/null | tail -n +$((KEEP + 1)) | xargs -r rm --
+
+# Copia cifrada fuera del servidor (Google Drive, vía un remote "crypt" de
+# rclone) -- si el VPS se pierde o se compromete, el backup local se pierde
+# con él. No se borra nada del lado remoto: el tamaño de estos dumps es
+# insignificante frente al espacio disponible, así que no vale el riesgo de
+# un bug en la lógica de borrado remoto.
+RCLONE="$HOME/bin/rclone"
+if [ -x "$RCLONE" ] && "$RCLONE" listremotes 2>/dev/null | grep -qx "gdrive-crypt:"; then
+    if "$RCLONE" copy "$FILE" gdrive-crypt: >/dev/null 2>&1; then
+        echo "Copia cifrada subida a Google Drive."
+    else
+        echo "ADVERTENCIA: fallo al subir la copia cifrada a Google Drive." >&2
+    fi
+fi
