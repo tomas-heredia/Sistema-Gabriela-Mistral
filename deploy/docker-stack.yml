@@ -39,6 +39,24 @@ services:
       - app_storage:/var/www/html/storage/app
     networks:
       - gabriela-mistral
+      - easypanel
+    labels:
+      # Traefik (ya corre en la VPS para EasyPanel/n8n, providers.docker con
+      # exposedByDefault=false) -- estas etiquetas son lo único que lo hace
+      # enrutar tráfico hacia este contenedor; no tocan nada de los otros
+      # stacks. HTTPS gratis vía sslip.io (resuelve solo a esta IP, sin
+      # necesidad de comprar un dominio) usando el certresolver "letsencrypt"
+      # que el Traefik ya tiene configurado.
+      - traefik.enable=true
+      - traefik.http.services.gabriela-mistral.loadbalancer.server.port=8080
+      - traefik.http.routers.gabriela-mistral-https.rule=Host(`76-13-166-178.sslip.io`)
+      - traefik.http.routers.gabriela-mistral-https.entrypoints=https
+      - traefik.http.routers.gabriela-mistral-https.tls=true
+      - traefik.http.routers.gabriela-mistral-https.tls.certresolver=letsencrypt
+      - traefik.http.routers.gabriela-mistral-http.rule=Host(`76-13-166-178.sslip.io`)
+      - traefik.http.routers.gabriela-mistral-http.entrypoints=http
+      - traefik.http.routers.gabriela-mistral-http.middlewares=gabriela-mistral-https-redirect
+      - traefik.http.middlewares.gabriela-mistral-https-redirect.redirectscheme.scheme=https
     healthcheck:
       test: ["CMD", "wget", "--spider", "-q", "http://127.0.0.1:8080/up"]
       interval: 30s
@@ -70,6 +88,9 @@ networks:
   gabriela-mistral:
     external: true
     name: easypanel-gabriela-mistral
+  easypanel:
+    external: true
+    name: easypanel
 
 volumes:
   app_storage:

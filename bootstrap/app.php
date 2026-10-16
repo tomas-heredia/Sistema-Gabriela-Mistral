@@ -27,8 +27,12 @@ return Application::configure(basePath: dirname(__DIR__))
         // del gateway interno (docker_gwbridge) antes de que llegue al
         // contenedor -- ese rango es interno de Docker, nunca alcanzable
         // desde afuera, así que confiar en él es seguro.
+        // 10.11.0.0/16 es la red overlay "easypanel" del Traefik ya
+        // instalado en la VPS (ver docker-stack.yml) -- el mismo motivo:
+        // sin esto, $request->ip() vería la IP interna de Traefik en vez
+        // de la del cliente real para el acceso público HTTPS.
         $middleware->trustProxies(
-            at: ['127.0.0.1', '172.16.1.0/24'],
+            at: ['127.0.0.1', '172.16.1.0/24', '10.11.0.0/16'],
             headers: Request::HEADER_X_FORWARDED_FOR
                 | Request::HEADER_X_FORWARDED_HOST
                 | Request::HEADER_X_FORWARDED_PORT
