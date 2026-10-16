@@ -1,0 +1,20 @@
+{
+    "name": "Sistema Gabriela Mistral",
+    "short_name": "GAMI",
+    "start_url": "/dashboard",
+    "display": "standalone",
+    "background_color": "#ffffff",
+    "theme_color": "#1e3a6e",
+    "icons": [
+        {
+            "src": "/images/gami-192.png",
+            "sizes": "192x192",
+            "type": "image/png"
+        },
+        {
+            "src": "/images/gami-512.png",
+            "sizes": "512x512",
+            "type": "image/png"
+        }
+    ]
+}
