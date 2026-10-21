@@ -31,6 +31,11 @@
 
         @if ($tutorEncontrado)
             <p class="text-sm text-gray-900">Tutor: <strong>{{ $tutorEncontrado->nombre }}</strong></p>
+            @if ($this->saldoAFavorDisponible > 0)
+                <p class="text-sm text-green-700">
+                    Saldo a favor disponible: <strong>${{ number_format($this->saldoAFavorDisponible / 100, 2, ',', '.') }}</strong>
+                </p>
+            @endif
         @endif
     </div>
 
@@ -153,6 +158,34 @@
                         >
                         <p class="mt-1 text-xs text-gray-500">Ej.: 1.40 = 40% de recargo. Se aplica por separado sobre la deuda de cada cuota tildada, no sobre el total.</p>
                         <x-input-error :messages="$errors->get('interesIndice')" class="mt-1" />
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    @if ($this->saldoAFavorDisponible > 0)
+                        <div>
+                            <x-input-label for="saldoAFavorAUsar" value="Saldo a favor a usar en este pago (opcional)" />
+                            <input
+                                type="number" step="0.01" min="0" max="{{ $this->saldoAFavorDisponible / 100 }}"
+                                id="saldoAFavorAUsar"
+                                wire:model.live="saldoAFavorAUsar"
+                                placeholder="0"
+                                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                            >
+                            <p class="mt-1 text-xs text-gray-500">Disponible: ${{ number_format($this->saldoAFavorDisponible / 100, 2, ',', '.') }}. El tutor entrega esa diferencia de menos en efectivo.</p>
+                        </div>
+                    @endif
+
+                    <div>
+                        <x-input-label for="saldoAFavorADejar" value="Saldo a favor a dejar (opcional)" />
+                        <input
+                            type="number" step="0.01" min="0"
+                            id="saldoAFavorADejar"
+                            wire:model.live="saldoAFavorADejar"
+                            placeholder="0"
+                            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                        >
+                        <p class="mt-1 text-xs text-gray-500">Si el tutor entrega más efectivo del que corresponde a las cuotas tildadas, el excedente queda a favor para el mes que viene.</p>
                     </div>
                 </div>
 

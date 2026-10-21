@@ -1,9 +1,11 @@
 <?php
 
 use App\Alumnos\Models\Alumno;
+use App\Alumnos\Models\Tutor;
 use App\Cobranzas\Exceptions\AsignacionDePagoInvalidaException;
 use App\Cobranzas\Models\Cuota;
 use App\Cobranzas\Models\Enums\EstadoCuota;
+use App\Cobranzas\Models\MovimientoSaldoAFavor;
 use App\Cobranzas\Models\Pago;
 use App\Cobranzas\Services\AsignadorDePagos;
 
@@ -87,6 +89,50 @@ test('rechaza si el monto aplicado supera el saldo pendiente de la cuota', funct
     $pago = Pago::factory()->create(['monto' => 150_000]);
 
     app(AsignadorDePagos::class)->aplicar($pago, [$cuota->id => ['monto' => 150_000, 'interes' => 0]]);
+})->throws(AsignacionDePagoInvalidaException::class);
+
+test('el excedente entregado de mas queda registrado como saldo a favor', function () {
+    $tutor = Tutor::factory()->create();
+    $cuota = Cuota::factory()->create(['monto' => 100_000, 'estado' => EstadoCuota::Pendiente]);
+    $pago = Pago::factory()->create(['tutor_id' => $tutor->id, 'monto' => 130_000]);
+
+    app(AsignadorDePagos::class)->aplicar(
+        $pago,
+        [$cuota->id => ['monto' => 100_000, 'interes' => 0]],
+        saldoAFavorGenerado: 30_000,
+    );
+
+    expect((int) MovimientoSaldoAFavor::where('tutor_id', $tutor->id)->sum('monto'))->toBe(30_000);
+});
+
+test('se puede usar saldo a favor existente para completar una cuota pagando menos en efectivo', function () {
+    $tutor = Tutor::factory()->create();
+    $pagoAnterior = Pago::factory()->create(['tutor_id' => $tutor->id]);
+    MovimientoSaldoAFavor::factory()->create(['tutor_id' => $tutor->id, 'pago_id' => $pagoAnterior->id, 'monto' => 30_000]);
+
+    $cuota = Cuota::factory()->create(['monto' => 100_000, 'estado' => EstadoCuota::Pendiente]);
+    $pago = Pago::factory()->create(['tutor_id' => $tutor->id, 'monto' => 70_000]);
+
+    app(AsignadorDePagos::class)->aplicar(
+        $pago,
+        [$cuota->id => ['monto' => 100_000, 'interes' => 0]],
+        saldoAFavorConsumido: 30_000,
+    );
+
+    expect($cuota->fresh()->estado)->toBe(EstadoCuota::Pagada)
+        ->and(MovimientoSaldoAFavor::where('tutor_id', $tutor->id)->sum('monto'))->toBe(0);
+});
+
+test('rechaza usar mas saldo a favor del que el tutor tiene disponible', function () {
+    $tutor = Tutor::factory()->create();
+    $cuota = Cuota::factory()->create(['monto' => 100_000, 'estado' => EstadoCuota::Pendiente]);
+    $pago = Pago::factory()->create(['tutor_id' => $tutor->id, 'monto' => 50_000]);
+
+    app(AsignadorDePagos::class)->aplicar(
+        $pago,
+        [$cuota->id => ['monto' => 100_000, 'interes' => 0]],
+        saldoAFavorConsumido: 50_000,
+    );
 })->throws(AsignacionDePagoInvalidaException::class);
 
 test('un pago adelantado se aplica contra una cuota futura ya existente', function () {

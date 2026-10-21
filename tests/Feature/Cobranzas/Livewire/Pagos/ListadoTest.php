@@ -2,6 +2,7 @@
 
 use App\Alumnos\Models\Alumno;
 use App\Alumnos\Models\Tutor;
+use App\Cobranzas\Jobs\EnviarComprobantePago;
 use App\Cobranzas\Livewire\Pagos\Listado;
 use App\Cobranzas\Models\Cuota;
 use App\Cobranzas\Models\Enums\EstadoCuota;
@@ -9,6 +10,7 @@ use App\Cobranzas\Models\Pago;
 use App\Cobranzas\Models\PagoCuota;
 use App\Core\Models\User;
 use Database\Seeders\RoleSeeder;
+use Illuminate\Support\Facades\Bus;
 use Livewire\Livewire;
 
 beforeEach(function () {
@@ -99,6 +101,31 @@ test('con pagos en la tabla, el boton de generar pdf esta habilitado', function 
     Livewire::actingAs($cobrador)->test(Listado::class)
         ->assertSeeHtml(route('pagos.pdf'))
         ->assertDontSeeHtml('No hay pagos en la tabla para generar el PDF.');
+});
+
+test('cobrador puede reenviar el comprobante de un pago vigente', function () {
+    Bus::fake();
+    $cobrador = User::factory()->create()->assignRole('cobrador');
+    $pago = Pago::factory()->create();
+    $pagoCuota = PagoCuota::factory()->create(['pago_id' => $pago->id]);
+
+    Livewire::actingAs($cobrador)->test(Listado::class)
+        ->call('reenviarComprobante', $pagoCuota->numero_recibo)
+        ->assertHasNoErrors();
+
+    Bus::assertDispatched(EnviarComprobantePago::class, fn ($job) => $job->numeroRecibo === $pagoCuota->numero_recibo);
+});
+
+test('no se puede reenviar el comprobante de un pago anulado', function () {
+    Bus::fake();
+    $cobrador = User::factory()->create()->assignRole('cobrador');
+    $pago = Pago::factory()->create(['anulado_at' => now()]);
+    $pagoCuota = PagoCuota::factory()->create(['pago_id' => $pago->id]);
+
+    Livewire::actingAs($cobrador)->test(Listado::class)
+        ->call('reenviarComprobante', $pagoCuota->numero_recibo);
+
+    Bus::assertNotDispatched(EnviarComprobantePago::class);
 });
 
 test('profesor no puede montar el componente', function () {

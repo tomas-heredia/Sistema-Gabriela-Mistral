@@ -10,6 +10,7 @@ use App\Cobranzas\Models\Enums\EstadoCuota;
 use App\Cobranzas\Models\Enums\MedioPago;
 use App\Cobranzas\Models\Pago;
 use App\Cobranzas\Services\AsignadorDePagos;
+use App\Cobranzas\Services\CalculadorDeSaldoAFavor;
 use App\Cobranzas\Services\GeneradorDeComprobantePago;
 use App\Cobranzas\Services\PeriodoDeCuotaEnTexto;
 use App\Core\Models\PeriodoLectivo;
@@ -62,6 +63,12 @@ class Registrar extends Component
     public string $interesIndice = '';
 
     public ?string $observaciones = null;
+
+    /** Lo que el tutor entrega de más, para dejar como saldo a favor a futuro -- en pesos, como texto. */
+    public string $saldoAFavorADejar = '';
+
+    /** Cuánto del saldo a favor ya existente se descuenta de este pago -- en pesos, como texto. */
+    public string $saldoAFavorAUsar = '';
 
     /**
      * Comprobantes recién generados, para mostrar los links de descarga sin
@@ -131,6 +138,8 @@ class Registrar extends Component
         $this->resultadosBusqueda = [];
         $this->cuotasSeleccionadas = [];
         $this->montos = [];
+        $this->saldoAFavorADejar = '';
+        $this->saldoAFavorAUsar = '';
 
         if (! $this->tutorEncontrado) {
             return;
@@ -141,6 +150,23 @@ class Registrar extends Component
         }
     }
 
+    /**
+     * Calculado al momento (nunca cacheado) -- ver CalculadorDeSaldoAFavor.
+     */
+    public function getSaldoAFavorDisponibleProperty(): int
+    {
+        if (! $this->tutorEncontrado) {
+            return 0;
+        }
+
+        return app(CalculadorDeSaldoAFavor::class)->calcular($this->tutorEncontrado);
+    }
+
+    /**
+     * Lo que realmente entra como efectivo en este pago: lo aplicado a
+     * cuotas, menos el saldo a favor que se usa (el tutor trae menos plata
+     * porque ya tenía a favor), más el que deja de más.
+     */
     public function getMontoTotalProperty(): int
     {
         $total = 0;
@@ -151,6 +177,9 @@ class Registrar extends Component
                 $total += $monto + $this->interesSobre($monto);
             }
         }
+
+        $total -= $this->pesosACentavos($this->saldoAFavorAUsar ?: '0');
+        $total += $this->pesosACentavos($this->saldoAFavorADejar ?: '0');
 
         return $total;
     }
@@ -203,12 +232,16 @@ class Registrar extends Component
             return;
         }
 
-        $montoTotal = array_sum(array_map(fn ($a) => $a['monto'] + $a['interes'], $asignaciones));
+        $saldoAFavorGenerado = $this->pesosACentavos($this->saldoAFavorADejar ?: '0');
+        $saldoAFavorConsumido = $this->pesosACentavos($this->saldoAFavorAUsar ?: '0');
+
+        $montoTotal = array_sum(array_map(fn ($a) => $a['monto'] + $a['interes'], $asignaciones))
+            - $saldoAFavorConsumido + $saldoAFavorGenerado;
 
         $pago = null;
 
         try {
-            DB::transaction(function () use ($asignaciones, $asignador, $montoTotal, &$pago) {
+            DB::transaction(function () use ($asignaciones, $asignador, $montoTotal, $saldoAFavorGenerado, $saldoAFavorConsumido, &$pago) {
                 $pago = Pago::create([
                     'tutor_id' => $this->tutorEncontrado->id,
                     'monto' => $montoTotal,
@@ -219,7 +252,7 @@ class Registrar extends Component
                     'observaciones' => $this->observaciones,
                 ]);
 
-                $asignador->aplicar($pago, $asignaciones);
+                $asignador->aplicar($pago, $asignaciones, $saldoAFavorGenerado, $saldoAFavorConsumido);
             });
         } catch (AsignacionDePagoInvalidaException $excepcion) {
             $this->addError('cuotasSeleccionadas', $excepcion->getMessage());
@@ -249,7 +282,7 @@ class Registrar extends Component
         })->values()->all();
 
         session()->flash('mensaje', 'Pago registrado correctamente.');
-        $this->reset(['tutorEncontrado', 'cuotasSeleccionadas', 'montos', 'medio_pago', 'interesIndice', 'observaciones', 'busquedaTutor', 'buscoTutor']);
+        $this->reset(['tutorEncontrado', 'cuotasSeleccionadas', 'montos', 'medio_pago', 'interesIndice', 'observaciones', 'busquedaTutor', 'buscoTutor', 'saldoAFavorADejar', 'saldoAFavorAUsar']);
     }
 
     /**

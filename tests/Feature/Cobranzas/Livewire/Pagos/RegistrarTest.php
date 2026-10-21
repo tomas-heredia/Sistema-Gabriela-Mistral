@@ -8,6 +8,7 @@ use App\Cobranzas\Mail\ComprobantePagoEnviado;
 use App\Cobranzas\Models\Cuota;
 use App\Cobranzas\Models\Enums\EstadoCuota;
 use App\Cobranzas\Models\Enums\MedioPago;
+use App\Cobranzas\Models\MovimientoSaldoAFavor;
 use App\Cobranzas\Models\Pago;
 use App\Cobranzas\Models\PagoCuota;
 use App\Core\Models\PeriodoLectivo;
@@ -329,6 +330,77 @@ test('un pago que tilda dos cuotas de meses distintos aplica ambas', function ()
     expect($cuotaMarzo->fresh()->estado)->toBe(EstadoCuota::Pagada);
     expect($cuotaAbril->fresh()->estado)->toBe(EstadoCuota::Pagada);
     expect(Pago::where('tutor_id', $this->tutor->id)->first()->monto)->toBe(200_000);
+});
+
+test('pagar de mas y dejar saldo a favor registra el excedente', function () {
+    $cobrador = User::factory()->create()->assignRole('cobrador');
+    $alumno = Alumno::factory()->primario()->create();
+    vincularAlumnoATutor($this->tutor, $alumno);
+
+    $cuota = Cuota::factory()->create([
+        'alumno_id' => $alumno->id,
+        'periodo_lectivo_id' => $this->periodo->id,
+        'monto_base' => 100_000,
+        'monto' => 100_000,
+        'estado' => EstadoCuota::Pendiente,
+    ]);
+
+    $componente = Livewire::actingAs($cobrador)->test(Registrar::class)
+        ->set('busquedaTutor', $this->tutor->dni)
+        ->call('buscarTutor')
+        ->set("cuotasSeleccionadas.{$cuota->id}", true)
+        ->set("montos.{$cuota->id}", '1000.00')
+        ->set('saldoAFavorADejar', '300.00')
+        ->set('medio_pago', MedioPago::Efectivo->value)
+        ->set('fecha', now()->format('Y-m-d'));
+
+    expect($componente->get('montoTotal'))->toBe(130_000);
+
+    $componente->call('guardar')->assertHasNoErrors();
+
+    expect($cuota->fresh()->estado)->toBe(EstadoCuota::Pagada);
+    expect(Pago::where('tutor_id', $this->tutor->id)->first()->monto)->toBe(130_000);
+    expect((int) MovimientoSaldoAFavor::where('tutor_id', $this->tutor->id)->sum('monto'))->toBe(30_000);
+});
+
+test('se ve y se puede usar el saldo a favor disponible de un tutor', function () {
+    $cobrador = User::factory()->create()->assignRole('cobrador');
+    $alumno = Alumno::factory()->primario()->create();
+    vincularAlumnoATutor($this->tutor, $alumno);
+
+    $pagoAnterior = Pago::factory()->create(['tutor_id' => $this->tutor->id]);
+    MovimientoSaldoAFavor::factory()->create([
+        'tutor_id' => $this->tutor->id,
+        'pago_id' => $pagoAnterior->id,
+        'monto' => 30_000,
+    ]);
+
+    $cuota = Cuota::factory()->create([
+        'alumno_id' => $alumno->id,
+        'periodo_lectivo_id' => $this->periodo->id,
+        'monto_base' => 100_000,
+        'monto' => 100_000,
+        'estado' => EstadoCuota::Pendiente,
+    ]);
+
+    $componente = Livewire::actingAs($cobrador)->test(Registrar::class)
+        ->set('busquedaTutor', $this->tutor->dni)
+        ->call('buscarTutor')
+        ->assertSee('Saldo a favor disponible')
+        ->assertSee('300,00')
+        ->set("cuotasSeleccionadas.{$cuota->id}", true)
+        ->set("montos.{$cuota->id}", '1000.00')
+        ->set('saldoAFavorAUsar', '300.00')
+        ->set('medio_pago', MedioPago::Efectivo->value)
+        ->set('fecha', now()->format('Y-m-d'));
+
+    expect($componente->get('montoTotal'))->toBe(70_000);
+
+    $componente->call('guardar')->assertHasNoErrors();
+
+    expect($cuota->fresh()->estado)->toBe(EstadoCuota::Pagada);
+    expect(Pago::where('tutor_id', $this->tutor->id)->latest('id')->first()->monto)->toBe(70_000);
+    expect(MovimientoSaldoAFavor::where('tutor_id', $this->tutor->id)->sum('monto'))->toBe(0);
 });
 
 test('profesor no puede montar el componente', function () {

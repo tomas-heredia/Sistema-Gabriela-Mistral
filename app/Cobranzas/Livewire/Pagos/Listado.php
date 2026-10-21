@@ -2,7 +2,9 @@
 
 namespace App\Cobranzas\Livewire\Pagos;
 
+use App\Cobranzas\Jobs\EnviarComprobantePago;
 use App\Cobranzas\Models\Pago;
+use App\Cobranzas\Models\PagoCuota;
 use App\Core\Models\PeriodoLectivo;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
@@ -48,6 +50,26 @@ class Listado extends Component
         $this->pagoAAnularId = $pagoId;
         $this->motivoAnulacion = '';
         $this->dispatch('open-modal', name: 'anular-pago');
+    }
+
+    /**
+     * Reenvía el mismo comprobante ya generado (no genera uno nuevo) -- para
+     * cuando el tutor dice que no le llegó, o pide que se lo manden a otro
+     * correo después de corregirlo en su ficha.
+     */
+    public function reenviarComprobante(string $numeroRecibo): void
+    {
+        $pagoCuota = PagoCuota::where('numero_recibo', $numeroRecibo)->with('pago')->firstOrFail();
+
+        $this->authorize('view', $pagoCuota->pago);
+
+        if ($pagoCuota->pago->estaAnulado()) {
+            return;
+        }
+
+        EnviarComprobantePago::dispatch($numeroRecibo);
+
+        session()->flash('mensaje', "Comprobante {$numeroRecibo} reenviado.");
     }
 
     public function anular(): void

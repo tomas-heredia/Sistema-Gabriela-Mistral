@@ -4,6 +4,7 @@ namespace App\Cobranzas\Services;
 
 use App\Cobranzas\Exceptions\AsignacionDePagoInvalidaException;
 use App\Cobranzas\Models\Cuota;
+use App\Cobranzas\Models\MovimientoSaldoAFavor;
 use App\Cobranzas\Models\Pago;
 use App\Cobranzas\Models\PagoCuota;
 use Illuminate\Support\Facades\DB;
@@ -26,10 +27,21 @@ use Illuminate\Support\Facades\DB;
  */
 class AsignadorDePagos
 {
+    public function __construct(
+        private CalculadorDeSaldoAFavor $calculadorDeSaldo,
+    ) {}
+
     /**
+     * $saldoAFavorGenerado: lo que el tutor entregó de más, para dejar como
+     * saldo a favor a futuro. $saldoAFavorConsumido: cuánto de su saldo a
+     * favor existente se descuenta de este pago (el tutor entrega menos
+     * efectivo porque ya tenía a favor). El efectivo que realmente entra
+     * (Pago::monto) es lo aplicado a cuotas, menos lo consumido, más lo
+     * generado -- ver la cuenta más abajo.
+     *
      * @param  array<int, array{monto: int, interes: int}>  $asignaciones  [cuota_id => ['monto' => monto_aplicado, 'interes' => interes_aplicado]]
      */
-    public function aplicar(Pago $pago, array $asignaciones): void
+    public function aplicar(Pago $pago, array $asignaciones, int $saldoAFavorGenerado = 0, int $saldoAFavorConsumido = 0): void
     {
         if ($pago->estaAnulado()) {
             throw new AsignacionDePagoInvalidaException('No se puede aplicar un pago anulado.');
@@ -39,12 +51,27 @@ class AsignadorDePagos
             throw new AsignacionDePagoInvalidaException('No hay cuotas para aplicar.');
         }
 
-        $sumaTotal = array_sum(array_map(fn ($a) => $a['monto'] + $a['interes'], $asignaciones));
+        if ($saldoAFavorGenerado < 0 || $saldoAFavorConsumido < 0) {
+            throw new AsignacionDePagoInvalidaException('El saldo a favor a dejar o a usar no puede ser negativo.');
+        }
 
-        if ($sumaTotal !== $pago->monto) {
+        $sumaTotal = array_sum(array_map(fn ($a) => $a['monto'] + $a['interes'], $asignaciones));
+        $montoEsperado = $sumaTotal - $saldoAFavorConsumido + $saldoAFavorGenerado;
+
+        if ($montoEsperado !== $pago->monto) {
             throw new AsignacionDePagoInvalidaException(
-                "La suma de las asignaciones ({$sumaTotal}) no coincide con el monto del pago ({$pago->monto}). No puede quedar plata sin aplicar."
+                "La suma de las asignaciones ({$sumaTotal}), descontando el saldo a favor usado ({$saldoAFavorConsumido}) y sumando el que se deja ({$saldoAFavorGenerado}), no coincide con el monto del pago ({$pago->monto}). No puede quedar plata sin aplicar."
             );
+        }
+
+        if ($saldoAFavorConsumido > 0) {
+            $saldoDisponible = $this->calculadorDeSaldo->calcular($pago->tutor);
+
+            if ($saldoAFavorConsumido > $saldoDisponible) {
+                throw new AsignacionDePagoInvalidaException(
+                    "El tutor quiere usar {$saldoAFavorConsumido} de saldo a favor, pero solo tiene {$saldoDisponible} disponible."
+                );
+            }
         }
 
         $cuotas = Cuota::query()->whereIn('id', array_keys($asignaciones))->get()->keyBy('id');
@@ -73,7 +100,7 @@ class AsignadorDePagos
             }
         }
 
-        DB::transaction(function () use ($pago, $asignaciones, $cuotas) {
+        DB::transaction(function () use ($pago, $asignaciones, $cuotas, $saldoAFavorGenerado, $saldoAFavorConsumido) {
             $cuotaIdsPorAlumno = [];
 
             foreach ($asignaciones as $cuotaId => $datos) {
@@ -94,6 +121,22 @@ class AsignadorDePagos
                         'numero_recibo' => $numeroRecibo,
                     ]);
                 }
+            }
+
+            if ($saldoAFavorGenerado > 0) {
+                MovimientoSaldoAFavor::create([
+                    'tutor_id' => $pago->tutor_id,
+                    'pago_id' => $pago->id,
+                    'monto' => $saldoAFavorGenerado,
+                ]);
+            }
+
+            if ($saldoAFavorConsumido > 0) {
+                MovimientoSaldoAFavor::create([
+                    'tutor_id' => $pago->tutor_id,
+                    'pago_id' => $pago->id,
+                    'monto' => -$saldoAFavorConsumido,
+                ]);
             }
         });
     }

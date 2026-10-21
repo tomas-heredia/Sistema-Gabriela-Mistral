@@ -86,13 +86,27 @@
                                 <td class="px-6 py-3 text-sm text-gray-600">
                                     <div class="flex flex-col gap-1">
                                         @foreach ($pago->pagoCuotas->groupBy('numero_recibo') as $grupoRecibo)
-                                            <a
-                                                href="{{ route('pagos.comprobantes.descargar', $grupoRecibo->first()->numero_recibo) }}"
-                                                target="_blank"
-                                                class="text-indigo-600 hover:text-indigo-500"
-                                            >
-                                                {{ $grupoRecibo->first()->numero_recibo }}
-                                            </a>
+                                            <div class="flex items-center gap-2">
+                                                <a
+                                                    href="{{ route('pagos.comprobantes.descargar', $grupoRecibo->first()->numero_recibo) }}"
+                                                    target="_blank"
+                                                    class="text-indigo-600 hover:text-indigo-500"
+                                                >
+                                                    {{ $grupoRecibo->first()->numero_recibo }}
+                                                </a>
+                                                @if (! $pago->estaAnulado())
+                                                    <button
+                                                        type="button"
+                                                        wire:click="reenviarComprobante('{{ $grupoRecibo->first()->numero_recibo }}')"
+                                                        wire:loading.attr="disabled"
+                                                        wire:target="reenviarComprobante('{{ $grupoRecibo->first()->numero_recibo }}')"
+                                                        class="text-gray-400 hover:text-gray-700 text-xs"
+                                                        title="Reenviar comprobante por mail"
+                                                    >
+                                                        (reenviar)
+                                                    </button>
+                                                @endif
+                                            </div>
                                         @endforeach
                                     </div>
                                 </td>
