@@ -49,7 +49,12 @@ class Listado extends Component
 
         $this->pagoAAnularId = $pagoId;
         $this->motivoAnulacion = '';
-        $this->dispatch('open-modal', name: 'anular-pago');
+        // Sin nombre: x-modal compara $event.detail contra un string plano
+        // (ver resources/views/components/modal.blade.php) -- con un
+        // parámetro con nombre, Livewire arma el detail como objeto
+        // ({name: 'anular-pago'}) y esa comparación nunca da true, así que
+        // el modal nunca se abre.
+        $this->dispatch('open-modal', 'anular-pago');
     }
 
     /**
@@ -83,7 +88,7 @@ class Listado extends Component
 
         $pago->anular($this->motivoAnulacion, auth()->user());
 
-        $this->dispatch('close-modal', name: 'anular-pago');
+        $this->dispatch('close-modal', 'anular-pago');
         $this->reset(['pagoAAnularId', 'motivoAnulacion']);
         session()->flash('mensaje', 'Pago anulado correctamente.');
     }

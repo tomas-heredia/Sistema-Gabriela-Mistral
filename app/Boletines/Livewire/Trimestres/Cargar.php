@@ -109,7 +109,10 @@ class Cargar extends Component
             session()->flash('mensaje', 'Trimestre confirmado: el PDF se está generando y se enviará por mail a los tutores.');
             $this->redirectRoute('boletines.index', navigate: true);
         } catch (TransicionDeEstadoInvalidaException $e) {
-            $this->dispatch('close-modal', name: 'confirmar-envio');
+            // Sin nombre: ver el comentario en Pagos\Listado::prepararAnulacion()
+            // sobre por qué un parámetro con nombre acá hace que x-modal nunca
+            // reciba el string que espera y el modal se quede abierto.
+            $this->dispatch('close-modal', 'confirmar-envio');
             session()->flash('error', $e->getMessage());
         }
     }
