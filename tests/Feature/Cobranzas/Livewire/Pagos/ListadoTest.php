@@ -17,16 +17,23 @@ beforeEach(function () {
     $this->seed(RoleSeeder::class);
 });
 
-test('cobrador ve el listado pero no la accion de anular', function () {
+test('cobrador ve el listado y el link para reenviar el comprobante', function () {
     $cobrador = User::factory()->create()->assignRole('cobrador');
     $pago = Pago::factory()->create();
     $pagoCuota = PagoCuota::factory()->create(['pago_id' => $pago->id]);
 
     Livewire::actingAs($cobrador)->test(Listado::class)
         ->assertSee($pagoCuota->numero_recibo)
-        ->assertDontSee("prepararAnulacion({$pago->id})", false);
+        ->assertSee('Reenviar');
 });
 
+/**
+ * El botón de anular está oculto a pedido del cliente (no lo necesitan en su
+ * operatoria), pero la capacidad en sí queda intacta para no perder la única
+ * forma que tiene el sistema de corregir un pago mal cargado (CLAUDE.md:
+ * un pago nunca se edita ni se borra, se anula) -- por eso el test llama a
+ * los métodos del componente directo, sin pasar por un botón que ya no existe.
+ */
 test('administrador puede anular un pago y la cuota afectada recalcula su estado', function () {
     $administrador = User::factory()->create()->assignRole('administrador');
     $tutor = Tutor::factory()->create();
@@ -46,7 +53,6 @@ test('administrador puede anular un pago y la cuota afectada recalcula su estado
     expect($cuota->fresh()->estado)->toBe(EstadoCuota::Pagada);
 
     Livewire::actingAs($administrador)->test(Listado::class)
-        ->assertSee('Anular')
         ->call('prepararAnulacion', $pago->id)
         ->set('motivoAnulacion', 'Error de carga')
         ->call('anular')
