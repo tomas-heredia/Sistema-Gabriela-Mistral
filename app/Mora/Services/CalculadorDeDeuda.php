@@ -43,6 +43,39 @@ class CalculadorDeDeuda
     }
 
     /**
+     * Detalle cuota por cuota de la deuda de un tutor, agrupado por alumno
+     * -- a diferencia de calcular() (que solo da el total), esto es lo que
+     * necesita el resumen mensual en PDF para mostrarle al tutor período
+     * por período qué le falta pagar de cada hijo.
+     *
+     * @return Collection<int, array{alumno: Alumno, cuotas: Collection, subtotal: int}>
+     */
+    public function detalleParaTutor(Tutor $tutor): Collection
+    {
+        $alumnos = $tutor->alumnos()->wherePivot('responsable_pago', true)->get();
+
+        return $alumnos->map(function ($alumno) {
+            $cuotas = Cuota::query()
+                ->where('alumno_id', $alumno->id)
+                ->whereIn('estado', [EstadoCuota::Pendiente, EstadoCuota::Parcial])
+                ->where('fecha_vencimiento', '<', today())
+                ->orderBy('fecha_vencimiento')
+                ->get()
+                ->map(fn (Cuota $cuota) => [
+                    'cuota' => $cuota,
+                    'pagado' => $cuota->montoPagado(),
+                    'saldo' => $cuota->monto - $cuota->montoPagado(),
+                ]);
+
+            return [
+                'alumno' => $alumno,
+                'cuotas' => $cuotas,
+                'subtotal' => $cuotas->sum('saldo'),
+            ];
+        })->filter(fn (array $fila) => $fila['cuotas']->isNotEmpty())->values();
+    }
+
+    /**
      * Igual que calcular(), pero para todos los tutores a la vez -- una
      * sola pasada por las cuotas vencidas en vez de una consulta por
      * tutor. Pensado para la pantalla de morosos: siempre calculado en el

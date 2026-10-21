@@ -12,3 +12,7 @@ Artisan::command('inspire', function () {
 // no este cron — correr a diario lo hace robusto a que el scheduler se
 // caiga un día. Ver App\Mora\Console\Commands\GenerarAvisosMora.
 Schedule::command('mora:generar-avisos')->daily();
+
+// Igual motivo que arriba: el comando decide internamente si ya pasó el
+// día 10. Ver App\Mora\Console\Commands\GenerarResumenesMensualesDeDeuda.
+Schedule::command('mora:generar-resumenes')->daily();
