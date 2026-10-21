@@ -117,6 +117,12 @@
                                                     Reenviar{{ $pago->pagoCuotas->groupBy('numero_recibo')->count() > 1 ? " ({$grupoRecibo->first()->numero_recibo})" : '' }}
                                                 </button>
                                             @endforeach
+
+                                            @can('anular', $pago)
+                                                <button type="button" wire:click="prepararAnulacion({{ $pago->id }})" class="text-red-600 hover:text-red-800">
+                                                    Anular
+                                                </button>
+                                            @endcan
                                         </div>
                                     @endif
                                 </td>

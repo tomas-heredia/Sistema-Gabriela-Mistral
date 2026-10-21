@@ -30,13 +30,15 @@ test('un pago anulado no se puede volver a aplicar', function () {
     app(AsignadorDePagos::class)->aplicar($pago, [$cuota->id => ['monto' => 100_000, 'interes' => 0]]);
 })->throws(AsignacionDePagoInvalidaException::class);
 
-test('solo administrador puede anular un pago, cobrador no', function () {
+test('administrador y cobrador pueden anular un pago', function () {
     $this->seed(RoleSeeder::class);
 
     $pago = Pago::factory()->create();
     $administrador = User::factory()->create()->assignRole('administrador');
     $cobrador = User::factory()->create()->assignRole('cobrador');
+    $profesor = User::factory()->create()->assignRole('profesor');
 
     expect($administrador->can('anular', $pago))->toBeTrue()
-        ->and($cobrador->can('anular', $pago))->toBeFalse();
+        ->and($cobrador->can('anular', $pago))->toBeTrue()
+        ->and($profesor->can('anular', $pago))->toBeFalse();
 });

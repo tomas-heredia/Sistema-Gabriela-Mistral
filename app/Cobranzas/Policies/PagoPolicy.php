@@ -33,12 +33,13 @@ class PagoPolicy
     }
 
     /**
-     * El cobrador carga pagos, pero no puede anularlos — solo administrador,
-     * para evitar que quien puede haber cometido el error también lo borre
-     * de la vista sin dejar rastro claro de responsabilidad.
+     * El cobrador también puede anular (a pedido del cliente) -- la
+     * anulación de todas formas queda auditada con quién la hizo y el
+     * motivo (ver Pago::anular()), así que la responsabilidad sigue
+     * siendo clara aunque sea la misma persona que cargó el error.
      */
     public function anular(User $user, Pago $pago): bool
     {
-        return $user->hasRole('administrador');
+        return $user->hasAnyRole(['administrador', 'cobrador']);
     }
 }
