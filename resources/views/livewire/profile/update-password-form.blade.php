@@ -49,6 +49,16 @@ new class extends Component
         </p>
     </header>
 
+    <div
+        x-data="{ shown: false, timeout: null }"
+        x-init="@this.on('password-updated', () => { clearTimeout(timeout); shown = true; timeout = setTimeout(() => { shown = false }, 4000); })"
+        x-show.transition.opacity="shown"
+        style="display: none;"
+        class="mt-4 rounded-md bg-green-50 border border-green-200 px-4 py-3 text-sm text-green-800"
+    >
+        {{ __('Contraseña actualizada correctamente.') }}
+    </div>
+
     <form wire:submit="updatePassword" class="mt-6 space-y-6">
         <div>
             <x-input-label for="update_password_current_password" :value="__('Contraseña actual')" />
@@ -70,10 +80,6 @@ new class extends Component
 
         <div class="flex items-center gap-4">
             <x-primary-button>{{ __('Guardar') }}</x-primary-button>
-
-            <x-action-message class="me-3" on="password-updated">
-                {{ __('Guardado.') }}
-            </x-action-message>
         </div>
     </form>
 </section>
