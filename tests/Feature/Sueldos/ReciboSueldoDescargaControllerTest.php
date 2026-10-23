@@ -81,3 +81,23 @@ test('un cobrador fuera de la red del colegio puede descargar su propio recibo',
         ->get(route('recibos-sueldo.descargar', $archivo))
         ->assertOk();
 });
+
+/**
+ * La excepción de red para recibos-sueldo.* solo salta el chequeo de IP --
+ * la Policy de "a quién pertenece" se sigue evaluando igual que si viniera
+ * de la red del colegio. Esto confirma que no hay forma de que, por estar
+ * exceptuado de la restricción de red, un cobrador termine viendo el
+ * recibo de otra persona.
+ */
+test('un cobrador fuera de la red del colegio NO puede descargar el recibo de otro', function () {
+    config(['acceso.restriccion_de_red_habilitada' => true]);
+    $cobrador = User::factory()->create()->assignRole('cobrador');
+    Storage::disk('local')->put('recibos-sueldo/8/2026-03/a.pdf', 'contenido');
+    $recibo = ReciboSueldo::factory()->create();
+    $archivo = ReciboSueldoArchivo::factory()->create(['recibo_sueldo_id' => $recibo->id, 'archivo' => 'recibos-sueldo/8/2026-03/a.pdf']);
+
+    $this->actingAs($cobrador)
+        ->withServerVariables(['REMOTE_ADDR' => '190.191.10.20'])
+        ->get(route('recibos-sueldo.descargar', $archivo))
+        ->assertForbidden();
+});

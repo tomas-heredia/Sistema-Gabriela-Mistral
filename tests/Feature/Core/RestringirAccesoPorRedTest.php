@@ -1,6 +1,7 @@
 <?php
 
 use App\Core\Models\User;
+use App\Sueldos\Models\ReciboSueldo;
 use Database\Seeders\RoleSeeder;
 
 beforeEach(function () {
@@ -117,6 +118,20 @@ test('un cobrador bloqueado puede volver a entrar como otro usuario sin restricc
         ->get(route('dashboard'));
 
     $response->assertOk();
+});
+
+test('un cobrador fuera de la red del colegio solo ve sus propios recibos de sueldo en el listado', function () {
+    $cobrador = User::factory()->create()->assignRole('cobrador');
+    $otroCobrador = User::factory()->create()->assignRole('cobrador');
+    ReciboSueldo::factory()->create(['profesor_id' => $cobrador->id, 'periodo' => '2026-03']);
+    ReciboSueldo::factory()->create(['profesor_id' => $otroCobrador->id, 'periodo' => '2026-03']);
+
+    $this->actingAs($cobrador)
+        ->withServerVariables(['REMOTE_ADDR' => '190.191.10.20'])
+        ->get(route('recibos-sueldo.index'))
+        ->assertOk()
+        ->assertSee('2026-03')
+        ->assertDontSee($otroCobrador->name);
 });
 
 test('un cobrador fuera de la red del colegio puede entrar a sus recibos de sueldo', function () {
