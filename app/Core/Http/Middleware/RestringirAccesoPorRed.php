@@ -27,6 +27,15 @@ class RestringirAccesoPorRed
 {
     private const ROLES_RESTRINGIDOS = ['cobrador'];
 
+    /**
+     * Alias Livewire (ver AppServiceProvider::boot) de los componentes de
+     * Sueldos -- cobrador puede ver su propio recibo desde cualquier red
+     * (ver ReciboSueldoPolicy), así que tanto la carga de la página como
+     * las siguientes peticiones AJAX a /livewire/update de ese componente
+     * quedan exceptuadas acá.
+     */
+    private const ALIAS_LIVEWIRE_EXCEPTUADOS = ['recibos-sueldo.listado', 'recibos-sueldo.formulario'];
+
     public function handle(Request $request, Closure $next)
     {
         if (! config('acceso.restriccion_de_red_habilitada')) {
@@ -34,6 +43,10 @@ class RestringirAccesoPorRed
         }
 
         $user = $request->user();
+
+        if ($user?->hasAnyRole(self::ROLES_RESTRINGIDOS) && $this->esRutaExceptuada($request)) {
+            return $next($request);
+        }
 
         if ($user?->hasAnyRole(self::ROLES_RESTRINGIDOS) && ! $this->accedeDesdeLaRedDelColegio($request)) {
             // Desloguea en vez de solo devolver 403 -- si no, un usuario
@@ -55,5 +68,42 @@ class RestringirAccesoPorRed
     private function accedeDesdeLaRedDelColegio(Request $request): bool
     {
         return IpUtils::checkIp($request->ip(), config('acceso.cidr_red_escuela'));
+    }
+
+    /**
+     * La carga inicial de la página de Sueldos se identifica por nombre de
+     * ruta. Pero cada click posterior (buscar, paginar) no pega a esa ruta:
+     * Livewire manda TODAS las interacciones de CUALQUIER componente de la
+     * app a la misma URL genérica /livewire/update (ver la nota sobre esto
+     * en CLAUDE.md) -- así que ahí hay que mirar adentro del payload qué
+     * componente es, en vez de confiar en la ruta. Si el pedido trae más de
+     * un componente y alguno no es de Sueldos, no se exceptúa nada.
+     */
+    private function esRutaExceptuada(Request $request): bool
+    {
+        if ($request->routeIs('recibos-sueldo.*')) {
+            return true;
+        }
+
+        if (! $request->routeIs('default.livewire.update')) {
+            return false;
+        }
+
+        $componentes = $request->input('components', []);
+
+        if (! is_array($componentes) || empty($componentes)) {
+            return false;
+        }
+
+        foreach ($componentes as $componente) {
+            $snapshot = json_decode($componente['snapshot'] ?? '', associative: true);
+            $nombre = $snapshot['memo']['name'] ?? null;
+
+            if (! in_array($nombre, self::ALIAS_LIVEWIRE_EXCEPTUADOS, true)) {
+                return false;
+            }
+        }
+
+        return true;
     }
 }

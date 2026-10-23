@@ -119,6 +119,65 @@ test('un cobrador bloqueado puede volver a entrar como otro usuario sin restricc
     $response->assertOk();
 });
 
+test('un cobrador fuera de la red del colegio puede entrar a sus recibos de sueldo', function () {
+    $cobrador = User::factory()->create()->assignRole('cobrador');
+
+    $response = $this->actingAs($cobrador)
+        ->withServerVariables(['REMOTE_ADDR' => '190.191.10.20'])
+        ->get(route('recibos-sueldo.index'));
+
+    $response->assertOk();
+});
+
+test('un cobrador fuera de la red del colegio sigue bloqueado para el resto del sistema', function () {
+    $cobrador = User::factory()->create()->assignRole('cobrador');
+
+    $response = $this->actingAs($cobrador)
+        ->withServerVariables(['REMOTE_ADDR' => '190.191.10.20'])
+        ->get(route('pagos.index'));
+
+    $response->assertRedirect(route('login'));
+    $this->assertGuest();
+});
+
+test('un cobrador fuera de la red del colegio puede interactuar via AJAX con el listado de sueldos', function () {
+    $cobrador = User::factory()->create()->assignRole('cobrador');
+
+    $snapshot = json_encode(['memo' => ['name' => 'recibos-sueldo.listado']]);
+
+    $response = $this->actingAs($cobrador)
+        ->withServerVariables(['REMOTE_ADDR' => '190.191.10.20'])
+        ->post('/livewire/update', [
+            'components' => [['snapshot' => $snapshot, 'updates' => [], 'calls' => []]],
+        ]);
+
+    // No se verifica el status exacto: el snapshot es fabricado a mano
+    // (sin checksum real) y Livewire lo va a rechazar por su cuenta con su
+    // propio error -- lo que importa acá es que el middleware de red no
+    // fue quien cortó el pedido (no redirige a /login ni desloguea).
+    expect($response->status())->not->toBe(302);
+    $this->assertAuthenticated();
+});
+
+test('un cobrador fuera de la red del colegio no puede colar otro componente en la excepcion de sueldos', function () {
+    $cobrador = User::factory()->create()->assignRole('cobrador');
+
+    $snapshotSueldos = json_encode(['memo' => ['name' => 'recibos-sueldo.listado']]);
+    $snapshotPagos = json_encode(['memo' => ['name' => 'pagos.listado']]);
+
+    $response = $this->actingAs($cobrador)
+        ->withServerVariables(['REMOTE_ADDR' => '190.191.10.20'])
+        ->post('/livewire/update', [
+            'components' => [
+                ['snapshot' => $snapshotSueldos, 'updates' => [], 'calls' => []],
+                ['snapshot' => $snapshotPagos, 'updates' => [], 'calls' => []],
+            ],
+        ]);
+
+    $response->assertRedirect(route('login'));
+    $this->assertGuest();
+});
+
 test('con la restriccion apagada, un cobrador entra desde cualquier red', function () {
     config(['acceso.restriccion_de_red_habilitada' => false]);
     $cobrador = User::factory()->create()->assignRole('cobrador');

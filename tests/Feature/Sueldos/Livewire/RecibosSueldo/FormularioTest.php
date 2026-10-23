@@ -100,3 +100,26 @@ test('un profesor no puede montar el componente', function () {
 
     Livewire::actingAs($profesor)->test(Formulario::class)->assertForbidden();
 });
+
+test('un cobrador no puede montar el componente', function () {
+    $cobrador = User::factory()->create()->assignRole('cobrador');
+
+    Livewire::actingAs($cobrador)->test(Formulario::class)->assertForbidden();
+});
+
+test('se le puede cargar un recibo a un cobrador', function () {
+    Storage::fake('local');
+
+    $administrador = User::factory()->create()->assignRole('administrador');
+    $cobrador = User::factory()->create()->assignRole('cobrador');
+
+    Livewire::actingAs($administrador)->test(Formulario::class)
+        ->set('profesor_id', (string) $cobrador->id)
+        ->set('periodo', '2026-03')
+        ->set('archivos', [UploadedFile::fake()->create('recibo.pdf', 100, 'application/pdf')])
+        ->call('guardar')
+        ->assertRedirect(route('recibos-sueldo.index'));
+
+    $recibo = ReciboSueldo::where('profesor_id', $cobrador->id)->where('periodo', '2026-03')->first();
+    expect($recibo)->not->toBeNull();
+});

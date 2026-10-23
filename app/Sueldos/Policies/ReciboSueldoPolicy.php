@@ -8,12 +8,15 @@ use App\Sueldos\Models\ReciboSueldo;
 class ReciboSueldoPolicy
 {
     /**
-     * El profesor puede listar — el filtro a "los propios" se aplica en la
-     * consulta, no acá. Cobrador sin ningún acceso (regla de CLAUDE.md).
+     * Profesor y cobrador pueden listar, cada uno ve solo lo suyo -- el
+     * filtro a "los propios" se aplica en la consulta, no acá. A cobrador se
+     * le abrió este acceso (y la excepción a la restricción de red en
+     * RestringirAccesoPorRed) porque necesita ver su propio recibo de sueldo
+     * desde cualquier lado, no porque pueda gestionar recibos de terceros.
      */
     public function viewAny(User $user): bool
     {
-        return $user->hasAnyRole(['administrador', 'profesor']);
+        return $user->hasAnyRole(['administrador', 'profesor', 'cobrador']);
     }
 
     public function view(User $user, ReciboSueldo $reciboSueldo): bool
@@ -22,7 +25,7 @@ class ReciboSueldoPolicy
             return true;
         }
 
-        return $user->hasRole('profesor') && $reciboSueldo->profesor_id === $user->id;
+        return $user->hasAnyRole(['profesor', 'cobrador']) && $reciboSueldo->profesor_id === $user->id;
     }
 
     public function create(User $user): bool

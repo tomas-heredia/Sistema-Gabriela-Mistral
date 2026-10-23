@@ -26,6 +26,12 @@ class ReciboSueldo extends Model
         ];
     }
 
+    /**
+     * El nombre de la columna quedó de cuando el módulo era solo para
+     * profesores -- ahora también guarda recibos de cobradores (ver
+     * ReciboSueldoPolicy). No se renombró para evitar una migración sin
+     * necesidad real: sigue siendo "el empleado dueño de este recibo".
+     */
     public function profesor(): BelongsTo
     {
         return $this->belongsTo(User::class, 'profesor_id');

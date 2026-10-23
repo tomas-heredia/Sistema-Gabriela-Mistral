@@ -51,11 +51,33 @@ test('un administrador puede descargar cada archivo de un recibo con varios', fu
     $this->actingAs($administrador)->get(route('recibos-sueldo.descargar', $archivoB))->assertOk();
 });
 
-test('el cobrador no puede descargar ningun recibo', function () {
+test('un cobrador puede descargar su propio recibo', function () {
     $cobrador = User::factory()->create()->assignRole('cobrador');
     Storage::disk('local')->put('recibos-sueldo/4/2026-03/a.pdf', 'contenido');
-    $recibo = ReciboSueldo::factory()->create();
+    $recibo = ReciboSueldo::factory()->create(['profesor_id' => $cobrador->id]);
     $archivo = ReciboSueldoArchivo::factory()->create(['recibo_sueldo_id' => $recibo->id, 'archivo' => 'recibos-sueldo/4/2026-03/a.pdf']);
 
+    $this->actingAs($cobrador)->get(route('recibos-sueldo.descargar', $archivo))->assertOk();
+});
+
+test('un cobrador no puede descargar el recibo de otro', function () {
+    $cobrador = User::factory()->create()->assignRole('cobrador');
+    Storage::disk('local')->put('recibos-sueldo/6/2026-03/a.pdf', 'contenido');
+    $recibo = ReciboSueldo::factory()->create();
+    $archivo = ReciboSueldoArchivo::factory()->create(['recibo_sueldo_id' => $recibo->id, 'archivo' => 'recibos-sueldo/6/2026-03/a.pdf']);
+
     $this->actingAs($cobrador)->get(route('recibos-sueldo.descargar', $archivo))->assertForbidden();
+});
+
+test('un cobrador fuera de la red del colegio puede descargar su propio recibo', function () {
+    config(['acceso.restriccion_de_red_habilitada' => true]);
+    $cobrador = User::factory()->create()->assignRole('cobrador');
+    Storage::disk('local')->put('recibos-sueldo/7/2026-03/a.pdf', 'contenido');
+    $recibo = ReciboSueldo::factory()->create(['profesor_id' => $cobrador->id]);
+    $archivo = ReciboSueldoArchivo::factory()->create(['recibo_sueldo_id' => $recibo->id, 'archivo' => 'recibos-sueldo/7/2026-03/a.pdf']);
+
+    $this->actingAs($cobrador)
+        ->withServerVariables(['REMOTE_ADDR' => '190.191.10.20'])
+        ->get(route('recibos-sueldo.descargar', $archivo))
+        ->assertOk();
 });

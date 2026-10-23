@@ -64,8 +64,14 @@ test('un administrador puede eliminar un recibo, junto con todos sus archivos', 
     Storage::disk('local')->assertMissing('recibos-sueldo/1/2026-03/b.pdf');
 });
 
-test('el cobrador no puede montar el componente', function () {
+test('un cobrador puede montar el componente y solo ve sus propios recibos', function () {
     $cobrador = User::factory()->create()->assignRole('cobrador');
+    $otroCobrador = User::factory()->create()->assignRole('cobrador');
+    ReciboSueldo::factory()->create(['profesor_id' => $cobrador->id, 'periodo' => '2026-03']);
+    ReciboSueldo::factory()->create(['profesor_id' => $otroCobrador->id, 'periodo' => '2026-03']);
 
-    Livewire::actingAs($cobrador)->test(Listado::class)->assertForbidden();
+    Livewire::actingAs($cobrador)->test(Listado::class)
+        ->assertOk()
+        ->assertSee('2026-03')
+        ->assertDontSee($otroCobrador->name);
 });

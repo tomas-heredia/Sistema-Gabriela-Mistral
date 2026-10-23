@@ -75,7 +75,7 @@ class Formulario extends Component
     public function render()
     {
         return view('livewire.sueldos.recibos-sueldo.formulario', [
-            'profesores' => User::role('profesor')->orderBy('name')->get(),
+            'profesores' => User::role(['profesor', 'cobrador'])->orderBy('name')->get(),
         ]);
     }
 }

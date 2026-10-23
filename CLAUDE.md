@@ -78,7 +78,7 @@ php artisan migrate:fresh --seed # resetear DB con datos de prueba
 ## Roles
 
 - **Administrador**: acceso total al sistema.
-- **Cobrador**: cobranzas (matrícula, cuotas, mora), gestión de avisos, y carga/envío de boletines. Sin acceso a recibos de sueldo. Es el único rol sujeto a la restricción de red (ver `RestringirAccesoPorRed`).
+- **Cobrador**: cobranzas (matrícula, cuotas, mora), gestión de avisos, y carga/envío de boletines. Es el único rol sujeto a la restricción de red (ver `RestringirAccesoPorRed`) -- con una excepción: puede ver y descargar sus propios recibos de sueldo (nunca los de otro) desde cualquier red, igual que un profesor con los suyos.
 - **Profesor**: consulta de sus propios recibos de sueldo. Opcionalmente, con el permiso `cargar_boletines` asignado a mano (no es un rol aparte), puede además cargar y enviar boletines (misma pantalla y flujo que usa el cobrador para esa tarea, ver regla 3) -- sin ese permiso, solo ve sus recibos. Sin acceso a cobranzas en ningún caso.
 
 Los tres roles se crean vía `database/seeders/RoleSeeder.php` (nombres: `administrador`, `cobrador`, `profesor`), junto con el permiso `cargar_boletines`. Se asignan a un `User` con `$user->assignRole('...')` y `$user->givePermissionTo('cargar_boletines')`.

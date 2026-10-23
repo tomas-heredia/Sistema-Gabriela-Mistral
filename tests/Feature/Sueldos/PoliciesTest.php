@@ -28,10 +28,13 @@ test('un profesor puede ver su propio recibo pero no el de otro profesor', funct
         ->and($profesor->can('create', ReciboSueldo::class))->toBeFalse();
 });
 
-test('el cobrador no tiene ningun acceso a recibos de sueldo', function () {
+test('un cobrador puede ver su propio recibo pero no el de otro usuario, y no puede crear', function () {
     $cobrador = User::factory()->create()->assignRole('cobrador');
-    $recibo = ReciboSueldo::factory()->create();
+    $suRecibo = ReciboSueldo::factory()->create(['profesor_id' => $cobrador->id]);
+    $reciboDeOtro = ReciboSueldo::factory()->create();
 
-    expect($cobrador->can('viewAny', ReciboSueldo::class))->toBeFalse()
-        ->and($cobrador->can('view', $recibo))->toBeFalse();
+    expect($cobrador->can('viewAny', ReciboSueldo::class))->toBeTrue()
+        ->and($cobrador->can('view', $suRecibo))->toBeTrue()
+        ->and($cobrador->can('view', $reciboDeOtro))->toBeFalse()
+        ->and($cobrador->can('create', ReciboSueldo::class))->toBeFalse();
 });

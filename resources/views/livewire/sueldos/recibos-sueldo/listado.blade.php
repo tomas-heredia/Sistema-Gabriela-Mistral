@@ -8,7 +8,7 @@
             @if ($esAdministrador)
                 <div class="flex items-center gap-3">
                     <div class="w-full max-w-sm">
-                        <label for="busqueda" class="sr-only">Buscar por nombre o correo del profesor</label>
+                        <label for="busqueda" class="sr-only">Buscar por nombre o correo del empleado</label>
                         <input
                             type="text"
                             id="busqueda"
@@ -37,7 +37,7 @@
                     <thead class="bg-gray-50">
                         <tr>
                             @if ($esAdministrador)
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Profesor</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Empleado</th>
                             @endif
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Período</th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha de carga</th>
