@@ -60,13 +60,17 @@ test('un cobrador puede descargar su propio recibo', function () {
     $this->actingAs($cobrador)->get(route('recibos-sueldo.descargar', $archivo))->assertOk();
 });
 
-test('un cobrador no puede descargar el recibo de otro', function () {
+test('un cobrador en la red del colegio puede descargar el recibo de otro', function () {
+    config(['acceso.restriccion_de_red_habilitada' => true]);
     $cobrador = User::factory()->create()->assignRole('cobrador');
-    Storage::disk('local')->put('recibos-sueldo/6/2026-03/a.pdf', 'contenido');
+    Storage::disk('local')->put('recibos-sueldo/9/2026-03/a.pdf', 'contenido');
     $recibo = ReciboSueldo::factory()->create();
-    $archivo = ReciboSueldoArchivo::factory()->create(['recibo_sueldo_id' => $recibo->id, 'archivo' => 'recibos-sueldo/6/2026-03/a.pdf']);
+    $archivo = ReciboSueldoArchivo::factory()->create(['recibo_sueldo_id' => $recibo->id, 'archivo' => 'recibos-sueldo/9/2026-03/a.pdf']);
 
-    $this->actingAs($cobrador)->get(route('recibos-sueldo.descargar', $archivo))->assertForbidden();
+    $this->actingAs($cobrador)
+        ->withServerVariables(['REMOTE_ADDR' => '100.90.12.34'])
+        ->get(route('recibos-sueldo.descargar', $archivo))
+        ->assertOk();
 });
 
 test('un cobrador fuera de la red del colegio puede descargar su propio recibo', function () {

@@ -2,11 +2,11 @@
 
 namespace App\Core\Http\Middleware;
 
+use App\Core\Services\VerificadorDeRedEscolar;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Session;
-use Symfony\Component\HttpFoundation\IpUtils;
 
 /**
  * Cobrador maneja dinero (cobranzas, mora) desde dispositivos propios
@@ -28,13 +28,24 @@ class RestringirAccesoPorRed
     private const ROLES_RESTRINGIDOS = ['cobrador'];
 
     /**
-     * Alias Livewire (ver AppServiceProvider::boot) de los componentes de
-     * Sueldos -- cobrador puede ver su propio recibo desde cualquier red
-     * (ver ReciboSueldoPolicy), así que tanto la carga de la página como
-     * las siguientes peticiones AJAX a /livewire/update de ese componente
-     * quedan exceptuadas acá.
+     * Rutas de Sueldos que cobrador puede usar para ver (nunca cargar) su
+     * propio recibo desde cualquier red (ver ReciboSueldoPolicy). A
+     * propósito NO incluye 'recibos-sueldo.crear' -- cargar un recibo ajeno
+     * sigue exigiendo estar en la red del colegio, así que esa ruta pasa
+     * por el chequeo normal de más abajo.
      */
-    private const ALIAS_LIVEWIRE_EXCEPTUADOS = ['recibos-sueldo.listado', 'recibos-sueldo.formulario'];
+    private const RUTAS_EXCEPTUADAS = ['recibos-sueldo.index', 'recibos-sueldo.descargar'];
+
+    /**
+     * Alias Livewire (ver AppServiceProvider::boot) del listado de Sueldos
+     * -- las peticiones AJAX a /livewire/update posteriores a cargar esa
+     * página (buscar, paginar) quedan exceptuadas igual que la carga
+     * inicial. El formulario de carga queda afuera a propósito, mismo
+     * motivo que arriba.
+     */
+    private const ALIAS_LIVEWIRE_EXCEPTUADOS = ['recibos-sueldo.listado'];
+
+    public function __construct(private readonly VerificadorDeRedEscolar $verificador) {}
 
     public function handle(Request $request, Closure $next)
     {
@@ -48,7 +59,7 @@ class RestringirAccesoPorRed
             return $next($request);
         }
 
-        if ($user?->hasAnyRole(self::ROLES_RESTRINGIDOS) && ! $this->accedeDesdeLaRedDelColegio($request)) {
+        if ($user?->hasAnyRole(self::ROLES_RESTRINGIDOS) && ! $this->verificador->estaEnLaRedDelColegio()) {
             // Desloguea en vez de solo devolver 403 -- si no, un usuario
             // restringido que quedó autenticado se queda trabado viendo el
             // error en cada pantalla, sin forma de volver al login para
@@ -65,11 +76,6 @@ class RestringirAccesoPorRed
         return $next($request);
     }
 
-    private function accedeDesdeLaRedDelColegio(Request $request): bool
-    {
-        return IpUtils::checkIp($request->ip(), config('acceso.cidr_red_escuela'));
-    }
-
     /**
      * La carga inicial de la página de Sueldos se identifica por nombre de
      * ruta. Pero cada click posterior (buscar, paginar) no pega a esa ruta:
@@ -81,7 +87,7 @@ class RestringirAccesoPorRed
      */
     private function esRutaExceptuada(Request $request): bool
     {
-        if ($request->routeIs('recibos-sueldo.*')) {
+        if (in_array($request->route()?->getName(), self::RUTAS_EXCEPTUADAS, true)) {
             return true;
         }
 

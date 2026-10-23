@@ -2,10 +2,10 @@
     <div class="max-w-5xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
         <div class="flex items-center justify-between gap-4 mb-6">
             <h1 class="text-lg font-semibold text-gray-900">
-                {{ $esAdministrador ? 'Recibos de sueldo' : 'Mis recibos de sueldo' }}
+                {{ $puedeGestionar ? 'Recibos de sueldo' : 'Mis recibos de sueldo' }}
             </h1>
 
-            @if ($esAdministrador)
+            @if ($puedeGestionar)
                 <div class="flex items-center gap-3">
                     <div class="w-full max-w-sm">
                         <label for="busqueda" class="sr-only">Buscar por nombre o correo del empleado</label>
@@ -30,13 +30,13 @@
         <div class="bg-white shadow-sm rounded-lg overflow-hidden">
             @if ($recibos->isEmpty())
                 <p class="text-center text-gray-500 py-12">
-                    {{ $esAdministrador ? 'Todavía no hay recibos cargados.' : 'Todavía no tenés recibos cargados.' }}
+                    {{ $puedeGestionar ? 'Todavía no hay recibos cargados.' : 'Todavía no tenés recibos cargados.' }}
                 </p>
             @else
                 <table class="min-w-full divide-y divide-gray-200">
                     <thead class="bg-gray-50">
                         <tr>
-                            @if ($esAdministrador)
+                            @if ($puedeGestionar)
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Empleado</th>
                             @endif
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Período</th>
@@ -47,7 +47,7 @@
                     <tbody class="divide-y divide-gray-100">
                         @foreach ($recibos as $recibo)
                             <tr wire:key="recibo-{{ $recibo->id }}">
-                                @if ($esAdministrador)
+                                @if ($puedeGestionar)
                                     <td class="px-6 py-3 text-sm text-gray-900">{{ $recibo->profesor->name }}</td>
                                 @endif
                                 <td class="px-6 py-3 text-sm text-gray-600">{{ $recibo->periodo }}</td>

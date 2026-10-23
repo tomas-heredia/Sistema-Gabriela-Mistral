@@ -47,11 +47,16 @@ class Listado extends Component
 
     public function render()
     {
+        // "Gestionar" decide qué ve y el botón de "Nuevo recibo" (administrador
+        // siempre, cobrador solo mientras está en la red del colegio -- ver
+        // ReciboSueldoPolicy::gestionar). "Eliminar" queda aparte, exclusivo
+        // de administrador, nunca se le abrió a cobrador.
+        $puedeGestionar = auth()->user()->can('gestionar', ReciboSueldo::class);
         $esAdministrador = auth()->user()->hasRole('administrador');
 
         $recibos = ReciboSueldo::query()
             ->with('profesor', 'archivos')
-            ->when(! $esAdministrador, fn ($query) => $query->where('profesor_id', auth()->id()))
+            ->when(! $puedeGestionar, fn ($query) => $query->where('profesor_id', auth()->id()))
             ->when($this->busqueda, function ($query) {
                 $query->whereHas('profesor', function ($subquery) {
                     $subquery->where('name', 'like', "%{$this->busqueda}%")
@@ -63,6 +68,7 @@ class Listado extends Component
 
         return view('livewire.sueldos.recibos-sueldo.listado', [
             'recibos' => $recibos,
+            'puedeGestionar' => $puedeGestionar,
             'esAdministrador' => $esAdministrador,
         ]);
     }

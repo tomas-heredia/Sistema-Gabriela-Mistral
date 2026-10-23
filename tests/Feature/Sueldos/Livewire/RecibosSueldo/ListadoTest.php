@@ -64,14 +64,47 @@ test('un administrador puede eliminar un recibo, junto con todos sus archivos', 
     Storage::disk('local')->assertMissing('recibos-sueldo/1/2026-03/b.pdf');
 });
 
-test('un cobrador puede montar el componente y solo ve sus propios recibos', function () {
+/**
+ * Estos dos casos pegan por HTTP real (no Livewire::test()): el mount
+ * inicial de Livewire::test() corre con el middleware deshabilitado y arma
+ * su PROPIO Request interno (ver Livewire\Features\SupportTesting\
+ * InitialRender::makeInitialRequest), que ignora cualquier REMOTE_ADDR
+ * seteado a mano antes de llamarlo -- mismo tipo de limitación que ya
+ * documenta CLAUDE.md para Livewire::test() y el layout/naming de
+ * componentes. Para probar algo que depende de la IP del pedido hay que
+ * pegarle a la ruta real.
+ */
+test('un cobrador fuera de la red del colegio solo ve sus propios recibos', function () {
+    config(['acceso.restriccion_de_red_habilitada' => true]);
+
     $cobrador = User::factory()->create()->assignRole('cobrador');
     $otroCobrador = User::factory()->create()->assignRole('cobrador');
     ReciboSueldo::factory()->create(['profesor_id' => $cobrador->id, 'periodo' => '2026-03']);
     ReciboSueldo::factory()->create(['profesor_id' => $otroCobrador->id, 'periodo' => '2026-03']);
 
-    Livewire::actingAs($cobrador)->test(Listado::class)
+    $this->actingAs($cobrador)
+        ->withServerVariables(['REMOTE_ADDR' => '190.191.10.20'])
+        ->get(route('recibos-sueldo.index'))
         ->assertOk()
         ->assertSee('2026-03')
-        ->assertDontSee($otroCobrador->name);
+        ->assertDontSee($otroCobrador->name)
+        ->assertDontSee('Nuevo recibo');
+});
+
+test('un cobrador en la red del colegio ve el listado completo y el boton de nuevo recibo, pero no eliminar', function () {
+    config(['acceso.restriccion_de_red_habilitada' => true]);
+
+    $cobrador = User::factory()->create()->assignRole('cobrador');
+    $otroCobrador = User::factory()->create()->assignRole('cobrador');
+    ReciboSueldo::factory()->create(['profesor_id' => $cobrador->id, 'periodo' => '2026-03']);
+    ReciboSueldo::factory()->create(['profesor_id' => $otroCobrador->id, 'periodo' => '2026-03']);
+
+    $this->actingAs($cobrador)
+        ->withServerVariables(['REMOTE_ADDR' => '100.90.12.34'])
+        ->get(route('recibos-sueldo.index'))
+        ->assertOk()
+        ->assertSee('2026-03')
+        ->assertSee($otroCobrador->name)
+        ->assertSee('Nuevo recibo')
+        ->assertDontSee('Eliminar');
 });
