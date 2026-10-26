@@ -84,6 +84,14 @@ class Formulario extends Component
 
         if ($this->usuario) {
             $this->usuario->update(['name' => $datos['name'], 'email' => $datos['email'], 'activo' => $datos['activo']]);
+
+            // Vacío = no tocar la contraseña actual -- la regla 'nullable' de
+            // más arriba ya deja pasar el campo vacío, acá se decide si de
+            // verdad hay algo nuevo para guardar.
+            if (filled($datos['password'])) {
+                $this->usuario->update(['password' => $datos['password']]);
+            }
+
             $this->usuario->syncRoles([$datos['rol']]);
             $this->sincronizarPermisoDeBoletines($this->usuario, $datos['rol']);
             session()->flash('mensaje', 'Usuario actualizado correctamente.');

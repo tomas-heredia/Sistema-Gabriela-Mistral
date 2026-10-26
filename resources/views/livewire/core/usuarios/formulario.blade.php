@@ -16,14 +16,18 @@
             <x-input-error :messages="$errors->get('email')" class="mt-1" />
         </div>
 
-        @unless ($usuario)
-            <div>
-                <x-input-label for="password" value="Contraseña" />
-                <x-text-input id="password" type="text" class="mt-1 block w-full" wire:model="password" />
-                <p class="text-xs text-gray-500 mt-1">Puede ser simple — el usuario la cambia desde su perfil una vez que entra.</p>
-                <x-input-error :messages="$errors->get('password')" class="mt-1" />
-            </div>
-        @endunless
+        <div>
+            <x-input-label for="password" :value="$usuario ? 'Nueva contraseña' : 'Contraseña'" />
+            <x-text-input id="password" type="text" class="mt-1 block w-full" wire:model="password" />
+            <p class="text-xs text-gray-500 mt-1">
+                @if ($usuario)
+                    Dejar en blanco para no cambiarla. Puede ser simple — el usuario la cambia desde su perfil si quiere.
+                @else
+                    Puede ser simple — el usuario la cambia desde su perfil una vez que entra.
+                @endif
+            </p>
+            <x-input-error :messages="$errors->get('password')" class="mt-1" />
+        </div>
 
         <div>
             <x-input-label for="rol" value="Rol" />

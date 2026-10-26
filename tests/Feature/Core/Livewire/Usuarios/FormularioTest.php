@@ -39,12 +39,12 @@ test('el correo debe ser unico', function () {
         ->assertHasErrors(['email' => 'unique']);
 });
 
-test('editar un usuario cambia nombre, correo y rol sin pedir contraseña', function () {
+test('editar un usuario cambia nombre, correo y rol sin tocar la contraseña si se deja en blanco', function () {
     $administrador = User::factory()->create()->assignRole('administrador');
     $usuario = User::factory()->create(['name' => 'Marta Gómez'])->assignRole('cobrador');
+    $passwordOriginal = $usuario->password;
 
     Livewire::actingAs($administrador)->test(Formulario::class, ['usuario' => $usuario])
-        ->assertDontSee('Contraseña')
         ->set('name', 'Marta Gómez de López')
         ->set('rol', 'administrador')
         ->call('guardar')
@@ -54,7 +54,20 @@ test('editar un usuario cambia nombre, correo y rol sin pedir contraseña', func
     expect($usuario->name)->toBe('Marta Gómez de López')
         ->and($usuario->hasRole('administrador'))->toBeTrue()
         ->and($usuario->hasRole('cobrador'))->toBeFalse()
-        ->and($usuario->roles)->toHaveCount(1);
+        ->and($usuario->roles)->toHaveCount(1)
+        ->and($usuario->password)->toBe($passwordOriginal);
+});
+
+test('un administrador puede cambiarle la contraseña a otro usuario al editarlo', function () {
+    $administrador = User::factory()->create()->assignRole('administrador');
+    $usuario = User::factory()->create()->assignRole('cobrador');
+
+    Livewire::actingAs($administrador)->test(Formulario::class, ['usuario' => $usuario])
+        ->set('password', 'nuevaClave123')
+        ->call('guardar')
+        ->assertRedirect(route('usuarios.index'));
+
+    expect(Hash::check('nuevaClave123', $usuario->fresh()->password))->toBeTrue();
 });
 
 test('profesor no puede montar el componente, pero cobrador si para crear', function () {
