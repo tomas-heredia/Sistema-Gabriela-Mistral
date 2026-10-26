@@ -193,6 +193,29 @@ test('un cobrador fuera de la red del colegio no puede colar otro componente en 
     $this->assertGuest();
 });
 
+test('un cobrador fuera de la red del colegio puede entrar y editar su propio perfil', function () {
+    $cobrador = User::factory()->create()->assignRole('cobrador');
+
+    $this->actingAs($cobrador)
+        ->withServerVariables(['REMOTE_ADDR' => '190.191.10.20'])
+        ->get(route('profile'))
+        ->assertOk();
+
+    $snapshot = json_encode(['memo' => ['name' => 'profile.update-password-form']]);
+
+    $response = $this->actingAs($cobrador)
+        ->withServerVariables(['REMOTE_ADDR' => '190.191.10.20'])
+        ->post('/livewire/update', [
+            'components' => [['snapshot' => $snapshot, 'updates' => [], 'calls' => []]],
+        ]);
+
+    // Mismo criterio que con sueldos: no importa el status exacto (el
+    // snapshot es fabricado a mano), lo que importa es que el middleware
+    // de red no fue quien cortó el pedido.
+    expect($response->status())->not->toBe(302);
+    $this->assertAuthenticated();
+});
+
 test('con la restriccion apagada, un cobrador entra desde cualquier red', function () {
     config(['acceso.restriccion_de_red_habilitada' => false]);
     $cobrador = User::factory()->create()->assignRole('cobrador');

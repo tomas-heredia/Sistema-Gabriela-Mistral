@@ -33,17 +33,27 @@ class RestringirAccesoPorRed
      * propósito NO incluye 'recibos-sueldo.crear' -- cargar un recibo ajeno
      * sigue exigiendo estar en la red del colegio, así que esa ruta pasa
      * por el chequeo normal de más abajo.
+     *
+     * 'profile' no tiene ese matiz: a diferencia de sueldos, ahí no existe
+     * ningún dato "ajeno" que ver -- siempre es la cuenta del propio
+     * usuario logueado -- así que se exceptúa entera.
      */
-    private const RUTAS_EXCEPTUADAS = ['recibos-sueldo.index', 'recibos-sueldo.descargar'];
+    private const RUTAS_EXCEPTUADAS = ['recibos-sueldo.index', 'recibos-sueldo.descargar', 'profile'];
 
     /**
-     * Alias Livewire (ver AppServiceProvider::boot) del listado de Sueldos
-     * -- las peticiones AJAX a /livewire/update posteriores a cargar esa
-     * página (buscar, paginar) quedan exceptuadas igual que la carga
-     * inicial. El formulario de carga queda afuera a propósito, mismo
+     * Alias Livewire (ver AppServiceProvider::boot, y el propio Volt para
+     * las de perfil) de los componentes de arriba -- las peticiones AJAX a
+     * /livewire/update posteriores a cargar esas páginas (buscar, paginar,
+     * guardar el perfil) quedan exceptuadas igual que la carga inicial. El
+     * formulario de carga de Sueldos queda afuera a propósito, mismo
      * motivo que arriba.
      */
-    private const ALIAS_LIVEWIRE_EXCEPTUADOS = ['recibos-sueldo.listado'];
+    private const ALIAS_LIVEWIRE_EXCEPTUADOS = [
+        'recibos-sueldo.listado',
+        'profile.update-profile-information-form',
+        'profile.update-password-form',
+        'profile.delete-user-form',
+    ];
 
     public function __construct(private readonly VerificadorDeRedEscolar $verificador) {}
 
