@@ -1,6 +1,8 @@
 <?php
 
 use App\Core\Livewire\Forms\LoginForm;
+use App\Core\Services\VerificadorDeRedEscolar;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Session;
 use Livewire\Attributes\Layout;
 use Livewire\Volt\Component;
@@ -20,7 +22,20 @@ new #[Layout('layouts.guest')] class extends Component
 
         Session::regenerate();
 
-        $this->redirectIntended(default: route('dashboard', absolute: false), navigate: true);
+        // El dashboard no es una ruta exceptuada de RestringirAccesoPorRed --
+        // mandar ahí por defecto a un cobrador fuera de la red del colegio lo
+        // desloguearía en el próximo pedido antes de llegar a ningún lado,
+        // aunque sus recibos de sueldo sí le quedan permitidos. Por eso el
+        // destino por defecto (no el "intended", que se respeta igual) es
+        // sus recibos de sueldo en ese caso puntual.
+        $esCobradorFueraDeLaRed = Auth::user()->hasRole('cobrador')
+            && ! app(VerificadorDeRedEscolar::class)->estaEnLaRedDelColegio();
+
+        $default = $esCobradorFueraDeLaRed
+            ? route('recibos-sueldo.index', absolute: false)
+            : route('dashboard', absolute: false);
+
+        $this->redirectIntended(default: $default, navigate: true);
     }
 }; ?>
 
