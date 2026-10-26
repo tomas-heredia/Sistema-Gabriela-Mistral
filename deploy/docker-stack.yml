@@ -49,13 +49,18 @@ services:
       # que el Traefik ya tiene configurado.
       - traefik.enable=true
       - traefik.http.services.gabriela-mistral.loadbalancer.server.port=8080
-      # Sin esto, Traefik solo se entera de que un contenedor viejo ya no
-      # existe cuando le llega el evento de Docker correspondiente -- en un
-      # deploy (swarm reemplaza el contenedor) hay una ventana de varios
-      # minutos donde sigue repartiendo pedidos reales al contenedor
-      # apagado, que cuelgan ~30s y terminan en 504. Con esto Traefik prueba
-      # cada backend por su cuenta cada 2s y saca al que no contesta, sin
-      # depender de esa sincronización con Docker.
+      # Este contenedor vive en DOS redes (gabriela-mistral, para hablar con
+      # mysql, y easypanel, donde vive Traefik) -- sin esto, Traefik
+      # descubre la IP del contenedor en las dos y reparte tráfico real
+      # entre ambas al azar. La de "gabriela-mistral" (un network privado
+      # de este stack) no es alcanzable desde el contenedor de Traefik, así
+      # que la mitad de los pedidos quedaban colgados ~10s y terminaban en
+      # 504/503 -- no por un deploy reciente, siempre, al azar. Esto fija
+      # cuál de las dos usa para enrutar.
+      - traefik.docker.network=easypanel
+      # Además de lo anterior (causa real), esto hace que Traefik note más
+      # rápido cuando un contenedor reemplazado por un deploy ya no existe,
+      # en vez de depender solo del evento de Docker correspondiente.
       - traefik.http.services.gabriela-mistral.loadbalancer.healthcheck.path=/up
       - traefik.http.services.gabriela-mistral.loadbalancer.healthcheck.interval=2s
       - traefik.http.services.gabriela-mistral.loadbalancer.healthcheck.timeout=2s
