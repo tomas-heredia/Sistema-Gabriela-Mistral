@@ -4,7 +4,7 @@
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
 
-        <title>Sistema Gabriela Mistral</title>
+        <title>GAMI</title>
 
         @include('partials.iconos-pagina')
 
@@ -19,7 +19,7 @@
         <div class="bg-gray-50 text-black/50 dark:bg-black dark:text-white/50">
             <div class="relative min-h-screen flex flex-col items-center justify-center">
                 <div class="w-full max-w-sm px-6 text-center">
-                    <h1 class="text-xl font-semibold text-black dark:text-white">Sistema Gabriela Mistral</h1>
+                    <h1 class="text-xl font-semibold text-black dark:text-white">GAMI</h1>
                     <p class="mt-2 text-sm">Gestión de mora, recibos de sueldo y libretas.</p>
 
                     <div class="mt-8">
