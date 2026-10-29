@@ -93,6 +93,24 @@
       ]
     },
     {
+      "id": "consideraciones_generales_trimestre_1",
+      "titulo": "Consideraciones Generales",
+      "tipo": "campo_texto",
+      "momento": "trimestre_1"
+    },
+    {
+      "id": "consideraciones_generales_trimestre_2",
+      "titulo": "Consideraciones Generales",
+      "tipo": "campo_texto",
+      "momento": "trimestre_2"
+    },
+    {
+      "id": "consideraciones_generales_trimestre_3",
+      "titulo": "Consideraciones Generales",
+      "tipo": "campo_texto",
+      "momento": "trimestre_3"
+    },
+    {
       "id": "trayectoria_escolar",
       "titulo": "Trayectoria Escolar",
       "tipo": "campo_seleccion",
