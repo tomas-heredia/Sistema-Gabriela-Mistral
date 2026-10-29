@@ -8,6 +8,11 @@
         h1 { font-size: 16px; margin-bottom: 0; }
         h2 { font-size: 13px; margin-top: 10px; border-bottom: 1px solid #999; padding-bottom: 4px; }
         h3 { font-size: 11px; margin-top: 12px; margin-bottom: 4px; }
+        .encabezado-ministerio { width: 100%; border-collapse: collapse; margin-bottom: 10px; }
+        .encabezado-ministerio td { border: none; padding: 0; vertical-align: middle; font-size: 9px; line-height: 1.3; }
+        .encabezado-ministerio .logo-ministerio { width: 50px; padding-right: 8px; }
+        .encabezado-ministerio .logo-ministerio img { width: 42px; }
+        .encabezado-ministerio .titulo-principal { font-weight: bold; font-size: 10px; }
         .nombre-colegio { font-size: 14px; font-weight: bold; text-align: center; margin: 0; }
         .titulo-informe { font-size: 13px; font-weight: bold; text-align: center; margin: 4px 0 0; }
         .subtitulo-nivel { font-size: 11px; font-weight: bold; text-align: center; margin: 0 0 10px; }
@@ -32,6 +37,17 @@
                     default => null,
                 };
             @endphp
+            <table class="encabezado-ministerio">
+                <tr>
+                    <td class="logo-ministerio"><img src="{{ public_path('images/ministerio-logo.jpeg') }}" alt=""></td>
+                    <td>
+                        <span class="titulo-principal">Ministerio de Educación y Trabajo</span><br>
+                        Catamarca Gobierno
+                    </td>
+                    <td>Secretaría de<br>Gestión Educativa</td>
+                    <td>Dirección Provincial de Educación<br>de Gestión Municipal, Privada,<br>Social y Cooperativa</td>
+                </tr>
+            </table>
             <p class="nombre-colegio">COLEGIO PRIVADO GABRIELA MISTRAL</p>
             <p class="titulo-informe">INFORME INDIVIDUAL DE EVALUACIÓN DE APRENDIZAJES</p>
             @if ($subtituloNivel)
