@@ -73,8 +73,8 @@
         { "id": "trimestre_3", "nombre": "Tercer Trimestre", "momento": "trimestre_3" }
       ],
       "filas": [
-        { "id": "actitudes_solidarias", "nombre": "Presenta actitudes solidarias y de compañerismo en la escuela." },
         { "id": "respeta_convivencia", "nombre": "Respeta los acuerdos de convivencia y colabora en la resolución de conflictos de manera responsable." },
+        { "id": "actitudes_solidarias", "nombre": "Presenta actitudes solidarias y de compañerismo en la escuela." },
         { "id": "compromiso_cuidado", "nombre": "Manifiesta compromiso con el cuidado personal, grupal, institucional y del entorno social." },
         { "id": "pertenencia_institucional", "nombre": "De definición institucional: Evidencia pertenencia participando activa, empática y solidariamente en las propuestas institucionales." }
       ]

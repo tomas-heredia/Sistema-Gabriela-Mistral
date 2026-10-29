@@ -8,6 +8,8 @@
         h1 { font-size: 16px; margin-bottom: 0; }
         h2 { font-size: 13px; margin-top: 10px; border-bottom: 1px solid #999; padding-bottom: 4px; }
         h3 { font-size: 11px; margin-top: 12px; margin-bottom: 4px; }
+        .titulo-informe { font-size: 13px; font-weight: bold; text-align: center; margin: 0; }
+        .subtitulo-nivel { font-size: 11px; font-weight: bold; text-align: center; margin: 0 0 10px; }
         .meta { color: #555; margin-bottom: 8px; }
         table { width: 100%; border-collapse: collapse; margin-bottom: 8px; }
         th, td { border: 1px solid #ccc; padding: 4px 6px; text-align: left; vertical-align: top; }
@@ -21,11 +23,26 @@
 
     @foreach ($trimestres as $trimestre)
         <div class="trimestre">
+            @php
+                $subtituloNivel = match (true) {
+                    $alumno->nivel === \App\Alumnos\Models\Enums\Nivel::Primario => 'NIVEL PRIMARIO',
+                    $alumno->nivel === \App\Alumnos\Models\Enums\Nivel::Secundario && $alumno->anio_secundaria <= 3 => 'NIVEL SECUNDARIO CICLO BÁSICO',
+                    $alumno->nivel === \App\Alumnos\Models\Enums\Nivel::Secundario => 'NIVEL SECUNDARIO CICLO ORIENTADO',
+                    default => null,
+                };
+            @endphp
+            <p class="titulo-informe">INFORME INDIVIDUAL DE EVALUACIÓN DE APRENDIZAJES</p>
+            @if ($subtituloNivel)
+                <p class="subtitulo-nivel">{{ $subtituloNivel }}</p>
+            @endif
+            <p class="meta">C.U.E.: 1000770-00</p>
             <h1>{{ $alumno->nombre }}</h1>
             <p class="meta">
                 DNI: {{ $alumno->dni ?? '—' }} ·
                 Nivel: {{ $alumno->nivel->value }} ·
                 Grado: {{ $alumno->grado }} ·
+                División: {{ $alumno->division ?? '—' }} ·
+                Turno: {{ $alumno->turno === \App\Alumnos\Models\Enums\Turno::Manana ? 'M' : 'T' }} ·
                 Período: {{ $periodo->nombre }}
             </p>
 

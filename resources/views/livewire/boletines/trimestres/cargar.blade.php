@@ -8,13 +8,30 @@
             <p class="text-sm text-gray-500">{{ $boletinTrimestre->boletin->plantilla->nombre }}</p>
         </div>
 
-        <x-pill :color="match ($boletinTrimestre->estado->value) {
-            'enviado' => 'green',
-            'cargado' => 'amber',
-            default => 'gray',
-        }">
-            {{ ucfirst($boletinTrimestre->estado->value) }}
-        </x-pill>
+        <div class="flex items-center gap-3">
+            @if ($soloLectura)
+                <a
+                    href="{{ route('boletines.trimestres.pdf.imprimir', $boletinTrimestre) }}"
+                    target="_blank"
+                    class="inline-flex items-center gap-1.5 rounded-md bg-indigo-600 px-3 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-500"
+                >
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" class="w-4 h-4">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M5.5 7V3.5A.5.5 0 0 1 6 3h8a.5.5 0 0 1 .5.5V7" />
+                        <rect x="3" y="7" width="14" height="6" rx="1" />
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 13v3.5a.5.5 0 0 0 .5.5h7a.5.5 0 0 0 .5-.5V13" />
+                    </svg>
+                    Imprimir libreta
+                </a>
+            @endif
+
+            <x-pill :color="match ($boletinTrimestre->estado->value) {
+                'enviado' => 'green',
+                'cargado' => 'amber',
+                default => 'gray',
+            }">
+                {{ ucfirst($boletinTrimestre->estado->value) }}
+            </x-pill>
+        </div>
     </div>
 
     @if ($soloLectura)

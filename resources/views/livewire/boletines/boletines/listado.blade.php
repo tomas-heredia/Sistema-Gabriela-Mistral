@@ -52,21 +52,9 @@
                                             </x-pill>
                                         </td>
                                         <td class="px-6 py-3 text-sm">
-                                            <div class="flex items-center gap-2">
+                                            <div class="flex items-center gap-3">
                                                 @foreach ($boletin->trimestres->sortBy('trimestre') as $trimestre)
-                                                    <a
-                                                        href="{{ route('boletines.trimestres.cargar', $trimestre) }}"
-                                                        wire:navigate
-                                                        class="inline-flex"
-                                                    >
-                                                        <x-pill :color="match ($trimestre->estado->value) {
-                                                            'enviado' => 'green',
-                                                            'cargado' => 'amber',
-                                                            default => 'gray',
-                                                        }">
-                                                            {{ $trimestre->trimestre === 4 ? 'Apoyo' : "T{$trimestre->trimestre}" }}
-                                                        </x-pill>
-                                                    </a>
+                                                    @include('livewire.boletines.boletines.partials.trimestre-pill')
                                                 @endforeach
                                             </div>
                                         </td>
@@ -115,21 +103,9 @@
                                     </x-pill>
                                 </td>
                                 <td class="px-6 py-3 text-sm">
-                                    <div class="flex items-center gap-2">
+                                    <div class="flex items-center gap-3">
                                         @foreach ($boletin->trimestres->sortBy('trimestre') as $trimestre)
-                                            <a
-                                                href="{{ route('boletines.trimestres.cargar', $trimestre) }}"
-                                                wire:navigate
-                                                class="inline-flex"
-                                            >
-                                                <x-pill :color="match ($trimestre->estado->value) {
-                                                    'enviado' => 'green',
-                                                    'cargado' => 'amber',
-                                                    default => 'gray',
-                                                }">
-                                                    {{ $trimestre->trimestre === 4 ? 'Apoyo' : "T{$trimestre->trimestre}" }}
-                                                </x-pill>
-                                            </a>
+                                            @include('livewire.boletines.boletines.partials.trimestre-pill')
                                         @endforeach
                                     </div>
                                 </td>
