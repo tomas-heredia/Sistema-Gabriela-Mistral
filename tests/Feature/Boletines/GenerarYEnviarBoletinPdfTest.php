@@ -77,6 +77,34 @@ test('un alumno sin tutores vinculados no manda mail pero igual marca el trimest
     Mail::assertNothingSent();
 });
 
+test('al reenviar una correccion el mail aclara que lo es y se apaga el flag de pendiente', function () {
+    Storage::fake('local');
+    Mail::fake();
+
+    $plantilla = PlantillaBoletin::factory()->create(['estructura_campos' => ['secciones' => []]]);
+    $alumno = Alumno::factory()->create();
+    $tutor = Tutor::factory()->create(['correo' => 'tutor@example.com']);
+    $alumno->tutores()->attach($tutor, ['vinculo' => 'madre', 'responsable_pago' => true]);
+
+    $boletin = Boletin::factory()->create(['alumno_id' => $alumno->id, 'plantilla_id' => $plantilla->id]);
+    $trimestre = BoletinTrimestre::factory()->create([
+        'boletin_id' => $boletin->id,
+        'trimestre' => 1,
+        'estado' => EstadoTrimestre::Enviado,
+        'requiere_reenvio' => true,
+        'pdf_path' => 'boletines/generados/'.$boletin->id.'/trimestre-1.pdf',
+    ]);
+
+    $trimestre->reenviarCorreccion();
+
+    expect($trimestre->refresh()->requiere_reenvio)->toBeFalse();
+
+    Mail::assertSent(BoletinEnviado::class, function (BoletinEnviado $mail) {
+        return $mail->esCorreccion === true
+            && $mail->envelope()->subject === "Corrección de la libreta de {$mail->trimestre->boletin->alumno->nombre}";
+    });
+});
+
 test('el boletin pasa a completo cuando los 3 trimestres regulares estan enviados', function () {
     Storage::fake('local');
     Mail::fake();

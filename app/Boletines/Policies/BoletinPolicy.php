@@ -33,6 +33,17 @@ class BoletinPolicy
     }
 
     /**
+     * Corregir un trimestre ya enviado es más sensible que cargarlo antes
+     * del envío (ya le llegó un mail al tutor con la versión anterior) --
+     * a diferencia de `update`, no lo tiene el cobrador ni el profesor con
+     * `cargar_boletines`, solo administrador.
+     */
+    public function corregir(User $user, Boletin $boletin): bool
+    {
+        return $user->hasRole('administrador');
+    }
+
+    /**
      * Reemplaza al antiguo rol administra_alumnos: un profesor puede, además
      * de ver sus propios recibos de sueldo, cargar y enviar libretas si el
      * administrador le asignó este permiso puntual.

@@ -102,6 +102,32 @@ class Cargar extends Component
         }
     }
 
+    public function guardarCorreccion(): void
+    {
+        $this->authorize('corregir', $this->boletinTrimestre->boletin);
+
+        $this->normalizarDatos();
+
+        try {
+            $this->boletinTrimestre->corregir($this->datos, auth()->user());
+            session()->flash('mensaje', 'Corrección guardada. No se les avisó todavía a los tutores -- usá "Reenviar corrección" para mandarles la nueva versión.');
+        } catch (TransicionDeEstadoInvalidaException $e) {
+            session()->flash('error', $e->getMessage());
+        }
+    }
+
+    public function reenviarCorreccion(): void
+    {
+        $this->authorize('corregir', $this->boletinTrimestre->boletin);
+
+        try {
+            $this->boletinTrimestre->reenviarCorreccion();
+            session()->flash('mensaje', 'La corrección se está reenviando por mail a los tutores.');
+        } catch (TransicionDeEstadoInvalidaException $e) {
+            session()->flash('error', $e->getMessage());
+        }
+    }
+
     public function confirmarYEnviar(): void
     {
         try {
@@ -282,9 +308,15 @@ class Cargar extends Component
 
     public function render()
     {
+        $trimestreEnviado = $this->boletinTrimestre->estado === EstadoTrimestre::Enviado;
+        $puedeCorregir = $trimestreEnviado && auth()->user()->can('corregir', $this->boletinTrimestre->boletin);
+
         return view('livewire.boletines.trimestres.cargar', [
             'secciones' => $this->seccionesVisibles(),
-            'soloLectura' => $this->boletinTrimestre->estado === EstadoTrimestre::Enviado,
+            'trimestreEnviado' => $trimestreEnviado,
+            'puedeCorregir' => $puedeCorregir,
+            'soloLectura' => $trimestreEnviado && ! $puedeCorregir,
+            'requiereReenvio' => $this->boletinTrimestre->requiere_reenvio,
         ]);
     }
 }

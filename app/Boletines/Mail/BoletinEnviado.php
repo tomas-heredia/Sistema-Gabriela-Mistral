@@ -17,14 +17,16 @@ class BoletinEnviado extends Mailable
     public function __construct(
         public BoletinTrimestre $trimestre,
         public string $pdfAbsolutePath,
+        public bool $esCorreccion = false,
     ) {}
 
     public function envelope(): Envelope
     {
         $alumno = $this->trimestre->boletin->alumno;
+        $asunto = $this->esCorreccion ? "Corrección de la libreta de {$alumno->nombre}" : "Libreta de {$alumno->nombre}";
 
         return new Envelope(
-            subject: "Libreta de {$alumno->nombre}",
+            subject: $asunto,
         );
     }
 
@@ -32,7 +34,10 @@ class BoletinEnviado extends Mailable
     {
         return new Content(
             view: 'boletines.mail.enviado',
-            with: ['alumno' => $this->trimestre->boletin->alumno],
+            with: [
+                'alumno' => $this->trimestre->boletin->alumno,
+                'esCorreccion' => $this->esCorreccion,
+            ],
         );
     }
 

@@ -32,6 +32,18 @@ test('profesor con permiso cargar_boletines puede viewAny/view/update sobre Bole
         ->and($profesor->can('delete', $boletin))->toBeFalse();
 });
 
+test('solo administrador puede corregir un boletin ya enviado; cobrador y profesor con permiso no', function () {
+    $administrador = User::factory()->create()->assignRole('administrador');
+    $cobrador = User::factory()->create()->assignRole('cobrador');
+    $profesor = User::factory()->create()->assignRole('profesor');
+    $profesor->givePermissionTo('cargar_boletines');
+    $boletin = Boletin::factory()->create();
+
+    expect($administrador->can('corregir', $boletin))->toBeTrue()
+        ->and($cobrador->can('corregir', $boletin))->toBeFalse()
+        ->and($profesor->can('corregir', $boletin))->toBeFalse();
+});
+
 test('profesor sin permiso cargar_boletines no tiene acceso a Boletin', function () {
     $profesor = User::factory()->create()->assignRole('profesor');
     $boletin = Boletin::factory()->create();

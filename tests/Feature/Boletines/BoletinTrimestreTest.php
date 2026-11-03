@@ -50,3 +50,52 @@ test('no se puede editar un trimestre ya enviado', function () {
 
     $trimestre->cargar(['promedio_anual' => 9], User::factory()->create());
 })->throws(TransicionDeEstadoInvalidaException::class);
+
+test('corregir actualiza los datos de un trimestre enviado y lo marca pendiente de reenvio', function () {
+    $plantilla = PlantillaBoletin::factory()->create();
+    $trimestre = BoletinTrimestre::factory()->create(['estado' => EstadoTrimestre::Enviado]);
+    $trimestre->boletin->update(['plantilla_id' => $plantilla->id]);
+    $usuario = User::factory()->create();
+
+    $trimestre->corregir(['promedio_anual' => 9], $usuario);
+
+    expect($trimestre->fresh()->estado)->toBe(EstadoTrimestre::Enviado)
+        ->and($trimestre->fresh()->datos)->toBe(['promedio_anual' => 9])
+        ->and($trimestre->fresh()->requiere_reenvio)->toBeTrue();
+});
+
+test('corregir rechaza un trimestre que todavia no fue enviado', function () {
+    $trimestre = BoletinTrimestre::factory()->cargado()->create();
+
+    $trimestre->corregir(['promedio_anual' => 9], User::factory()->create());
+})->throws(TransicionDeEstadoInvalidaException::class);
+
+test('corregir rechaza una seccion que no existe en la plantilla', function () {
+    $plantilla = PlantillaBoletin::factory()->create();
+    $trimestre = BoletinTrimestre::factory()->create(['estado' => EstadoTrimestre::Enviado]);
+    $trimestre->boletin->update(['plantilla_id' => $plantilla->id]);
+
+    $trimestre->corregir(['seccion_inventada' => 'x'], User::factory()->create());
+})->throws(TransicionDeEstadoInvalidaException::class);
+
+test('reenviar correccion despacha el job marcado como correccion solo si hay una pendiente', function () {
+    Queue::fake();
+
+    $trimestre = BoletinTrimestre::factory()->create([
+        'estado' => EstadoTrimestre::Enviado,
+        'requiere_reenvio' => true,
+    ]);
+
+    $trimestre->reenviarCorreccion();
+
+    Queue::assertPushed(GenerarYEnviarBoletinPdf::class, fn ($job) => $job->trimestre->is($trimestre) && $job->esCorreccion === true);
+});
+
+test('reenviar correccion rechaza un trimestre sin ninguna correccion pendiente', function () {
+    $trimestre = BoletinTrimestre::factory()->create([
+        'estado' => EstadoTrimestre::Enviado,
+        'requiere_reenvio' => false,
+    ]);
+
+    $trimestre->reenviarCorreccion();
+})->throws(TransicionDeEstadoInvalidaException::class);

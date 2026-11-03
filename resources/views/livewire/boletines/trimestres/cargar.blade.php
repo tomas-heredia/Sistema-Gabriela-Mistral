@@ -9,7 +9,22 @@
         </div>
 
         <div class="flex items-center gap-3">
-            @if ($soloLectura)
+            @if ($requiereReenvio)
+                <button
+                    type="button"
+                    wire:click="reenviarCorreccion"
+                    wire:confirm="¿Reenviar el mail a los tutores aclarando que es una corrección?"
+                    class="inline-flex items-center gap-1.5 rounded-md bg-amber-600 px-3 py-2 text-sm font-medium text-white shadow-sm hover:bg-amber-500"
+                >
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" class="w-4 h-4">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M2.5 4.5h15v11h-15z" />
+                        <path stroke-linecap="round" stroke-linejoin="round" d="m2.5 5 7.5 6 7.5-6" />
+                    </svg>
+                    Reenviar corrección
+                </button>
+            @endif
+
+            @if ($trimestreEnviado)
                 <a
                     href="{{ route('boletines.trimestres.pdf.imprimir', $boletinTrimestre) }}"
                     target="_blank"
@@ -34,11 +49,15 @@
         </div>
     </div>
 
-    @if ($soloLectura)
+    @if ($requiereReenvio)
+        <p class="text-sm text-amber-600">Corregiste este trimestre pero todavía no se le avisó al tutor -- usá "Reenviar corrección" para mandarle la nueva versión.</p>
+    @elseif ($puedeCorregir)
+        <p class="text-sm text-gray-500">Este trimestre ya fue enviado a los tutores. Podés corregirlo, pero después vas a tener que reenviarles el mail para avisarles del cambio.</p>
+    @elseif ($soloLectura)
         <p class="text-sm text-gray-500">Este trimestre ya fue enviado y no se puede editar.</p>
     @endif
 
-    <form wire:submit="guardarBorrador" class="space-y-6">
+    <form wire:submit="{{ $puedeCorregir ? 'guardarCorreccion' : 'guardarBorrador' }}" class="space-y-6">
         @foreach ($secciones as $entry)
             @php $seccion = $entry['seccion']; @endphp
 
@@ -159,12 +178,16 @@
             </a>
 
             @unless ($soloLectura)
-                <x-primary-button type="submit">Guardar borrador</x-primary-button>
+                @if ($puedeCorregir)
+                    <x-primary-button type="submit">Guardar corrección</x-primary-button>
+                @else
+                    <x-primary-button type="submit">Guardar borrador</x-primary-button>
 
-                @if ($boletinTrimestre->estado->value === 'cargado')
-                    <x-secondary-button type="button" x-on:click="$dispatch('open-modal', 'confirmar-envio')">
-                        Confirmar y enviar
-                    </x-secondary-button>
+                    @if ($boletinTrimestre->estado->value === 'cargado')
+                        <x-secondary-button type="button" x-on:click="$dispatch('open-modal', 'confirmar-envio')">
+                            Confirmar y enviar
+                        </x-secondary-button>
+                    @endif
                 @endif
             @endunless
         </div>

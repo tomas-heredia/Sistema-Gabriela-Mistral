@@ -230,6 +230,77 @@ test('profesor sin permiso de cargar boletines no puede montar el componente', f
     Livewire::actingAs($profesor)->test(Cargar::class, ['boletinTrimestre' => $trimestre])->assertForbidden();
 });
 
+test('un administrador puede editar y guardar la correccion de un trimestre ya enviado', function () {
+    $administrador = User::factory()->create()->assignRole('administrador');
+    $boletin = Boletin::factory()->create(['plantilla_id' => $this->plantilla->id]);
+    $trimestre = BoletinTrimestre::factory()->create([
+        'boletin_id' => $boletin->id,
+        'trimestre' => 1,
+        'estado' => EstadoTrimestre::Enviado,
+        'datos' => ['espacios_curriculares' => [['nombre' => 'Lengua', 'trimestre_1' => '7'], ['nombre' => 'Matemática', 'trimestre_1' => '6']]],
+    ]);
+
+    Livewire::actingAs($administrador)->test(Cargar::class, ['boletinTrimestre' => $trimestre])
+        ->assertSee('Guardar corrección')
+        ->set('datos.espacios_curriculares.0.trimestre_1', '9')
+        ->call('guardarCorreccion');
+
+    $trimestre->refresh();
+
+    expect($trimestre->estado)->toBe(EstadoTrimestre::Enviado)
+        ->and($trimestre->datos['espacios_curriculares'][0]['trimestre_1'])->toBe('9')
+        ->and($trimestre->requiere_reenvio)->toBeTrue();
+});
+
+test('un cobrador no puede editar un trimestre ya enviado, solo un administrador puede', function () {
+    $cobrador = User::factory()->create()->assignRole('cobrador');
+    $boletin = Boletin::factory()->create(['plantilla_id' => $this->plantilla->id]);
+    $trimestre = BoletinTrimestre::factory()->create([
+        'boletin_id' => $boletin->id,
+        'trimestre' => 1,
+        'estado' => EstadoTrimestre::Enviado,
+    ]);
+
+    Livewire::actingAs($cobrador)->test(Cargar::class, ['boletinTrimestre' => $trimestre])
+        ->assertDontSee('Guardar corrección')
+        ->call('guardarCorreccion')
+        ->assertForbidden();
+});
+
+test('reenviar la correccion despacha el job solo cuando hay una pendiente', function () {
+    Queue::fake();
+
+    $administrador = User::factory()->create()->assignRole('administrador');
+    $boletin = Boletin::factory()->create(['plantilla_id' => $this->plantilla->id]);
+    $trimestre = BoletinTrimestre::factory()->create([
+        'boletin_id' => $boletin->id,
+        'trimestre' => 1,
+        'estado' => EstadoTrimestre::Enviado,
+        'requiere_reenvio' => true,
+    ]);
+
+    Livewire::actingAs($administrador)->test(Cargar::class, ['boletinTrimestre' => $trimestre])
+        ->assertSee('Reenviar corrección')
+        ->call('reenviarCorreccion');
+
+    Queue::assertPushed(GenerarYEnviarBoletinPdf::class, fn ($job) => $job->trimestre->is($trimestre) && $job->esCorreccion === true);
+});
+
+test('un cobrador no puede reenviar una correccion', function () {
+    $cobrador = User::factory()->create()->assignRole('cobrador');
+    $boletin = Boletin::factory()->create(['plantilla_id' => $this->plantilla->id]);
+    $trimestre = BoletinTrimestre::factory()->create([
+        'boletin_id' => $boletin->id,
+        'trimestre' => 1,
+        'estado' => EstadoTrimestre::Enviado,
+        'requiere_reenvio' => true,
+    ]);
+
+    Livewire::actingAs($cobrador)->test(Cargar::class, ['boletinTrimestre' => $trimestre])
+        ->call('reenviarCorreccion')
+        ->assertForbidden();
+});
+
 test('profesor con permiso de cargar boletines puede cargar un borrador y confirmar y enviar el trimestre', function () {
     Queue::fake();
 

@@ -30,6 +30,7 @@ class GenerarYEnviarBoletinPdf implements ShouldQueue
 
     public function __construct(
         public BoletinTrimestre $trimestre,
+        public bool $esCorreccion = false,
     ) {}
 
     public function handle(): void
@@ -58,7 +59,7 @@ class GenerarYEnviarBoletinPdf implements ShouldQueue
 
         if ($destinatarios->isNotEmpty()) {
             Mail::to($destinatarios->all())->send(
-                new BoletinEnviado($this->trimestre, Storage::disk('local')->path($rutaRelativa))
+                new BoletinEnviado($this->trimestre, Storage::disk('local')->path($rutaRelativa), $this->esCorreccion)
             );
         }
 
@@ -66,6 +67,7 @@ class GenerarYEnviarBoletinPdf implements ShouldQueue
             'pdf_path' => $rutaRelativa,
             'estado' => EstadoTrimestre::Enviado,
             'fecha_enviado' => now(),
+            'requiere_reenvio' => false,
         ])->save();
 
         $boletin->recalcularEstado();
