@@ -29,7 +29,7 @@ class BoletinPolicy
 
     public function delete(User $user, Boletin $boletin): bool
     {
-        return $user->hasAnyRole(['administrador', 'cobrador']);
+        return $user->hasAnyRole(['administrador', 'cobrador', 'director_secretario']);
     }
 
     /**

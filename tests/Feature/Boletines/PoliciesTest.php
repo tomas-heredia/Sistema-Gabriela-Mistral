@@ -46,15 +46,28 @@ test('solo administrador y director_secretario pueden corregir un boletin ya env
         ->and($profesor->can('corregir', $boletin))->toBeFalse();
 });
 
-test('director_secretario puede ver y cargar boletines sin el permiso cargar_boletines, pero no crear ni eliminar', function () {
+test('director_secretario puede ver y cargar boletines sin el permiso cargar_boletines, pero no crear', function () {
     $directorSecretario = User::factory()->create()->assignRole('director_secretario');
     $boletin = Boletin::factory()->create();
 
     expect($directorSecretario->can('viewAny', Boletin::class))->toBeTrue()
         ->and($directorSecretario->can('view', $boletin))->toBeTrue()
         ->and($directorSecretario->can('update', $boletin))->toBeTrue()
-        ->and($directorSecretario->can('create', Boletin::class))->toBeFalse()
-        ->and($directorSecretario->can('delete', $boletin))->toBeFalse();
+        ->and($directorSecretario->can('create', Boletin::class))->toBeFalse();
+});
+
+test('administrador, cobrador y director_secretario pueden eliminar un boletin; profesor con permiso no', function () {
+    $administrador = User::factory()->create()->assignRole('administrador');
+    $cobrador = User::factory()->create()->assignRole('cobrador');
+    $directorSecretario = User::factory()->create()->assignRole('director_secretario');
+    $profesor = User::factory()->create()->assignRole('profesor');
+    $profesor->givePermissionTo('cargar_boletines');
+    $boletin = Boletin::factory()->create();
+
+    expect($administrador->can('delete', $boletin))->toBeTrue()
+        ->and($cobrador->can('delete', $boletin))->toBeTrue()
+        ->and($directorSecretario->can('delete', $boletin))->toBeTrue()
+        ->and($profesor->can('delete', $boletin))->toBeFalse();
 });
 
 test('profesor sin permiso cargar_boletines no tiene acceso a Boletin', function () {

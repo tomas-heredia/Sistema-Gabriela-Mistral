@@ -104,6 +104,54 @@ test('crearLibreta no hace nada para un alumno de nivel inicial', function () {
     expect(Boletin::where('alumno_id', $alumno->id)->where('periodo_lectivo_id', $periodo->id)->exists())->toBeFalse();
 });
 
+test('un administrador puede eliminar una libreta, que deja de listarse y queda libre para crear una nueva', function () {
+    $administrador = User::factory()->create()->assignRole('administrador');
+    $periodo = PeriodoLectivo::factory()->activo()->create();
+    $alumno = Alumno::factory()->primario()->create(['nombre' => 'Marcos Suárez']);
+    $boletin = Boletin::factory()->create(['alumno_id' => $alumno->id, 'periodo_lectivo_id' => $periodo->id]);
+    BoletinTrimestre::factory()->create(['boletin_id' => $boletin->id, 'trimestre' => 1]);
+
+    Livewire::actingAs($administrador)->test(Listado::class)
+        ->assertSee('Marcos Suárez')
+        ->call('eliminar', $boletin->id)
+        ->assertSee('Libreta eliminada correctamente')
+        ->assertDontSee('Marcos Suárez');
+
+    expect(Boletin::find($boletin->id))->toBeNull();
+
+    Livewire::actingAs($administrador)->test(Listado::class)
+        ->set('busqueda', 'Marcos Suárez')
+        ->assertSee('Todavía no tiene libreta');
+});
+
+test('un director_secretario puede eliminar una libreta', function () {
+    $directorSecretario = User::factory()->create()->assignRole('director_secretario');
+    $periodo = PeriodoLectivo::factory()->activo()->create();
+    $alumno = Alumno::factory()->primario()->create(['nombre' => 'Nora Paz']);
+    $boletin = Boletin::factory()->create(['alumno_id' => $alumno->id, 'periodo_lectivo_id' => $periodo->id]);
+
+    Livewire::actingAs($directorSecretario)->test(Listado::class)
+        ->assertSee('Eliminar')
+        ->call('eliminar', $boletin->id);
+
+    expect(Boletin::find($boletin->id))->toBeNull();
+});
+
+test('un profesor con permiso de cargar boletines no ve el boton de eliminar ni puede invocarlo a mano', function () {
+    $profesor = User::factory()->create()->assignRole('profesor');
+    $profesor->givePermissionTo('cargar_boletines');
+    $periodo = PeriodoLectivo::factory()->activo()->create();
+    $alumno = Alumno::factory()->primario()->create(['nombre' => 'Oscar Lima']);
+    $boletin = Boletin::factory()->create(['alumno_id' => $alumno->id, 'periodo_lectivo_id' => $periodo->id]);
+
+    Livewire::actingAs($profesor)->test(Listado::class)
+        ->assertDontSee('Eliminar')
+        ->call('eliminar', $boletin->id)
+        ->assertForbidden();
+
+    expect(Boletin::find($boletin->id))->not->toBeNull();
+});
+
 test('profesor con permiso de cargar boletines no ve el boton de crear libreta en la busqueda', function () {
     $profesor = User::factory()->create()->assignRole('profesor');
     $profesor->givePermissionTo('cargar_boletines');

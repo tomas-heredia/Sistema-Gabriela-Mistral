@@ -63,6 +63,16 @@ class Listado extends Component
         }
     }
 
+    public function eliminar(int $boletinId): void
+    {
+        $boletin = Boletin::findOrFail($boletinId);
+        $this->authorize('delete', $boletin);
+
+        $boletin->eliminarConTrimestres(auth()->user());
+
+        session()->flash('mensaje', 'Libreta eliminada correctamente.');
+    }
+
     public function render()
     {
         $periodoActivo = PeriodoLectivo::where('activo', true)->first();

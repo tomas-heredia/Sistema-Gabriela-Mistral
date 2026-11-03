@@ -37,6 +37,7 @@
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Alumno</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Grado</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" colspan="2">Libreta</th>
+                                <th class="px-6 py-3"></th>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-gray-100">
@@ -58,8 +59,21 @@
                                                 @endforeach
                                             </div>
                                         </td>
+                                        <td class="px-6 py-3 text-right text-sm whitespace-nowrap">
+                                            @can('delete', $boletin)
+                                                <button
+                                                    type="button"
+                                                    wire:click="eliminar({{ $boletin->id }})"
+                                                    wire:confirm="¿Eliminar la libreta de {{ $alumno->nombre }}? Se borran todos los trimestres cargados y los PDF ya generados -- esta acción no se puede deshacer."
+                                                    class="text-red-600 hover:text-red-800"
+                                                >
+                                                    Eliminar
+                                                </button>
+                                            @endcan
+                                        </td>
                                     @elseif ($alumno->nivel === \App\Alumnos\Models\Enums\Nivel::Inicial)
                                         <td class="px-6 py-3 text-sm text-gray-400" colspan="2">Nivel inicial no tiene libreta.</td>
+                                        <td></td>
                                     @else
                                         <td class="px-6 py-3 text-sm text-gray-500" colspan="2">
                                             <span>Todavía no tiene libreta para este período.</span>
@@ -74,6 +88,7 @@
                                                 </button>
                                             @endcan
                                         </td>
+                                        <td></td>
                                     @endif
                                 </tr>
                             @endforeach
@@ -90,6 +105,7 @@
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Grado</th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Trimestres</th>
+                            <th class="px-6 py-3"></th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-100">
@@ -108,6 +124,18 @@
                                             @include('livewire.boletines.boletines.partials.trimestre-pill')
                                         @endforeach
                                     </div>
+                                </td>
+                                <td class="px-6 py-3 text-right text-sm whitespace-nowrap">
+                                    @can('delete', $boletin)
+                                        <button
+                                            type="button"
+                                            wire:click="eliminar({{ $boletin->id }})"
+                                            wire:confirm="¿Eliminar la libreta de {{ $boletin->alumno->nombre }}? Se borran todos los trimestres cargados y los PDF ya generados -- esta acción no se puede deshacer."
+                                            class="text-red-600 hover:text-red-800"
+                                        >
+                                            Eliminar
+                                        </button>
+                                    @endcan
                                 </td>
                             </tr>
                         @endforeach

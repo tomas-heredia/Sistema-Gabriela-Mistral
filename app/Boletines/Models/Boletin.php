@@ -6,12 +6,15 @@ use App\Alumnos\Models\Alumno;
 use App\Boletines\Models\Enums\EstadoBoletin;
 use App\Boletines\Models\Enums\EstadoTrimestre;
 use App\Core\Models\PeriodoLectivo;
+use App\Core\Models\User;
 use Database\Factories\BoletinFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 
 #[Fillable(['alumno_id', 'plantilla_id', 'periodo_lectivo_id', 'estado'])]
 class Boletin extends Model
@@ -60,6 +63,29 @@ class Boletin extends Model
 
         $this->estado = $regularesEnviados === 3 ? EstadoBoletin::Completo : EstadoBoletin::EnCurso;
         $this->save();
+    }
+
+    /**
+     * Borra la libreta completa: sus trimestres (el FK de boletin_trimestres
+     * es restrictOnDelete, así que hay que borrarlos antes) y los PDFs ya
+     * generados en storage. Pensado para corregir un alta equivocada (ej.
+     * plantilla incorrecta) y volver a crear la libreta desde cero para el
+     * mismo período -- no revierte mails ya mandados a los tutores.
+     */
+    public function eliminarConTrimestres(User $usuario): void
+    {
+        $alumnoNombre = $this->alumno->nombre;
+        $boletinId = $this->id;
+
+        Storage::disk('local')->deleteDirectory("boletines/generados/{$this->id}");
+        $this->trimestres()->delete();
+        $this->delete();
+
+        Log::channel('actividad')->info("Eliminó la libreta de {$alumnoNombre}", [
+            'usuario_id' => $usuario->id,
+            'usuario' => $usuario->name,
+            'boletin_id' => $boletinId,
+        ]);
     }
 
     /**
