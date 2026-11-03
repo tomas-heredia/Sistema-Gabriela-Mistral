@@ -11,14 +11,15 @@ class ReciboSueldoPolicy
     public function __construct(private readonly VerificadorDeRedEscolar $verificador) {}
 
     /**
-     * Profesor y cobrador pueden listar, cada uno ve solo lo suyo -- el
-     * filtro a "los propios" se aplica en la consulta, no acá. Cobrador,
-     * además, ve el listado completo (como administrador) mientras está en
-     * la red del colegio -- ver gestionar().
+     * Profesor, cobrador y director_secretario pueden listar, cada uno ve
+     * solo lo suyo -- el filtro a "los propios" se aplica en la consulta,
+     * no acá. Cobrador, además, ve el listado completo (como
+     * administrador) mientras está en la red del colegio -- ver
+     * gestionar().
      */
     public function viewAny(User $user): bool
     {
-        return $user->hasAnyRole(['administrador', 'profesor', 'cobrador']);
+        return $user->hasAnyRole(['administrador', 'profesor', 'cobrador', 'director_secretario']);
     }
 
     public function view(User $user, ReciboSueldo $reciboSueldo): bool
@@ -27,7 +28,7 @@ class ReciboSueldoPolicy
             return true;
         }
 
-        return $user->hasAnyRole(['profesor', 'cobrador']) && $reciboSueldo->profesor_id === $user->id;
+        return $user->hasAnyRole(['profesor', 'cobrador', 'director_secretario']) && $reciboSueldo->profesor_id === $user->id;
     }
 
     public function create(User $user): bool

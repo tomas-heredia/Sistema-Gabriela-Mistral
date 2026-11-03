@@ -301,6 +301,57 @@ test('un cobrador no puede reenviar una correccion', function () {
         ->assertForbidden();
 });
 
+test('director_secretario puede cargar un borrador y confirmar y enviar el trimestre sin ningun permiso extra', function () {
+    Queue::fake();
+
+    $directorSecretario = User::factory()->create()->assignRole('director_secretario');
+    $boletin = Boletin::factory()->create(['plantilla_id' => $this->plantilla->id]);
+    $trimestre1 = BoletinTrimestre::factory()->create(['boletin_id' => $boletin->id, 'trimestre' => 1]);
+
+    Livewire::actingAs($directorSecretario)->test(Cargar::class, ['boletinTrimestre' => $trimestre1])
+        ->set('datos.espacios_curriculares.0.trimestre_1', '9')
+        ->call('guardarBorrador');
+
+    expect($trimestre1->refresh()->estado)->toBe(EstadoTrimestre::Cargado)
+        ->and($trimestre1->cargado_por_id)->toBe($directorSecretario->id);
+
+    Livewire::actingAs($directorSecretario)->test(Cargar::class, ['boletinTrimestre' => $trimestre1])
+        ->call('confirmarYEnviar')
+        ->assertRedirect(route('boletines.index'));
+
+    Queue::assertPushed(GenerarYEnviarBoletinPdf::class);
+});
+
+test('director_secretario puede corregir y reenviar un trimestre ya enviado, igual que administrador', function () {
+    Queue::fake();
+
+    $directorSecretario = User::factory()->create()->assignRole('director_secretario');
+    $boletin = Boletin::factory()->create(['plantilla_id' => $this->plantilla->id]);
+    $trimestre = BoletinTrimestre::factory()->create([
+        'boletin_id' => $boletin->id,
+        'trimestre' => 1,
+        'estado' => EstadoTrimestre::Enviado,
+        'datos' => ['espacios_curriculares' => [['nombre' => 'Lengua', 'trimestre_1' => '7'], ['nombre' => 'Matemática', 'trimestre_1' => '6']]],
+    ]);
+
+    Livewire::actingAs($directorSecretario)->test(Cargar::class, ['boletinTrimestre' => $trimestre])
+        ->assertSee('Guardar corrección')
+        ->set('datos.espacios_curriculares.0.trimestre_1', '9')
+        ->call('guardarCorreccion');
+
+    $trimestre->refresh();
+
+    expect($trimestre->estado)->toBe(EstadoTrimestre::Enviado)
+        ->and($trimestre->datos['espacios_curriculares'][0]['trimestre_1'])->toBe('9')
+        ->and($trimestre->requiere_reenvio)->toBeTrue();
+
+    Livewire::actingAs($directorSecretario)->test(Cargar::class, ['boletinTrimestre' => $trimestre])
+        ->assertSee('Reenviar corrección')
+        ->call('reenviarCorreccion');
+
+    Queue::assertPushed(GenerarYEnviarBoletinPdf::class, fn ($job) => $job->trimestre->is($trimestre) && $job->esCorreccion === true);
+});
+
 test('profesor con permiso de cargar boletines puede cargar un borrador y confirmar y enviar el trimestre', function () {
     Queue::fake();
 

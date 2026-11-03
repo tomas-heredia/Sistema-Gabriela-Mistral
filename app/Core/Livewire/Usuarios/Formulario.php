@@ -14,6 +14,7 @@ class Formulario extends Component
         'administrador' => 'Administrador',
         'cobrador' => 'Cobrador',
         'profesor' => 'Profesor',
+        'director_secretario' => 'Director/Secretario',
     ];
 
     public ?User $usuario = null;

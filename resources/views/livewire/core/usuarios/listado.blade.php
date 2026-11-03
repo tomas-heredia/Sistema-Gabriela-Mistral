@@ -43,9 +43,10 @@
                                         'administrador' => 'green',
                                         'cobrador' => 'amber',
                                         'profesor' => 'gray',
+                                        'director_secretario' => 'indigo',
                                         default => 'gray',
                                     }">
-                                        {{ ucfirst($usuario->roles->first()?->name ?? 'Sin rol') }}
+                                        {{ \App\Core\Livewire\Usuarios\Formulario::ROLES[$usuario->roles->first()?->name] ?? 'Sin rol' }}
                                     </x-pill>
                                     @if ($usuario->hasRole('profesor') && $usuario->hasPermissionTo('cargar_boletines'))
                                         <x-pill color="indigo">Libretas</x-pill>

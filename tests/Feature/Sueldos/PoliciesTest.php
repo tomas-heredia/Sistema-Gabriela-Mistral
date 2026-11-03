@@ -28,6 +28,17 @@ test('un profesor puede ver su propio recibo pero no el de otro profesor', funct
         ->and($profesor->can('create', ReciboSueldo::class))->toBeFalse();
 });
 
+test('un director_secretario puede ver su propio recibo pero no el de otro', function () {
+    $directorSecretario = User::factory()->create()->assignRole('director_secretario');
+    $suRecibo = ReciboSueldo::factory()->create(['profesor_id' => $directorSecretario->id]);
+    $reciboDeOtro = ReciboSueldo::factory()->create();
+
+    expect($directorSecretario->can('viewAny', ReciboSueldo::class))->toBeTrue()
+        ->and($directorSecretario->can('view', $suRecibo))->toBeTrue()
+        ->and($directorSecretario->can('view', $reciboDeOtro))->toBeFalse()
+        ->and($directorSecretario->can('create', ReciboSueldo::class))->toBeFalse();
+});
+
 test('un cobrador fuera de la red del colegio solo ve su propio recibo y no puede crear', function () {
     config(['acceso.restriccion_de_red_habilitada' => true]);
     request()->server->set('REMOTE_ADDR', '190.191.10.20');

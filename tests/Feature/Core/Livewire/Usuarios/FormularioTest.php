@@ -98,6 +98,37 @@ test('cobrador solo puede elegir el rol profesor, y crear con ese rol', function
     expect($nuevo->hasRole('profesor'))->toBeTrue();
 });
 
+test('un administrador puede crear un usuario con rol director_secretario', function () {
+    $administrador = User::factory()->create()->assignRole('administrador');
+
+    Livewire::actingAs($administrador)->test(Formulario::class)
+        ->assertSee('Director/Secretario')
+        ->set('name', 'Lucía Fernández')
+        ->set('email', 'lucia@example.com')
+        ->set('password', '123456')
+        ->set('rol', 'director_secretario')
+        ->call('guardar')
+        ->assertRedirect(route('usuarios.index'));
+
+    $nuevo = User::where('email', 'lucia@example.com')->firstOrFail();
+    expect($nuevo->hasRole('director_secretario'))->toBeTrue();
+});
+
+test('cobrador no puede elegir ni mandar a mano el rol director_secretario', function () {
+    $cobrador = User::factory()->create()->assignRole('cobrador');
+
+    Livewire::actingAs($cobrador)->test(Formulario::class)
+        ->assertDontSee('Director/Secretario')
+        ->set('name', 'Intento Director')
+        ->set('email', 'intento.director@example.com')
+        ->set('password', '123456')
+        ->set('rol', 'director_secretario')
+        ->call('guardar')
+        ->assertHasErrors(['rol']);
+
+    expect(User::where('email', 'intento.director@example.com')->exists())->toBeFalse();
+});
+
 test('cobrador no puede crear un usuario con rol administrador o cobrador aunque lo mande a mano', function () {
     $cobrador = User::factory()->create()->assignRole('cobrador');
 
