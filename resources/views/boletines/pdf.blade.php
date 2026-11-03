@@ -15,7 +15,8 @@
         .encabezado-ministerio .titulo-principal { font-weight: bold; font-size: 10px; }
         .nombre-colegio { font-size: 14px; font-weight: bold; text-align: center; margin: 0; }
         .titulo-informe { font-size: 13px; font-weight: bold; text-align: center; margin: 4px 0 0; }
-        .subtitulo-nivel { font-size: 11px; font-weight: bold; text-align: center; margin: 0 0 10px; }
+        .subtitulo-nivel { font-size: 11px; font-weight: bold; text-align: center; margin: 0 0 4px; }
+        .normativa { font-size: 8px; color: #555; text-align: center; line-height: 1.3; margin: 0 0 10px; }
         .meta { color: #555; margin-bottom: 8px; }
         table { width: 100%; border-collapse: collapse; margin-bottom: 8px; }
         th, td { border: 1px solid #ccc; padding: 4px 6px; text-align: left; vertical-align: top; }
@@ -49,10 +50,15 @@
                 </tr>
             </table>
             <p class="nombre-colegio">COLEGIO PRIVADO GABRIELA MISTRAL</p>
-            <p class="titulo-informe">INFORME INDIVIDUAL DE EVALUACIÓN DE APRENDIZAJES</p>
+            <p class="titulo-informe">Informe Individual de Seguimiento Pedagógico</p>
             @if ($subtituloNivel)
                 <p class="subtitulo-nivel">{{ $subtituloNivel }}</p>
             @endif
+            <p class="normativa">
+                Ley de Educación Nacional N° 26206/06<br>
+                Ley de Educación Provincial N° 5381/14<br>
+                Resolución Ministerial N° 168/23
+            </p>
             <p class="meta">C.U.E.: 1000770-00</p>
             <h1>{{ $alumno->nombre }}</h1>
             <p class="meta">
@@ -61,7 +67,7 @@
                 Grado: {{ $alumno->grado }} ·
                 División: {{ $alumno->division ?? '—' }} ·
                 Turno: {{ $alumno->turno === \App\Alumnos\Models\Enums\Turno::Manana ? 'M' : 'T' }} ·
-                Período: {{ $periodo->nombre }}
+                Ciclo lectivo: {{ $periodo->nombre }}
             </p>
 
             <h2>
