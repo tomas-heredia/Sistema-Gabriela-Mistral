@@ -16,6 +16,7 @@
         .nombre-colegio { font-size: 14px; font-weight: bold; text-align: center; margin: 0; }
         .titulo-informe { font-size: 13px; font-weight: bold; text-align: center; margin: 4px 0 0; }
         .subtitulo-nivel { font-size: 11px; font-weight: bold; text-align: center; margin: 0 0 4px; }
+        .orientacion { font-size: 10px; text-align: center; margin: 0 0 6px; }
         .normativa { font-size: 8px; color: #555; text-align: center; line-height: 1.3; margin: 0 0 10px; }
         .meta { color: #555; margin-bottom: 8px; }
         .leyenda-seleccion { margin: 10px 0; }
@@ -34,10 +35,11 @@
     @foreach ($trimestres as $trimestre)
         <div class="trimestre">
             @php
+                $esCicloOrientado = $alumno->nivel === \App\Alumnos\Models\Enums\Nivel::Secundario && $alumno->anio_secundaria > 3;
                 $subtituloNivel = match (true) {
                     $alumno->nivel === \App\Alumnos\Models\Enums\Nivel::Primario => 'NIVEL PRIMARIO',
                     $alumno->nivel === \App\Alumnos\Models\Enums\Nivel::Secundario && $alumno->anio_secundaria <= 3 => 'NIVEL SECUNDARIO CICLO BÁSICO',
-                    $alumno->nivel === \App\Alumnos\Models\Enums\Nivel::Secundario => 'NIVEL SECUNDARIO CICLO ORIENTADO',
+                    $esCicloOrientado => 'NIVEL SECUNDARIO CICLO ORIENTADO',
                     default => null,
                 };
             @endphp
@@ -56,6 +58,9 @@
             <p class="titulo-informe">Informe Individual de Seguimiento Pedagógico</p>
             @if ($subtituloNivel)
                 <p class="subtitulo-nivel">{{ $subtituloNivel }}</p>
+            @endif
+            @if ($esCicloOrientado)
+                <p class="orientacion">Orientación: Cs. Soc. y Hum.</p>
             @endif
             <p class="normativa">
                 Ley de Educación Nacional N° 26206/06<br>
@@ -93,7 +98,7 @@
                         </p>
                     @else
                         <h3>{{ $seccion['titulo'] ?? $seccion['id'] }}</h3>
-                        @include('boletines.partials.valor-generico', ['valor' => $valor])
+                        @include('boletines.partials.valor-generico', ['valor' => $valor, 'seccion' => $seccion])
                     @endif
                 @endif
             @endforeach

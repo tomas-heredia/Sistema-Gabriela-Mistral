@@ -67,11 +67,19 @@ beforeEach(function () {
                     'id' => 'espacios_pendientes',
                     'titulo' => 'Espacios Pendientes de Acreditación',
                     'tipo' => 'tabla_materias_libre',
+                    'etiqueta_nombre' => 'Número de Orden',
+                    'tipo_nombre' => 'numero',
                     'columnas' => [
                         ['id' => 'espacio', 'nombre' => 'Espacio Curricular', 'tipo' => 'texto'],
                         ['id' => 'calificacion', 'nombre' => 'Calificación', 'tipo' => 'numero'],
                     ],
                     'filas_libres' => true,
+                ],
+                [
+                    'id' => 'promedio_anual',
+                    'titulo' => 'Promedio Anual',
+                    'tipo' => 'campo_numero',
+                    'momento' => 'trimestre_3',
                 ],
             ],
         ],
@@ -176,6 +184,30 @@ test('una nota fuera de 0 a 10 se ajusta al limite mas cercano al guardar', func
 
     expect($trimestre1->datos['espacios_curriculares'][0]['trimestre_1'])->toBe('10')
         ->and($trimestre1->datos['espacios_curriculares'][1]['trimestre_1'])->toBe('0');
+});
+
+test('un campo numerico simple (sin ser parte de una grilla) tambien se ajusta de 0 a 10 al guardar', function () {
+    $cobrador = User::factory()->create()->assignRole('cobrador');
+    $boletin = Boletin::factory()->create(['plantilla_id' => $this->plantilla->id]);
+    $trimestre3 = BoletinTrimestre::factory()->create(['boletin_id' => $boletin->id, 'trimestre' => 3]);
+
+    Livewire::actingAs($cobrador)->test(Cargar::class, ['boletinTrimestre' => $trimestre3])
+        ->set('datos.promedio_anual', '12')
+        ->call('guardarBorrador');
+
+    expect($trimestre3->refresh()->datos['promedio_anual'])->toBe('10');
+});
+
+test('la columna libre de una tabla usa la etiqueta y el tipo de input configurados en la seccion', function () {
+    $cobrador = User::factory()->create()->assignRole('cobrador');
+    $boletin = Boletin::factory()->create(['plantilla_id' => $this->plantilla->id]);
+    $trimestre1 = BoletinTrimestre::factory()->create(['boletin_id' => $boletin->id, 'trimestre' => 1]);
+
+    Livewire::actingAs($cobrador)->test(Cargar::class, ['boletinTrimestre' => $trimestre1])
+        ->call('agregarFila', 'espacios_pendientes')
+        ->assertSee('Número de Orden')
+        ->assertSeeHtml('type="number"', false)
+        ->assertSeeHtml('wire:model="datos.espacios_pendientes.0.nombre"', false);
 });
 
 test('la asistencia no permite valores negativos pero no tiene techo', function () {

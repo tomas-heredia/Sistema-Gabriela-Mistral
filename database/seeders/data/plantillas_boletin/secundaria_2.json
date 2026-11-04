@@ -23,7 +23,7 @@
         { "id": "lengua_literatura", "nombre": "Lengua y Literatura" },
         { "id": "matematica", "nombre": "Matemática" },
         { "id": "ed_fisica", "nombre": "Ed. Física" },
-        { "id": "ed_artistica", "nombre": "Ed. Art. Plástica" },
+        { "id": "ed_artistica", "nombre": "Ed. Art.: Plástica" },
         { "id": "historia", "nombre": "Historia" },
         { "id": "geografia", "nombre": "Geografía" },
         { "id": "biologia", "nombre": "Biología" },
@@ -38,6 +38,8 @@
       "titulo": "Espacios Pendientes de Acreditación",
       "tipo": "tabla_materias_libre",
       "nota": "Filas variables: el cobrador agrega una por cada espacio curricular que el alumno tenga pendiente.",
+      "etiqueta_nombre": "Número de Orden",
+      "tipo_nombre": "numero",
       "columnas": [
         { "id": "espacio_curricular", "nombre": "Espacio Curricular", "tipo": "texto" },
         { "id": "calificacion", "nombre": "Calificación", "tipo": "numero" },

@@ -67,7 +67,7 @@
                         <table class="min-w-full divide-y divide-gray-200">
                             <thead class="bg-gray-50">
                                 <tr>
-                                    <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nombre</th>
+                                    <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{{ $seccion['etiqueta_nombre'] ?? 'Nombre' }}</th>
                                     @foreach ($entry['columnas'] as $columna)
                                         <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{{ $columna['nombre'] }}</th>
                                     @endforeach
@@ -82,7 +82,7 @@
                                         <td class="px-3 py-2 text-sm text-gray-900">
                                             @if ($seccion['filas_libres'] ?? false)
                                                 <input
-                                                    type="text"
+                                                    type="{{ ($seccion['tipo_nombre'] ?? 'texto') === 'numero' ? 'number' : 'text' }}"
                                                     wire:model="datos.{{ $seccion['id'] }}.{{ $indice }}.nombre"
                                                     @disabled($soloLectura)
                                                     class="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"

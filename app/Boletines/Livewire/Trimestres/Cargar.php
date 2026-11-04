@@ -166,6 +166,10 @@ class Cargar extends Component
             return [0, null];
         }
 
+        if (($seccion['tipo'] ?? null) === 'campo_numero') {
+            return [0, 10];
+        }
+
         $tipo = $columna['tipo'] ?? $seccion['escala']['tipo'] ?? null;
 
         if (in_array($tipo, ['numerica', 'numero'], true)) {
