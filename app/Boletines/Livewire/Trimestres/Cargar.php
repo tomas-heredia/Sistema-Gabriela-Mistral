@@ -35,8 +35,14 @@ class Cargar extends Component
         $existentes = $boletinTrimestre->datos ?? [];
 
         foreach ($this->seccionesVisibles() as $entry) {
-            $id = $entry['seccion']['id'];
-            $this->datos[$id] = $existentes[$id] ?? $this->defaultParaSeccion($entry['seccion'], $entry['columnas']);
+            $seccion = $entry['seccion'];
+
+            if (($seccion['tipo'] ?? null) === 'campo_calculado') {
+                continue;
+            }
+
+            $id = $seccion['id'];
+            $this->datos[$id] = $existentes[$id] ?? $this->defaultParaSeccion($seccion, $entry['columnas']);
         }
     }
 
@@ -203,6 +209,23 @@ class Cargar extends Component
         return "{$opcion} — {$significados[$indice]}";
     }
 
+    /**
+     * "Promedio de Materias" (Libreta Final): nunca se guarda en `datos` --
+     * se recalcula siempre a partir de la columna "nota_final" que el
+     * cobrador/director está corrigiendo, así nunca queda desactualizado.
+     */
+    public function promedioCalculado(array $seccion): ?float
+    {
+        $filas = $this->datos[$seccion['fuente']['seccion']] ?? [];
+
+        $numeros = collect($filas)
+            ->pluck($seccion['fuente']['columna'])
+            ->filter(fn ($valor) => is_numeric($valor))
+            ->map(fn ($valor) => (float) $valor);
+
+        return $numeros->isNotEmpty() ? round($numeros->avg(), 1) : null;
+    }
+
     private function esGrilla(array $seccion): bool
     {
         return str_starts_with($seccion['tipo'] ?? '', 'tabla_');
@@ -232,6 +255,10 @@ class Cargar extends Component
         foreach ($this->seccionesVisibles() as $entry) {
             $seccion = $entry['seccion'];
             $seccionId = $seccion['id'];
+
+            if (($seccion['tipo'] ?? null) === 'campo_calculado') {
+                continue;
+            }
 
             if ($this->esGrilla($seccion)) {
                 foreach ($this->datos[$seccionId] ?? [] as $indice => $fila) {

@@ -407,7 +407,7 @@
                             @foreach ($boletin->trimestres->sortBy('trimestre') as $trimestre)
                                 <tr wire:key="trimestre-{{ $trimestre->id }}">
                                     <td class="px-4 py-2 text-sm text-gray-900">
-                                        {{ $trimestre->trimestre === 4 ? 'Etapa de Apoyo' : "Trimestre {$trimestre->trimestre}" }}
+                                        {{ $trimestre->etiqueta() }}
                                     </td>
                                     <td class="px-4 py-2 text-sm">
                                         <x-pill :color="match ($trimestre->estado->value) {
@@ -429,12 +429,6 @@
                             @endforeach
                         </tbody>
                     </table>
-
-                    @if ($alumno->nivel === \App\Alumnos\Models\Enums\Nivel::Primario && ! $boletin->trimestres->contains('trimestre', 4))
-                        <x-secondary-button type="button" wire:click="agregarEtapaApoyo" class="mt-4">
-                            Agregar Etapa de Apoyo
-                        </x-secondary-button>
-                    @endif
                 @endif
             </div>
         </div>

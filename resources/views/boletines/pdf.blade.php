@@ -22,6 +22,7 @@
         .leyenda-seleccion { margin: 10px 0; }
         .leyenda-seleccion strong { text-transform: uppercase; }
         .leyenda-seleccion .opcion-elegida { font-weight: bold; text-decoration: underline; }
+        .campo-calculado { margin: 10px 0; font-size: 12px; }
         table { width: 100%; border-collapse: collapse; margin-bottom: 8px; }
         th, td { border: 1px solid #ccc; padding: 4px 6px; text-align: left; vertical-align: top; }
         th { background: #f0efe9; font-weight: bold; }
@@ -79,11 +80,29 @@
             </p>
 
             <h2>
-                {{ $trimestre->trimestre === 4 ? 'Etapa de Apoyo' : "Trimestre {$trimestre->trimestre}" }}
+                {{ $trimestre->etiqueta() }}
             </h2>
 
             @foreach (($plantilla->estructura_campos['secciones'] ?? []) as $seccion)
-                @php $valor = data_get($trimestre->datos, $seccion['id']); @endphp
+                @php
+                    // campo_calculado nunca se guarda en datos -- se recalcula siempre a
+                    // partir de otra sección (ej. Promedio de Materias, a partir de las
+                    // notas finales de espacios_curriculares), solo en el trimestre dueño.
+                    if (($seccion['tipo'] ?? null) === 'campo_calculado') {
+                        if (($seccion['momento'] ?? null) !== "trimestre_{$trimestre->trimestre}") {
+                            $valor = null;
+                        } else {
+                            $filas = data_get($trimestre->datos, $seccion['fuente']['seccion']) ?? [];
+                            $numeros = collect($filas)
+                                ->pluck($seccion['fuente']['columna'])
+                                ->filter(fn ($v) => is_numeric($v))
+                                ->map(fn ($v) => (float) $v);
+                            $valor = $numeros->isNotEmpty() ? round($numeros->avg(), 1) : null;
+                        }
+                    } else {
+                        $valor = data_get($trimestre->datos, $seccion['id']);
+                    }
+                @endphp
 
                 @if ($valor !== null && $valor !== [])
                     @if (($seccion['tipo'] ?? null) === 'campo_seleccion' && isset($seccion['opciones']))
@@ -96,6 +115,8 @@
                                 <span @class(['opcion-elegida' => $opcion === $valor])>{{ $opcion }}</span>{{ ! $loop->last ? ' / ' : '' }}
                             @endforeach
                         </p>
+                    @elseif (($seccion['tipo'] ?? null) === 'campo_calculado')
+                        <p class="campo-calculado"><strong>{{ $seccion['titulo'] ?? $seccion['id'] }}:</strong> {{ $valor }}</p>
                     @else
                         <h3>{{ $seccion['titulo'] ?? $seccion['id'] }}</h3>
                         @include('boletines.partials.valor-generico', ['valor' => $valor, 'seccion' => $seccion])

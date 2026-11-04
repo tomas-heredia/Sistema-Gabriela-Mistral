@@ -2,9 +2,11 @@
 
 namespace App\Boletines\Models;
 
+use App\Alumnos\Models\Enums\Nivel;
 use App\Boletines\Exceptions\TransicionDeEstadoInvalidaException;
 use App\Boletines\Jobs\GenerarYEnviarBoletinPdf;
 use App\Boletines\Models\Enums\EstadoTrimestre;
+use App\Boletines\Models\Enums\TipoTrimestre;
 use App\Core\Models\User;
 use Database\Factories\BoletinTrimestreFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -13,10 +15,24 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Facades\Log;
 
+/**
+ * `trimestre` ya no es siempre 1/2/3: a partir de este cambio, 4/5/6 tienen
+ * un significado fijo (ver TipoTrimestre::tipo() más abajo) --
+ * Recuperación Diciembre / Recuperación Febrero / Libreta Final -- en vez
+ * de la vieja "Etapa de Apoyo" (que mostraba todas las materias, no solo
+ * las desaprobadas, y se creaba a mano). Reutiliza el mismo campo entero
+ * sin agregar columnas nuevas.
+ */
 #[Fillable(['boletin_id', 'trimestre', 'datos', 'estado', 'cargado_por_id', 'fecha_enviado', 'pdf_path', 'requiere_reenvio'])]
 class BoletinTrimestre extends Model
 {
     use HasFactory;
+
+    public const TRIMESTRE_RECUPERACION_DICIEMBRE = 4;
+
+    public const TRIMESTRE_RECUPERACION_FEBRERO = 5;
+
+    public const TRIMESTRE_LIBRETA_FINAL = 6;
 
     protected $table = 'boletin_trimestres';
 
@@ -38,6 +54,50 @@ class BoletinTrimestre extends Model
     public function cargadoPor(): BelongsTo
     {
         return $this->belongsTo(User::class, 'cargado_por_id');
+    }
+
+    public function tipo(): TipoTrimestre
+    {
+        return match ($this->trimestre) {
+            self::TRIMESTRE_RECUPERACION_DICIEMBRE => TipoTrimestre::RecuperacionDiciembre,
+            self::TRIMESTRE_RECUPERACION_FEBRERO => TipoTrimestre::RecuperacionFebrero,
+            self::TRIMESTRE_LIBRETA_FINAL => TipoTrimestre::LibretaFinal,
+            default => TipoTrimestre::Regular,
+        };
+    }
+
+    /**
+     * Etiqueta que ve el cobrador/director: "PAeIP" en primaria, "ICAP" en
+     * secundaria, para las dos instancias de recuperación -- mismo nombre
+     * de pila que antes tenía "Etapa de Apoyo", ahora centralizado acá en
+     * vez de repetido como `=== 4` en cada vista.
+     */
+    public function etiqueta(): string
+    {
+        $recuperacion = $this->boletin->alumno->nivel === Nivel::Primario ? 'PAeIP' : 'ICAP';
+
+        return match ($this->tipo()) {
+            TipoTrimestre::RecuperacionDiciembre => "Recuperación Diciembre ({$recuperacion})",
+            TipoTrimestre::RecuperacionFebrero => "Recuperación Febrero ({$recuperacion})",
+            TipoTrimestre::LibretaFinal => 'Libreta Final',
+            TipoTrimestre::Regular => "Trimestre {$this->trimestre}",
+        };
+    }
+
+    /**
+     * Versión corta de `etiqueta()` para espacios chicos (la pill del
+     * listado de boletines).
+     */
+    public function etiquetaCorta(): string
+    {
+        $recuperacion = $this->boletin->alumno->nivel === Nivel::Primario ? 'PAeIP' : 'ICAP';
+
+        return match ($this->tipo()) {
+            TipoTrimestre::RecuperacionDiciembre => "{$recuperacion} Dic",
+            TipoTrimestre::RecuperacionFebrero => "{$recuperacion} Feb",
+            TipoTrimestre::LibretaFinal => 'Final',
+            TipoTrimestre::Regular => "T{$this->trimestre}",
+        };
     }
 
     /**

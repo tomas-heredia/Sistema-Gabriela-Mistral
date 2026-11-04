@@ -26,6 +26,8 @@ beforeEach(function () {
                         ['id' => 'trimestre_1', 'nombre' => 'Trimestre 1', 'momento' => 'trimestre_1'],
                         ['id' => 'trimestre_3', 'nombre' => 'Trimestre 3', 'momento' => 'trimestre_3'],
                         ['id' => 'calificacion_final', 'nombre' => 'Calificación Final', 'momento' => 'trimestre_3'],
+                        ['id' => 'nota_diciembre', 'nombre' => 'Nota Diciembre', 'momento' => 'trimestre_4'],
+                        ['id' => 'nota_final', 'nombre' => 'Nota Final', 'momento' => 'trimestre_6'],
                     ],
                     'filas' => [
                         ['id' => 'lengua', 'nombre' => 'Lengua'],
@@ -80,6 +82,13 @@ beforeEach(function () {
                     'titulo' => 'Promedio Anual',
                     'tipo' => 'campo_numero',
                     'momento' => 'trimestre_3',
+                ],
+                [
+                    'id' => 'promedio_materias',
+                    'titulo' => 'Promedio de Materias',
+                    'tipo' => 'campo_calculado',
+                    'momento' => 'trimestre_6',
+                    'fuente' => ['seccion' => 'espacios_curriculares', 'columna' => 'nota_final'],
                 ],
             ],
         ],
@@ -402,6 +411,75 @@ test('profesor con permiso de cargar boletines puede cargar un borrador y confir
     Livewire::actingAs($profesor)->test(Cargar::class, ['boletinTrimestre' => $trimestre1])
         ->call('confirmarYEnviar')
         ->assertRedirect(route('boletines.index'));
+
+    Queue::assertPushed(GenerarYEnviarBoletinPdf::class);
+});
+
+test('un campo_calculado se muestra como texto, nunca como input, y no queda guardado en datos', function () {
+    $cobrador = User::factory()->create()->assignRole('cobrador');
+    $boletin = Boletin::factory()->create(['plantilla_id' => $this->plantilla->id]);
+    $trimestreFinal = BoletinTrimestre::factory()->create([
+        'boletin_id' => $boletin->id,
+        'trimestre' => BoletinTrimestre::TRIMESTRE_LIBRETA_FINAL,
+        'datos' => ['espacios_curriculares' => [
+            ['nombre' => 'Lengua', 'nota_final' => '8'],
+            ['nombre' => 'Matemática', 'nota_final' => '10'],
+        ]],
+    ]);
+
+    $componente = Livewire::actingAs($cobrador)->test(Cargar::class, ['boletinTrimestre' => $trimestreFinal])
+        ->assertSee('Promedio de Materias')
+        ->assertSee('9') // promedio de 8 y 10
+        ->assertDontSeeHtml('wire:model="datos.promedio_materias"');
+
+    $componente->call('guardarBorrador');
+
+    expect(array_key_exists('promedio_materias', $trimestreFinal->refresh()->datos))->toBeFalse();
+});
+
+test('la libreta final llega con la nota final precargada y el cobrador puede corregirla antes de enviar', function () {
+    $cobrador = User::factory()->create()->assignRole('cobrador');
+    $boletin = Boletin::factory()->create(['plantilla_id' => $this->plantilla->id]);
+    $trimestreFinal = BoletinTrimestre::factory()->create([
+        'boletin_id' => $boletin->id,
+        'trimestre' => BoletinTrimestre::TRIMESTRE_LIBRETA_FINAL,
+        'datos' => ['espacios_curriculares' => [
+            ['nombre' => 'Lengua', 'nota_final' => '7'],
+            ['nombre' => 'Matemática', 'nota_final' => '8'],
+        ]],
+    ]);
+
+    Livewire::actingAs($cobrador)->test(Cargar::class, ['boletinTrimestre' => $trimestreFinal])
+        ->assertSet('datos.espacios_curriculares.0.nota_final', '7')
+        ->set('datos.espacios_curriculares.0.nota_final', '9')
+        ->call('guardarBorrador');
+
+    expect($trimestreFinal->refresh()->datos['espacios_curriculares'][0]['nota_final'])->toBe('9');
+});
+
+test('una recuperacion filtrada a solo las materias desaprobadas se carga, guarda y envia como cualquier trimestre', function () {
+    Queue::fake();
+
+    $cobrador = User::factory()->create()->assignRole('cobrador');
+    $boletin = Boletin::factory()->create(['plantilla_id' => $this->plantilla->id]);
+    $diciembre = BoletinTrimestre::factory()->create([
+        'boletin_id' => $boletin->id,
+        'trimestre' => BoletinTrimestre::TRIMESTRE_RECUPERACION_DICIEMBRE,
+        'datos' => ['espacios_curriculares' => [['nombre' => 'Matemática', 'nota_diciembre' => '']]],
+    ]);
+
+    Livewire::actingAs($cobrador)->test(Cargar::class, ['boletinTrimestre' => $diciembre])
+        ->assertSee('Recuperación Diciembre')
+        ->assertDontSee('Lengua')
+        ->assertSee('Matemática')
+        ->set('datos.espacios_curriculares.0.nota_diciembre', '7')
+        ->call('guardarBorrador');
+
+    expect($diciembre->refresh()->estado)->toBe(EstadoTrimestre::Cargado)
+        ->and($diciembre->datos['espacios_curriculares'])->toBe([['nombre' => 'Matemática', 'nota_diciembre' => '7']]);
+
+    Livewire::actingAs($cobrador)->test(Cargar::class, ['boletinTrimestre' => $diciembre])
+        ->call('confirmarYEnviar');
 
     Queue::assertPushed(GenerarYEnviarBoletinPdf::class);
 });

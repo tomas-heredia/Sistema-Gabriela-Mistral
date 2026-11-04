@@ -105,7 +105,7 @@ test('al reenviar una correccion el mail aclara que lo es y se apaga el flag de 
     });
 });
 
-test('el boletin pasa a completo cuando los 3 trimestres regulares estan enviados', function () {
+test('el boletin sigue en curso al enviar el 3er trimestre -- completo recien cuando se envia la libreta final', function () {
     Storage::fake('local');
     Mail::fake();
 
@@ -116,6 +116,17 @@ test('el boletin pasa a completo cuando los 3 trimestres regulares estan enviado
     $trimestre3 = BoletinTrimestre::factory()->create(['boletin_id' => $boletin->id, 'trimestre' => 3, 'estado' => EstadoTrimestre::Cargado, 'datos' => []]);
 
     $trimestre3->confirmarYEnviar();
+
+    // Sin materias desaprobadas (no hay ninguna sección de materias en esta
+    // plantilla de prueba), se genera la Libreta Final, pero todavía no está
+    // enviada -- el boletín sigue en curso.
+    expect($boletin->fresh()->estado)->toBe(EstadoBoletin::EnCurso);
+
+    $libretaFinal = $boletin->trimestres()->where('trimestre', BoletinTrimestre::TRIMESTRE_LIBRETA_FINAL)->first();
+    expect($libretaFinal)->not->toBeNull();
+
+    $libretaFinal->forceFill(['estado' => EstadoTrimestre::Cargado])->save();
+    $libretaFinal->confirmarYEnviar();
 
     expect($boletin->fresh()->estado)->toBe(EstadoBoletin::Completo);
 });

@@ -5,6 +5,7 @@ namespace App\Boletines\Jobs;
 use App\Boletines\Mail\BoletinEnviado;
 use App\Boletines\Models\BoletinTrimestre;
 use App\Boletines\Models\Enums\EstadoTrimestre;
+use App\Boletines\Services\GestorDeRecuperaciones;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -71,5 +72,12 @@ class GenerarYEnviarBoletinPdf implements ShouldQueue
         ])->save();
 
         $boletin->recalcularEstado();
+
+        // Un reenvío de corrección no es un envío nuevo -- la cadena de
+        // recuperación/libreta final ya se disparó (o no) la primera vez
+        // que este trimestre se envió.
+        if (! $this->esCorreccion) {
+            app(GestorDeRecuperaciones::class)->procesarEnvio($this->trimestre);
+        }
     }
 }

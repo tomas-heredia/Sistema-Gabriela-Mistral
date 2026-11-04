@@ -51,17 +51,19 @@ class Boletin extends Model
     }
 
     /**
-     * Completo cuando los 3 trimestres regulares (1/2/3) están enviados.
-     * La Etapa de Apoyo (trimestre 4) es opcional y no bloquea "completo".
+     * Completo cuando la Libreta Final (trimestre 6) está enviada -- ya no
+     * alcanza con los 3 trimestres regulares, porque un alumno con materias
+     * desaprobadas sigue "en curso" hasta terminar su recuperación
+     * (PAeIP/ICAP) y recibir la Libreta Final, apruebe o no.
      */
     public function recalcularEstado(): void
     {
-        $regularesEnviados = $this->trimestres()
-            ->whereIn('trimestre', [1, 2, 3])
+        $libretaFinalEnviada = $this->trimestres()
+            ->where('trimestre', BoletinTrimestre::TRIMESTRE_LIBRETA_FINAL)
             ->where('estado', EstadoTrimestre::Enviado)
-            ->count();
+            ->exists();
 
-        $this->estado = $regularesEnviados === 3 ? EstadoBoletin::Completo : EstadoBoletin::EnCurso;
+        $this->estado = $libretaFinalEnviada ? EstadoBoletin::Completo : EstadoBoletin::EnCurso;
         $this->save();
     }
 

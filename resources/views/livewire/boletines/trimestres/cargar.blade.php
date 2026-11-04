@@ -3,7 +3,7 @@
         <div>
             <h1 class="text-lg font-semibold text-gray-900">
                 {{ $boletinTrimestre->boletin->alumno->nombre }} —
-                {{ $boletinTrimestre->trimestre === 4 ? 'Etapa de Apoyo' : "Trimestre {$boletinTrimestre->trimestre}" }}
+                {{ $boletinTrimestre->etiqueta() }}
             </h1>
             <p class="text-sm text-gray-500">{{ $boletinTrimestre->boletin->plantilla->nombre }}</p>
         </div>
@@ -156,6 +156,10 @@
                         rows="3"
                         class="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
                     ></textarea>
+                @elseif ($seccion['tipo'] === 'campo_calculado')
+                    {{-- Nunca es un input: se recalcula siempre a partir de otra sección
+                    (ver Cargar::promedioCalculado()), nunca se guarda en datos. --}}
+                    <p class="text-lg font-semibold text-gray-900">{{ $this->promedioCalculado($seccion) ?? '—' }}</p>
                 @else
                     @php [$min, $max] = $this->limitesNumericos($seccion); @endphp
                     <input

@@ -10,7 +10,7 @@
             'cargado' => 'amber',
             default => 'gray',
         }">
-            {{ $trimestre->trimestre === 4 ? 'Apoyo' : "T{$trimestre->trimestre}" }}
+            {{ $trimestre->etiquetaCorta() }}
         </x-pill>
     </a>
 
@@ -26,7 +26,7 @@
     @if ($trimestre->estado->value === 'enviado')
         <a
             href="{{ route('boletines.trimestres.pdf.descargar', $trimestre) }}"
-            title="Descargar {{ $trimestre->trimestre === 4 ? 'Etapa de Apoyo' : "Trimestre {$trimestre->trimestre}" }}"
+            title="Descargar {{ $trimestre->etiqueta() }}"
             class="text-gray-400 hover:text-indigo-600 transition-colors"
         >
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" class="w-4 h-4">
