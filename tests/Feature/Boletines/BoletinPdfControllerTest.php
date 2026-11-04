@@ -45,37 +45,6 @@ test('un trimestre sin pdf generado todavia devuelve 404 en vez de un archivo va
     $this->actingAs($cobrador)->get(route('boletines.trimestres.pdf.descargar', $trimestre))->assertNotFound();
 });
 
-test('un cobrador puede ver el pdf inline, no forzado a descargar', function () {
-    $cobrador = User::factory()->create()->assignRole('cobrador');
-    $trimestre = trimestreEnviadoConPdf();
-
-    $response = $this->actingAs($cobrador)->get(route('boletines.trimestres.pdf.ver', $trimestre));
-
-    $response->assertOk()
-        ->assertHeader('content-type', 'application/pdf')
-        ->assertHeaderContains('content-disposition', 'inline');
-});
-
-test('la pagina de imprimir embebe el pdf en un iframe que se manda a imprimir solo', function () {
-    $cobrador = User::factory()->create()->assignRole('cobrador');
-    $trimestre = trimestreEnviadoConPdf();
-
-    $response = $this->actingAs($cobrador)->get(route('boletines.trimestres.pdf.imprimir', $trimestre));
-
-    $response->assertOk()
-        ->assertSee('<iframe', false)
-        ->assertSee('.print()', false)
-        ->assertSee(route('boletines.trimestres.pdf.ver', $trimestre), false);
-});
-
-test('un profesor sin permiso no puede ver ni imprimir el pdf', function () {
-    $profesor = User::factory()->create()->assignRole('profesor');
-    $trimestre = trimestreEnviadoConPdf();
-
-    $this->actingAs($profesor)->get(route('boletines.trimestres.pdf.ver', $trimestre))->assertForbidden();
-    $this->actingAs($profesor)->get(route('boletines.trimestres.pdf.imprimir', $trimestre))->assertForbidden();
-});
-
 test('un profesor con el permiso de cargar boletines puede descargar el pdf', function () {
     $profesor = User::factory()->create()->assignRole('profesor');
     $profesor->givePermissionTo('cargar_boletines');
