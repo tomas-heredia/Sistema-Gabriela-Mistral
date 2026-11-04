@@ -54,7 +54,7 @@ new class extends Component
 
                     @can('viewAny', \App\Boletines\Models\Boletin::class)
                         <x-nav-link :href="route('boletines.index')" :active="request()->routeIs('boletines.*')" wire:navigate>
-                            {{ __('Libretas') }}
+                            {{ __('Informes pedagógicos') }}
                         </x-nav-link>
                     @endcan
 
@@ -157,7 +157,7 @@ new class extends Component
 
             @can('viewAny', \App\Boletines\Models\Boletin::class)
                 <x-responsive-nav-link :href="route('boletines.index')" :active="request()->routeIs('boletines.*')" wire:navigate>
-                    {{ __('Libretas') }}
+                    {{ __('Informes pedagógicos') }}
                 </x-responsive-nav-link>
             @endcan
 
