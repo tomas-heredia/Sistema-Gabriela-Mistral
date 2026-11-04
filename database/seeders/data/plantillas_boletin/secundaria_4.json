@@ -68,7 +68,7 @@
       "id": "apreciaciones",
       "titulo": "Apreciaciones acerca de los desempeños, valores y actitudes personales y sociales",
       "tipo": "tabla_criterios",
-      "escala": { "tipo": "texto", "opciones": ["S", "AV", "PV", "N"], "leyenda": "Siempre / A veces / Pocas veces / Nunca" },
+      "escala": { "tipo": "texto", "opciones": ["S", "AV", "N"], "leyenda": "Siempre / A veces / Nunca" },
       "columnas": [
         { "id": "trimestre_1", "nombre": "Primer Trimestre", "momento": "trimestre_1" },
         { "id": "trimestre_2", "nombre": "Segundo Trimestre", "momento": "trimestre_2" },

@@ -7,6 +7,7 @@ use App\Alumnos\Models\Enums\Turno;
 use App\Alumnos\Models\Tutor;
 use App\Boletines\Models\Boletin;
 use App\Boletines\Models\BoletinTrimestre;
+use App\Boletines\Models\Enums\EstadoBoletin;
 use App\Boletines\Models\PlantillaBoletin;
 use App\Cobranzas\Models\Arancel;
 use App\Cobranzas\Models\Beca;
@@ -501,4 +502,24 @@ test('la ficha del alumno lista los trimestres del boletin con su etiqueta, incl
         ->assertSee('Trimestre 2')
         ->assertSee('Trimestre 3')
         ->assertSee('Recuperación Diciembre (PAeIP)');
+});
+
+test('una libreta en curso de un periodo viejo (recuperacion pendiente) se muestra aparte, sin tapar la del periodo activo', function () {
+    $cobrador = User::factory()->create()->assignRole('cobrador');
+    $periodoViejo = PeriodoLectivo::factory()->create(['activo' => false]);
+    $periodoActivo = PeriodoLectivo::factory()->activo()->create();
+    $alumno = Alumno::factory()->primario()->create();
+    PlantillaBoletin::factory()->create(['nivel' => $alumno->nivel, 'anio' => null]);
+
+    $boletinViejo = Boletin::factory()->create([
+        'alumno_id' => $alumno->id,
+        'periodo_lectivo_id' => $periodoViejo->id,
+        'estado' => EstadoBoletin::EnCurso,
+    ]);
+    BoletinTrimestre::factory()->create(['boletin_id' => $boletinViejo->id, 'trimestre' => BoletinTrimestre::TRIMESTRE_RECUPERACION_FEBRERO]);
+
+    Livewire::actingAs($cobrador)->test(Formulario::class, ['alumno' => $alumno])
+        ->assertSee("Libreta pendiente — período {$periodoViejo->nombre}")
+        ->assertSee('Recuperación Febrero (PAeIP)')
+        ->assertSee("Este alumno todavía no tiene libreta generada para el período {$periodoActivo->nombre}");
 });

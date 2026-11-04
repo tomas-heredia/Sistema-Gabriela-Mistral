@@ -8,6 +8,7 @@ use App\Alumnos\Models\Enums\Turno;
 use App\Alumnos\Models\Tutor;
 use App\Boletines\Exceptions\PlantillaNoEncontradaException;
 use App\Boletines\Models\Boletin;
+use App\Boletines\Models\Enums\EstadoBoletin;
 use App\Boletines\Services\CreadorDeBoletines;
 use App\Cobranzas\Models\Beca;
 use App\Cobranzas\Models\Cuota;
@@ -444,6 +445,22 @@ class Formulario extends Component
     }
 
     /**
+     * Una libreta todavía en curso de un período que ya no es el activo --
+     * ej. esperando la recuperación de febrero mientras ya arrancó el
+     * ciclo lectivo siguiente. Se muestra aparte de la libreta del período
+     * activo (no en su lugar) para no perderla de vista justo cuando el
+     * ciclo lectivo cambia.
+     */
+    private function boletinPendienteDeOtroPeriodo(?PeriodoLectivo $periodoActivo): ?Boletin
+    {
+        return Boletin::with('trimestres')
+            ->where('alumno_id', $this->alumno->id)
+            ->where('estado', EstadoBoletin::EnCurso)
+            ->when($periodoActivo, fn ($query) => $query->where('periodo_lectivo_id', '!=', $periodoActivo->id))
+            ->first();
+    }
+
+    /**
      * Otorgar y revocar es una sola acción: tildar el checkbox y guardar da
      * de alta (o actualiza el motivo de) la beca del período activo;
      * destildarlo y guardar la borra. No recalcula cuotas ya generadas —
@@ -512,6 +529,7 @@ class Formulario extends Component
                 ? Cuota::where('alumno_id', $this->alumno->id)->where('periodo_lectivo_id', $periodoActivo->id)->orderBy('mes')->get()
                 : collect(),
             'boletin' => $this->alumno && $periodoActivo ? $this->boletinDelPeriodo($periodoActivo) : null,
+            'boletinPendiente' => $this->alumno ? $this->boletinPendienteDeOtroPeriodo($periodoActivo) : null,
             'beca' => $this->becaDelPeriodoActivo(),
         ]);
     }

@@ -6,8 +6,11 @@ use App\Alumnos\Models\Alumno;
 use App\Alumnos\Models\Enums\Nivel;
 use App\Boletines\Exceptions\PlantillaNoEncontradaException;
 use App\Boletines\Models\Boletin;
+use App\Boletines\Models\Enums\EstadoBoletin;
 use App\Boletines\Services\CreadorDeBoletines;
 use App\Core\Models\PeriodoLectivo;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
 use Livewire\WithPagination;
@@ -73,6 +76,24 @@ class Listado extends Component
         session()->flash('mensaje', 'Libreta eliminada correctamente.');
     }
 
+    /**
+     * Un boletín "en curso" (ej. esperando la recuperación de diciembre o
+     * febrero) tiene que seguir apareciendo aunque ya haya un período
+     * lectivo nuevo activo -- si solo mostráramos el período activo, la
+     * libreta de un alumno que sigue en PAeIP/ICAP desaparecería del
+     * listado justo cuando el ciclo lectivo cambia, sin forma de terminarla.
+     */
+    private function scopeVisible(Builder|HasMany $query, ?PeriodoLectivo $periodoActivo): Builder|HasMany
+    {
+        return $query->where(function ($subquery) use ($periodoActivo) {
+            $subquery->where('estado', EstadoBoletin::EnCurso);
+
+            if ($periodoActivo) {
+                $subquery->orWhere('periodo_lectivo_id', $periodoActivo->id);
+            }
+        });
+    }
+
     public function render()
     {
         $periodoActivo = PeriodoLectivo::where('activo', true)->first();
@@ -83,11 +104,14 @@ class Listado extends Component
                     $query->where('nombre', 'like', "%{$this->busqueda}%")
                         ->orWhere('dni', 'like', "%{$this->busqueda}%");
                 })
-                ->when($periodoActivo, function ($query) use ($periodoActivo) {
-                    $query->with(['boletines' => function ($subquery) use ($periodoActivo) {
-                        $subquery->where('periodo_lectivo_id', $periodoActivo->id)->with('trimestres');
-                    }]);
-                })
+                ->with(['boletines' => function ($subquery) use ($periodoActivo) {
+                    // Si el alumno tiene dos libretas visibles a la vez (una vieja
+                    // todavía en curso por una recuperación pendiente, y la del
+                    // período activo), se prioriza mostrar la que está en curso.
+                    $this->scopeVisible($subquery, $periodoActivo)
+                        ->orderByRaw("estado = 'en_curso' desc")
+                        ->with('trimestres');
+                }])
                 ->orderBy('nombre')
                 ->paginate(15);
 
@@ -98,10 +122,10 @@ class Listado extends Component
             ]);
         }
 
-        $boletines = Boletin::query()
-            ->with(['alumno', 'trimestres'])
-            ->when($periodoActivo, fn ($query) => $query->where('periodo_lectivo_id', $periodoActivo->id))
-            ->when(! $periodoActivo, fn ($query) => $query->whereRaw('1 = 0'))
+        $boletines = $this->scopeVisible(
+            Boletin::query()->with(['alumno', 'trimestres']),
+            $periodoActivo,
+        )
             ->latest('id')
             ->paginate(15);
 

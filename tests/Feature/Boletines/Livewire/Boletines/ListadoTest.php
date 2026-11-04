@@ -4,6 +4,7 @@ use App\Alumnos\Models\Alumno;
 use App\Boletines\Livewire\Boletines\Listado;
 use App\Boletines\Models\Boletin;
 use App\Boletines\Models\BoletinTrimestre;
+use App\Boletines\Models\Enums\EstadoBoletin;
 use App\Boletines\Models\PlantillaBoletin;
 use App\Core\Models\PeriodoLectivo;
 use App\Core\Models\User;
@@ -26,15 +27,26 @@ test('lista los boletines del periodo activo con el estado de sus trimestres', f
         ->assertSee('T1');
 });
 
-test('no muestra boletines de otro periodo', function () {
+test('no muestra un boletin completo de otro periodo', function () {
     $cobrador = User::factory()->create()->assignRole('cobrador');
-    $periodoActivo = PeriodoLectivo::factory()->activo()->create();
+    PeriodoLectivo::factory()->activo()->create();
     $periodoViejo = PeriodoLectivo::factory()->create(['activo' => false]);
     $alumno = Alumno::factory()->primario()->create(['nombre' => 'Bruno Gómez']);
-    Boletin::factory()->create(['alumno_id' => $alumno->id, 'periodo_lectivo_id' => $periodoViejo->id]);
+    Boletin::factory()->create(['alumno_id' => $alumno->id, 'periodo_lectivo_id' => $periodoViejo->id, 'estado' => EstadoBoletin::Completo]);
 
     Livewire::actingAs($cobrador)->test(Listado::class)
         ->assertDontSee('Bruno Gómez');
+});
+
+test('un boletin en curso de un periodo viejo sigue apareciendo aunque ya haya un periodo activo mas nuevo', function () {
+    $cobrador = User::factory()->create()->assignRole('cobrador');
+    PeriodoLectivo::factory()->activo()->create();
+    $periodoViejo = PeriodoLectivo::factory()->create(['activo' => false]);
+    $alumno = Alumno::factory()->primario()->create(['nombre' => 'Bruno Gómez']);
+    Boletin::factory()->create(['alumno_id' => $alumno->id, 'periodo_lectivo_id' => $periodoViejo->id, 'estado' => EstadoBoletin::EnCurso]);
+
+    Livewire::actingAs($cobrador)->test(Listado::class)
+        ->assertSee('Bruno Gómez');
 });
 
 test('busca por nombre o dni del alumno', function () {

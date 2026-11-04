@@ -168,3 +168,119 @@ test('un campo_calculado se imprime como texto con el promedio, solo en su propi
     expect($html)->toContain('Promedio de Materias:</strong> 9');
     expect(substr_count($html, 'Promedio de Materias'))->toBe(1);
 });
+
+/**
+ * Consideraciones Conceptuales (campo_texto) y Espacios Pendientes de
+ * Acreditación (tabla_materias_libre) siempre se mandan en el PDF cuando
+ * aplican a ese trimestre, aunque hayan quedado vacías -- se manda el
+ * recuadro vacío en vez de omitir la sección entera.
+ */
+test('consideraciones conceptuales y espacios pendientes de acreditacion se mandan vacios, no se omiten', function () {
+    $alumno = Alumno::factory()->secundario()->create();
+    $periodo = PeriodoLectivo::factory()->activo()->create();
+    $plantilla = PlantillaBoletin::factory()->create([
+        'estructura_campos' => ['secciones' => [
+            [
+                'id' => 'consideraciones_conceptuales_trimestre_1',
+                'titulo' => 'Consideraciones Conceptuales',
+                'tipo' => 'campo_texto',
+                'momento' => 'trimestre_1',
+            ],
+            [
+                'id' => 'espacios_pendientes_acreditacion',
+                'titulo' => 'Espacios Pendientes de Acreditación',
+                'tipo' => 'tabla_materias_libre',
+                'etiqueta_nombre' => 'Número de Orden',
+                'columnas' => [
+                    ['id' => 'espacio_curricular', 'nombre' => 'Espacio Curricular'],
+                    ['id' => 'calificacion', 'nombre' => 'Calificación'],
+                ],
+                'filas_libres' => true,
+            ],
+        ]],
+    ]);
+    $trimestre = BoletinTrimestre::factory()->create([
+        'trimestre' => 1,
+        'datos' => [
+            'consideraciones_conceptuales_trimestre_1' => '',
+            'espacios_pendientes_acreditacion' => [],
+        ],
+    ]);
+
+    $html = view('boletines.pdf', [
+        'alumno' => $alumno,
+        'plantilla' => $plantilla,
+        'periodo' => $periodo,
+        'trimestres' => collect([$trimestre]),
+    ])->render();
+
+    expect($html)
+        ->toContain('Consideraciones Conceptuales')
+        ->toContain('Espacios Pendientes de Acreditación')
+        ->toContain('Número de Orden')
+        ->toContain('Espacio Curricular');
+});
+
+/**
+ * Una sección que ni siquiera aplica a este trimestre (no quedó ninguna
+ * clave en `datos` para ella) sigue sin mostrarse -- el "siempre visible"
+ * de arriba es solo para cuando la sección SÍ aplica pero quedó vacía.
+ */
+test('una seccion que no aplica a este trimestre sigue sin mostrarse aunque sea campo_texto', function () {
+    $alumno = Alumno::factory()->secundario()->create();
+    $periodo = PeriodoLectivo::factory()->activo()->create();
+    $plantilla = PlantillaBoletin::factory()->create([
+        'estructura_campos' => ['secciones' => [
+            [
+                'id' => 'consideraciones_conceptuales_trimestre_2',
+                'titulo' => 'Consideraciones Conceptuales T2',
+                'tipo' => 'campo_texto',
+                'momento' => 'trimestre_2',
+            ],
+        ]],
+    ]);
+    $trimestre1 = BoletinTrimestre::factory()->create(['trimestre' => 1, 'datos' => []]);
+
+    $html = view('boletines.pdf', [
+        'alumno' => $alumno,
+        'plantilla' => $plantilla,
+        'periodo' => $periodo,
+        'trimestres' => collect([$trimestre1]),
+    ])->render();
+
+    expect($html)->not->toContain('Consideraciones Conceptuales T2');
+});
+
+/**
+ * Las apreciaciones (escala de letras) se imprimen con la letra y su
+ * significado completo, no solo la letra cruda.
+ */
+test('una celda con escala de letras se imprime con la letra y su significado', function () {
+    $alumno = Alumno::factory()->secundario()->create();
+    $periodo = PeriodoLectivo::factory()->activo()->create();
+    $plantilla = PlantillaBoletin::factory()->create([
+        'estructura_campos' => ['secciones' => [
+            [
+                'id' => 'apreciaciones',
+                'titulo' => 'Apreciaciones',
+                'tipo' => 'tabla_criterios',
+                'escala' => ['tipo' => 'texto', 'opciones' => ['S', 'AV', 'N'], 'leyenda' => 'Siempre / A veces / Nunca'],
+                'columnas' => [['id' => 'trimestre_1', 'nombre' => 'Trimestre 1']],
+            ],
+        ]],
+    ]);
+    $trimestre = BoletinTrimestre::factory()->create([
+        'trimestre' => 1,
+        'datos' => ['apreciaciones' => [['nombre' => 'Participa en clase', 'trimestre_1' => 'AV']]],
+    ]);
+
+    $html = view('boletines.pdf', [
+        'alumno' => $alumno,
+        'plantilla' => $plantilla,
+        'periodo' => $periodo,
+        'trimestres' => collect([$trimestre]),
+    ])->render();
+
+    expect($html)->toContain('AV — A veces')
+        ->not->toContain('Pocas veces');
+});

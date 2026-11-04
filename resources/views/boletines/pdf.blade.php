@@ -85,10 +85,12 @@
 
             @foreach (($plantilla->estructura_campos['secciones'] ?? []) as $seccion)
                 @php
+                    $tipoSeccion = $seccion['tipo'] ?? null;
+
                     // campo_calculado nunca se guarda en datos -- se recalcula siempre a
                     // partir de otra sección (ej. Promedio de Materias, a partir de las
                     // notas finales de espacios_curriculares), solo en el trimestre dueño.
-                    if (($seccion['tipo'] ?? null) === 'campo_calculado') {
+                    if ($tipoSeccion === 'campo_calculado') {
                         if (($seccion['momento'] ?? null) !== "trimestre_{$trimestre->trimestre}") {
                             $valor = null;
                         } else {
@@ -99,12 +101,20 @@
                                 ->map(fn ($v) => (float) $v);
                             $valor = $numeros->isNotEmpty() ? round($numeros->avg(), 1) : null;
                         }
+                        $visible = $valor !== null;
                     } else {
                         $valor = data_get($trimestre->datos, $seccion['id']);
+
+                        // Consideraciones Conceptuales y Espacios Pendientes de Acreditación
+                        // van siempre que la sección aplique a este trimestre, aunque hayan
+                        // quedado vacías -- se manda el recuadro vacío en vez de omitirlo.
+                        $siempreVisible = in_array($tipoSeccion, ['campo_texto', 'tabla_materias_libre'], true);
+                        $existe = array_key_exists($seccion['id'], $trimestre->datos ?? []);
+                        $visible = $existe && ($siempreVisible || ($valor !== null && $valor !== []));
                     }
                 @endphp
 
-                @if ($valor !== null && $valor !== [])
+                @if ($visible)
                     @if (($seccion['tipo'] ?? null) === 'campo_seleccion' && isset($seccion['opciones']))
                         {{-- Campo de una sola opción elegida (ej. Trayectoria Escolar, Promoción,
                         Promovido/a): se imprime como leyenda con todas las opciones posibles,
