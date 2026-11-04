@@ -38,22 +38,6 @@
       ]
     },
     {
-      "id": "talleres",
-      "titulo": "Talleres",
-      "tipo": "tabla_materias_libre",
-      "nota": "Solo escuelas de Jornada Extendida o Completa. Las filas las define el cobrador según los talleres que dicte la escuela ese ciclo — no es una lista fija.",
-      "escala": { "tipo": "texto", "opciones": ["E", "MB", "B", "R", "NS"], "leyenda": "Excelente / Muy Bueno / Bueno / Regular / No Satisfactorio" },
-      "columnas": [
-        { "id": "trimestre_1", "nombre": "Primer Trimestre", "momento": "trimestre_1" },
-        { "id": "trimestre_2", "nombre": "Segundo Trimestre", "momento": "trimestre_2" },
-        { "id": "trimestre_3", "nombre": "Tercer Trimestre", "momento": "trimestre_3" },
-        { "id": "etapa_apoyo", "nombre": "Etapa de Apoyo", "momento": "trimestre_4", "opcional": true },
-        { "id": "calificacion_final", "nombre": "Calificación Final", "momento": "trimestre_3" },
-        { "id": "fecha", "nombre": "Fecha", "tipo": "fecha", "momento": "trimestre_3" }
-      ],
-      "filas_libres": true
-    },
-    {
       "id": "apreciaciones",
       "titulo": "Apreciaciones sobre Actitudes y Desempeños",
       "tipo": "tabla_criterios",
@@ -94,19 +78,19 @@
     },
     {
       "id": "consideraciones_generales_trimestre_1",
-      "titulo": "Consideraciones Generales",
+      "titulo": "Consideraciones Conceptuales",
       "tipo": "campo_texto",
       "momento": "trimestre_1"
     },
     {
       "id": "consideraciones_generales_trimestre_2",
-      "titulo": "Consideraciones Generales",
+      "titulo": "Consideraciones Conceptuales",
       "tipo": "campo_texto",
       "momento": "trimestre_2"
     },
     {
       "id": "consideraciones_generales_trimestre_3",
-      "titulo": "Consideraciones Generales",
+      "titulo": "Consideraciones Conceptuales",
       "tipo": "campo_texto",
       "momento": "trimestre_3"
     },
