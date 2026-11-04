@@ -57,6 +57,19 @@ docker run --rm \
     -e APP_KEY="$APP_KEY" \
     "$IMAGE" php artisan migrate --force
 
+# RoleSeeder es idempotente (firstOrCreate) -- correrlo en cada deploy
+# evita que un rol/permiso nuevo agregado al seeder se quede sin existir
+# en la base real hasta que alguien se acuerde de correrlo a mano (nos
+# pasó de verdad: syncRoles() con un rol que no existe en la tabla tira
+# una excepción sin capturar -- 500 al guardar, no un error claro).
+echo "==> Corriendo RoleSeeder (idempotente)"
+docker run --rm \
+    --network easypanel-gabriela-mistral \
+    -e DB_CONNECTION=mysql -e DB_HOST=mysql -e DB_PORT=3306 \
+    -e DB_DATABASE="$DB_DATABASE" -e DB_USERNAME="$DB_USERNAME" -e DB_PASSWORD="$DB_PASSWORD" \
+    -e APP_KEY="$APP_KEY" \
+    "$IMAGE" php artisan db:seed --class="Database\\Seeders\\RoleSeeder" --force
+
 echo "==> Listo. Estado de los servicios:"
 docker stack services "$STACK_NAME"
 
