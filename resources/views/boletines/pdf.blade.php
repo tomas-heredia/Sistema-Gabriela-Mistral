@@ -18,6 +18,9 @@
         .subtitulo-nivel { font-size: 11px; font-weight: bold; text-align: center; margin: 0 0 4px; }
         .normativa { font-size: 8px; color: #555; text-align: center; line-height: 1.3; margin: 0 0 10px; }
         .meta { color: #555; margin-bottom: 8px; }
+        .leyenda-seleccion { margin: 10px 0; }
+        .leyenda-seleccion strong { text-transform: uppercase; }
+        .leyenda-seleccion .opcion-elegida { font-weight: bold; text-decoration: underline; }
         table { width: 100%; border-collapse: collapse; margin-bottom: 8px; }
         th, td { border: 1px solid #ccc; padding: 4px 6px; text-align: left; vertical-align: top; }
         th { background: #f0efe9; font-weight: bold; }
@@ -78,8 +81,20 @@
                 @php $valor = data_get($trimestre->datos, $seccion['id']); @endphp
 
                 @if ($valor !== null && $valor !== [])
-                    <h3>{{ $seccion['titulo'] ?? $seccion['id'] }}</h3>
-                    @include('boletines.partials.valor-generico', ['valor' => $valor])
+                    @if (($seccion['tipo'] ?? null) === 'campo_seleccion' && isset($seccion['opciones']))
+                        {{-- Campo de una sola opción elegida (ej. Trayectoria Escolar, Promoción,
+                        Promovido/a): se imprime como leyenda con todas las opciones posibles,
+                        marcando la elegida, igual que en el formulario papel original. --}}
+                        <p class="leyenda-seleccion">
+                            <strong>{{ $seccion['titulo'] ?? $seccion['id'] }}:</strong>
+                            @foreach ($seccion['opciones'] as $opcion)
+                                <span @class(['opcion-elegida' => $opcion === $valor])>{{ $opcion }}</span>{{ ! $loop->last ? ' / ' : '' }}
+                            @endforeach
+                        </p>
+                    @else
+                        <h3>{{ $seccion['titulo'] ?? $seccion['id'] }}</h3>
+                        @include('boletines.partials.valor-generico', ['valor' => $valor])
+                    @endif
                 @endif
             @endforeach
         </div>

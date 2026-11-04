@@ -79,6 +79,24 @@
       ]
     },
     {
+      "id": "consideraciones_conceptuales_trimestre_1",
+      "titulo": "Consideraciones Conceptuales",
+      "tipo": "campo_texto",
+      "momento": "trimestre_1"
+    },
+    {
+      "id": "consideraciones_conceptuales_trimestre_2",
+      "titulo": "Consideraciones Conceptuales",
+      "tipo": "campo_texto",
+      "momento": "trimestre_2"
+    },
+    {
+      "id": "consideraciones_conceptuales_trimestre_3",
+      "titulo": "Consideraciones Conceptuales",
+      "tipo": "campo_texto",
+      "momento": "trimestre_3"
+    },
+    {
       "id": "promedio_anual",
       "titulo": "Promedio Anual",
       "tipo": "campo_numero",
