@@ -29,7 +29,16 @@
     // Para una escala de letras (S/AV/N, etc.) se imprime la letra y su
     // significado completo -- igual que ya se le muestra al cobrador en el
     // formulario (Cargar::etiquetaOpcion()), para no obligar a memorizar siglas.
-    $etiquetaCelda = function ($valorCelda) use ($seccion) {
+    //
+    // Una columna de tipo "fecha" llega guardada en formato ISO (Y-m-d, lo
+    // que manda un <input type="date">) -- se imprime en mes/dia/año.
+    $etiquetaCelda = function ($valorCelda, ?string $columnaId = null) use ($seccion) {
+        $columnaDef = $columnaId ? collect($seccion['columnas'] ?? [])->firstWhere('id', $columnaId) : null;
+
+        if (($columnaDef['tipo'] ?? null) === 'fecha' && is_string($valorCelda) && $valorCelda !== '') {
+            return \Illuminate\Support\Carbon::parse($valorCelda)->format('m/d/Y');
+        }
+
         $opciones = $seccion['escala']['opciones'] ?? [];
         $leyenda = $seccion['escala']['leyenda'] ?? null;
 
@@ -62,7 +71,7 @@
             @foreach ($valor as $fila)
                 <tr>
                     @foreach ($columnas as $columna)
-                        <td>{{ $etiquetaCelda(data_get($fila, $columna)) }}</td>
+                        <td>{{ $etiquetaCelda(data_get($fila, $columna), $columna) }}</td>
                     @endforeach
                 </tr>
             @endforeach
