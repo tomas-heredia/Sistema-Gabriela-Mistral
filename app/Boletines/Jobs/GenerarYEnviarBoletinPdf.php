@@ -6,6 +6,7 @@ use App\Boletines\Mail\BoletinEnviado;
 use App\Boletines\Models\BoletinTrimestre;
 use App\Boletines\Models\Enums\EstadoTrimestre;
 use App\Boletines\Services\GestorDeRecuperaciones;
+use App\Core\Models\User;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -14,6 +15,7 @@ use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
+use Spatie\Activitylog\Facades\CauserResolver;
 
 /**
  * Arma un PDF único y acumulativo (este trimestre + todos los `enviado`
@@ -32,10 +34,18 @@ class GenerarYEnviarBoletinPdf implements ShouldQueue
     public function __construct(
         public BoletinTrimestre $trimestre,
         public bool $esCorreccion = false,
+        public ?User $usuario = null,
     ) {}
 
     public function handle(): void
     {
+        // El job corre encolado, sin sesión HTTP -- sin esto, la auditoría
+        // automática de LogsActivity en el forceFill() de más abajo quedaría
+        // sin causer (ver comentario en BoletinTrimestre::getActivitylogOptions()).
+        if ($this->usuario) {
+            CauserResolver::setCauser($this->usuario);
+        }
+
         $boletin = $this->trimestre->boletin()->with(['alumno.tutores', 'plantilla', 'periodoLectivo'])->first();
 
         $trimestres = $boletin->trimestres()

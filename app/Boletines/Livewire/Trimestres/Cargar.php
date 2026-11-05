@@ -127,7 +127,7 @@ class Cargar extends Component
         $this->authorize('corregir', $this->boletinTrimestre->boletin);
 
         try {
-            $this->boletinTrimestre->reenviarCorreccion();
+            $this->boletinTrimestre->reenviarCorreccion(auth()->user());
             session()->flash('mensaje', 'La corrección se está reenviando por mail a los tutores.');
         } catch (TransicionDeEstadoInvalidaException $e) {
             session()->flash('error', $e->getMessage());
@@ -137,7 +137,7 @@ class Cargar extends Component
     public function confirmarYEnviar(): void
     {
         try {
-            $this->boletinTrimestre->confirmarYEnviar();
+            $this->boletinTrimestre->confirmarYEnviar(auth()->user());
             session()->flash('mensaje', 'Trimestre confirmado: el PDF se está generando y se enviará por mail a los tutores.');
             $this->redirectRoute('boletines.index', navigate: true);
         } catch (TransicionDeEstadoInvalidaException $e) {

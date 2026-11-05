@@ -74,7 +74,7 @@ test('confirmar y enviar un trimestre queda registrado en el archivo de log de a
     $trimestre = BoletinTrimestre::factory()->cargado()->create(['trimestre' => 2]);
 
     $this->actingAs($cobrador);
-    $trimestre->confirmarYEnviar();
+    $trimestre->confirmarYEnviar($cobrador);
 
     $log = leerLogDeActividad();
 

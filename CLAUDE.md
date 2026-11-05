@@ -18,7 +18,7 @@ Módulos:
 - **Backend**: Laravel + MySQL.
 - **Frontend**: Blade + Livewire (sin SPA separada). Se eligió por sobre Inertia+Vue/React para minimizar la superficie de tecnologías dado que es un panel administrativo interno, no una app de cara al público con alta interactividad.
 - **Roles y permisos**: `spatie/laravel-permission`, reforzado con Policies de Laravel en cada acción (nunca solo ocultando opciones en el menú).
-- **Auditoría**: `spatie/laravel-activitylog` sobre los modelos financieros (trait `LogsActivity`) — ver reglas más abajo.
+- **Auditoría**: `spatie/laravel-activitylog` sobre los modelos financieros y sobre `Boletin`/`BoletinTrimestre` (trait `LogsActivity`) — ver reglas más abajo. No hay pantalla que la muestre: se consulta directo en la tabla `activity_log` (uso interno de administrador, no una funcionalidad del sistema).
 - **Generación de PDF**: `barryvdh/laravel-dompdf` para el PDF acumulativo de boletines. Se eligió por sobre `spatie/laravel-pdf` (que renderiza vía Chrome/Puppeteer) porque los boletines son layouts tabulares simples — dompdf es PHP puro, sin depender de Node/Chromium en el VPS.
 - **Tests**: Pest, corriendo contra MySQL (base `sistema_gabriela_mistral_test`), no SQLite en memoria — se prioriza fidelidad con producción sobre velocidad, dado que hay lógica financiera sensible a comportamientos específicos de MySQL (precisión decimal, colación, etc.).
 - **Formato de código**: Laravel Pint.

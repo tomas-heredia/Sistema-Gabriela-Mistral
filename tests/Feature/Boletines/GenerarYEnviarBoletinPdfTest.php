@@ -8,6 +8,7 @@ use App\Boletines\Models\BoletinTrimestre;
 use App\Boletines\Models\Enums\EstadoBoletin;
 use App\Boletines\Models\Enums\EstadoTrimestre;
 use App\Boletines\Models\PlantillaBoletin;
+use App\Core\Models\User;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
 
@@ -41,7 +42,7 @@ test('genera un pdf acumulativo y lo manda a todos los tutores con correo, no so
         'estado' => EstadoTrimestre::Cargado,
     ]);
 
-    $trimestre2->confirmarYEnviar();
+    $trimestre2->confirmarYEnviar(User::factory()->create());
 
     $trimestre2->refresh();
     expect($trimestre2->estado)->toBe(EstadoTrimestre::Enviado)
@@ -71,7 +72,7 @@ test('un alumno sin tutores vinculados no manda mail pero igual marca el trimest
         'datos' => [],
     ]);
 
-    $trimestre->confirmarYEnviar();
+    $trimestre->confirmarYEnviar(User::factory()->create());
 
     expect($trimestre->refresh()->estado)->toBe(EstadoTrimestre::Enviado);
     Mail::assertNothingSent();
@@ -95,7 +96,7 @@ test('al reenviar una correccion el mail aclara que lo es y se apaga el flag de 
         'pdf_path' => 'boletines/generados/'.$boletin->id.'/trimestre-1.pdf',
     ]);
 
-    $trimestre->reenviarCorreccion();
+    $trimestre->reenviarCorreccion(User::factory()->create());
 
     expect($trimestre->refresh()->requiere_reenvio)->toBeFalse();
 
@@ -115,7 +116,8 @@ test('el boletin sigue en curso al enviar el 3er trimestre -- completo recien cu
     BoletinTrimestre::factory()->create(['boletin_id' => $boletin->id, 'trimestre' => 2, 'estado' => EstadoTrimestre::Enviado]);
     $trimestre3 = BoletinTrimestre::factory()->create(['boletin_id' => $boletin->id, 'trimestre' => 3, 'estado' => EstadoTrimestre::Cargado, 'datos' => []]);
 
-    $trimestre3->confirmarYEnviar();
+    $usuario = User::factory()->create();
+    $trimestre3->confirmarYEnviar($usuario);
 
     // Sin materias desaprobadas (no hay ninguna sección de materias en esta
     // plantilla de prueba), se genera la Libreta Final, pero todavía no está
@@ -126,7 +128,7 @@ test('el boletin sigue en curso al enviar el 3er trimestre -- completo recien cu
     expect($libretaFinal)->not->toBeNull();
 
     $libretaFinal->forceFill(['estado' => EstadoTrimestre::Cargado])->save();
-    $libretaFinal->confirmarYEnviar();
+    $libretaFinal->confirmarYEnviar($usuario);
 
     expect($boletin->fresh()->estado)->toBe(EstadoBoletin::Completo);
 });

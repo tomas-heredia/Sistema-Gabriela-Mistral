@@ -15,11 +15,13 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
+use Spatie\Activitylog\LogOptions;
+use Spatie\Activitylog\Traits\LogsActivity;
 
 #[Fillable(['alumno_id', 'plantilla_id', 'periodo_lectivo_id', 'estado'])]
 class Boletin extends Model
 {
-    use HasFactory;
+    use HasFactory, LogsActivity;
 
     protected $table = 'boletines';
 
@@ -88,6 +90,19 @@ class Boletin extends Model
             'usuario' => $usuario->name,
             'boletin_id' => $boletinId,
         ]);
+    }
+
+    /**
+     * Auditoría interna (no hay pantalla que la muestre -- se consulta
+     * directo en la tabla `activity_log`, igual que la de cobros/mora):
+     * quién crea o borra una libreta, y cuándo pasa de en_curso a completo.
+     */
+    public function getActivitylogOptions(): LogOptions
+    {
+        return LogOptions::defaults()
+            ->logOnly(['alumno_id', 'plantilla_id', 'periodo_lectivo_id', 'estado'])
+            ->logOnlyDirty()
+            ->dontSubmitEmptyLogs();
     }
 
     /**

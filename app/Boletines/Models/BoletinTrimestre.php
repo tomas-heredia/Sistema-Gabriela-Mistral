@@ -14,6 +14,9 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Facades\Log;
+use Spatie\Activitylog\Facades\CauserResolver;
+use Spatie\Activitylog\LogOptions;
+use Spatie\Activitylog\Traits\LogsActivity;
 
 /**
  * `trimestre` ya no es siempre 1/2/3: a partir de este cambio, 4/5/6 tienen
@@ -26,7 +29,7 @@ use Illuminate\Support\Facades\Log;
 #[Fillable(['boletin_id', 'trimestre', 'datos', 'estado', 'cargado_por_id', 'fecha_enviado', 'pdf_path', 'requiere_reenvio'])]
 class BoletinTrimestre extends Model
 {
-    use HasFactory;
+    use HasFactory, LogsActivity;
 
     public const TRIMESTRE_RECUPERACION_DICIEMBRE = 4;
 
@@ -122,6 +125,8 @@ class BoletinTrimestre extends Model
             }
         }
 
+        CauserResolver::setCauser($usuario);
+
         $this->forceFill([
             'datos' => $datos,
             'estado' => EstadoTrimestre::Cargado,
@@ -160,6 +165,8 @@ class BoletinTrimestre extends Model
             }
         }
 
+        CauserResolver::setCauser($usuario);
+
         $this->forceFill([
             'datos' => $datos,
             'requiere_reenvio' => true,
@@ -177,19 +184,17 @@ class BoletinTrimestre extends Model
      * envío. Acción explícita, separada de "cargar", para no mandar el mail
      * a mitad de la carga. El job real (PDF + mail) corre encolado.
      */
-    public function confirmarYEnviar(): void
+    public function confirmarYEnviar(User $usuario): void
     {
         if ($this->estado !== EstadoTrimestre::Cargado) {
             throw new TransicionDeEstadoInvalidaException('Solo se puede confirmar el envío de un trimestre cargado.');
         }
 
-        GenerarYEnviarBoletinPdf::dispatch($this);
-
-        $usuario = auth()->user();
+        GenerarYEnviarBoletinPdf::dispatch($this, usuario: $usuario);
 
         Log::channel('actividad')->info("Confirmó y envió el trimestre {$this->trimestre} — {$this->boletin->alumno->nombre}", [
-            'usuario_id' => $usuario?->id,
-            'usuario' => $usuario?->name,
+            'usuario_id' => $usuario->id,
+            'usuario' => $usuario->name,
             'boletin_trimestre_id' => $this->id,
         ]);
     }
@@ -202,21 +207,38 @@ class BoletinTrimestre extends Model
      * son dos decisiones distintas, no una consecuencia automática de la
      * otra.
      */
-    public function reenviarCorreccion(): void
+    public function reenviarCorreccion(User $usuario): void
     {
         if ($this->estado !== EstadoTrimestre::Enviado || ! $this->requiere_reenvio) {
             throw new TransicionDeEstadoInvalidaException('No hay ninguna corrección pendiente de reenvío para este trimestre.');
         }
 
-        GenerarYEnviarBoletinPdf::dispatch($this, esCorreccion: true);
-
-        $usuario = auth()->user();
+        GenerarYEnviarBoletinPdf::dispatch($this, esCorreccion: true, usuario: $usuario);
 
         Log::channel('actividad')->info("Reenvió por corrección el trimestre {$this->trimestre} — {$this->boletin->alumno->nombre}", [
-            'usuario_id' => $usuario?->id,
-            'usuario' => $usuario?->name,
+            'usuario_id' => $usuario->id,
+            'usuario' => $usuario->name,
             'boletin_trimestre_id' => $this->id,
         ]);
+    }
+
+    /**
+     * Auditoría interna (no hay pantalla que la muestre -- se consulta
+     * directo en la tabla `activity_log`, igual que la de cobros/mora): qué
+     * cambió en cada carga/corrección y quién la hizo. El causer se fija a
+     * mano con `CauserResolver::setCauser($usuario)` antes de cada guardado
+     * en vez de dejarlo resolver del usuario autenticado -- `cargar()` y
+     * `corregir()` corren en el mismo request, pero `confirmarYEnviar()`/
+     * `reenviarCorreccion()` terminan guardando el estado "enviado" dentro
+     * del job encolado (ver `GenerarYEnviarBoletinPdf::handle()`), sin
+     * sesión HTTP, así que ahí el autenticado nunca alcanzaría.
+     */
+    public function getActivitylogOptions(): LogOptions
+    {
+        return LogOptions::defaults()
+            ->logOnly(['datos', 'estado', 'cargado_por_id', 'fecha_enviado', 'requiere_reenvio'])
+            ->logOnlyDirty()
+            ->dontSubmitEmptyLogs();
     }
 
     /**

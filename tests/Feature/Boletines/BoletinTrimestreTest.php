@@ -32,7 +32,7 @@ test('cargar rechaza una seccion que no existe en la plantilla', function () {
 test('no se puede confirmar el envio de un trimestre que no fue cargado', function () {
     $trimestre = BoletinTrimestre::factory()->create(['estado' => EstadoTrimestre::Pendiente]);
 
-    $trimestre->confirmarYEnviar();
+    $trimestre->confirmarYEnviar(User::factory()->create());
 })->throws(TransicionDeEstadoInvalidaException::class);
 
 test('confirmar el envio de un trimestre cargado despacha el job de generacion', function () {
@@ -40,7 +40,7 @@ test('confirmar el envio de un trimestre cargado despacha el job de generacion',
 
     $trimestre = BoletinTrimestre::factory()->cargado()->create();
 
-    $trimestre->confirmarYEnviar();
+    $trimestre->confirmarYEnviar(User::factory()->create());
 
     Queue::assertPushed(GenerarYEnviarBoletinPdf::class, fn ($job) => $job->trimestre->is($trimestre));
 });
@@ -86,7 +86,7 @@ test('reenviar correccion despacha el job marcado como correccion solo si hay un
         'requiere_reenvio' => true,
     ]);
 
-    $trimestre->reenviarCorreccion();
+    $trimestre->reenviarCorreccion(User::factory()->create());
 
     Queue::assertPushed(GenerarYEnviarBoletinPdf::class, fn ($job) => $job->trimestre->is($trimestre) && $job->esCorreccion === true);
 });
@@ -97,5 +97,5 @@ test('reenviar correccion rechaza un trimestre sin ninguna correccion pendiente'
         'requiere_reenvio' => false,
     ]);
 
-    $trimestre->reenviarCorreccion();
+    $trimestre->reenviarCorreccion(User::factory()->create());
 })->throws(TransicionDeEstadoInvalidaException::class);
