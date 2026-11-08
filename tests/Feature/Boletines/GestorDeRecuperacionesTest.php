@@ -44,47 +44,20 @@ test('primaria: una sola materia desaprobada en un solo trimestre ya genera la r
         ->and(collect($diciembre->datos['espacios_curriculares'])->pluck('nombre')->all())->toBe(['Matemática']);
 });
 
-test('secundaria: una sola materia desaprobada en un trimestre que no es el 3ro no alcanza', function () {
-    $alumno = Alumno::factory()->secundario()->create();
-    $boletin = boletinConTrimestresRegulares($alumno, [
-        1 => ['Matemática' => 4],
-        2 => ['Matemática' => 8],
-        3 => ['Matemática' => 8],
-    ]);
-    $trimestre3 = $boletin->trimestres->firstWhere('trimestre', 3);
-
-    app(GestorDeRecuperaciones::class)->procesarEnvio($trimestre3);
-
-    expect($boletin->trimestres()->where('trimestre', BoletinTrimestre::TRIMESTRE_RECUPERACION_DICIEMBRE)->exists())->toBeFalse()
-        ->and($boletin->trimestres()->where('trimestre', BoletinTrimestre::TRIMESTRE_LIBRETA_FINAL)->exists())->toBeTrue();
-});
-
-test('secundaria: dos trimestres desaprobados generan la recuperacion aunque el 3ro este bien', function () {
+test('secundaria: enviar el 3er trimestre nunca genera recuperacion automatica, ni con materias desaprobadas', function () {
     $alumno = Alumno::factory()->secundario()->create();
     $boletin = boletinConTrimestresRegulares($alumno, [
         1 => ['Matemática' => 4],
         2 => ['Matemática' => 4],
-        3 => ['Matemática' => 8],
-    ]);
-    $trimestre3 = $boletin->trimestres->firstWhere('trimestre', 3);
-
-    app(GestorDeRecuperaciones::class)->procesarEnvio($trimestre3);
-
-    expect($boletin->trimestres()->where('trimestre', BoletinTrimestre::TRIMESTRE_RECUPERACION_DICIEMBRE)->exists())->toBeTrue();
-});
-
-test('secundaria: el 3er trimestre desaprobado solo ya alcanza, aunque los otros dos esten bien', function () {
-    $alumno = Alumno::factory()->secundario()->create();
-    $boletin = boletinConTrimestresRegulares($alumno, [
-        1 => ['Matemática' => 8],
-        2 => ['Matemática' => 8],
         3 => ['Matemática' => 4],
     ]);
     $trimestre3 = $boletin->trimestres->firstWhere('trimestre', 3);
 
     app(GestorDeRecuperaciones::class)->procesarEnvio($trimestre3);
 
-    expect($boletin->trimestres()->where('trimestre', BoletinTrimestre::TRIMESTRE_RECUPERACION_DICIEMBRE)->exists())->toBeTrue();
+    expect($boletin->trimestres()->where('trimestre', BoletinTrimestre::TRIMESTRE_RECUPERACION_DICIEMBRE)->exists())->toBeFalse()
+        ->and($boletin->trimestres()->where('trimestre', BoletinTrimestre::TRIMESTRE_RECUPERACION_FEBRERO)->exists())->toBeFalse()
+        ->and($boletin->trimestres()->where('trimestre', BoletinTrimestre::TRIMESTRE_LIBRETA_FINAL)->exists())->toBeFalse();
 });
 
 test('sin materias desaprobadas se genera la libreta final directo, con el promedio de cada materia', function () {

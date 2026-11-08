@@ -3,7 +3,6 @@
   "_anio": 6,
   "_orientacion": "Cs. Soc. y Hum.",
   "_excluido_del_json": "Los campos de encabezado (Establecimiento, Estudiante, C.U.E., Curso, División, Turno, Orientación, DNI, Libro y Folio, Ciclo Lectivo) y los bloques de notificación/firma (Estudiante/Tutor/a/Preceptor/a/Directora) no se modelan acá: los primeros salen de alumno+boletín al generar el PDF, los segundos son líneas para firma física.",
-  "_nota_recuperacion": "ICAIP* (las columnas icaip_1/icaip_2 del escaneo original) eran exactamente esto: las dos instancias de recuperación. Ahora son trimestre 4/5/6 (Recuperación Diciembre/Febrero/Libreta Final, ver GestorDeRecuperaciones) en vez de columnas sueltas de la tabla del trimestre 3 -- se crean solas y espacios_curriculares.filas llega filtrado a solo las materias desaprobadas en 4/5 (todas en 6, con nota_final precargada).",
   "secciones": [
     {
       "id": "espacios_curriculares",
@@ -15,9 +14,9 @@
         { "id": "trimestre_2", "nombre": "Trimestre 2°", "momento": "trimestre_2" },
         { "id": "trimestre_3", "nombre": "Trimestre 3°", "momento": "trimestre_3" },
         { "id": "calificacion_anual", "nombre": "Calificación Anual", "momento": "trimestre_3" },
-        { "id": "nota_diciembre", "nombre": "Nota Diciembre", "momento": "trimestre_4" },
-        { "id": "nota_febrero", "nombre": "Nota Febrero", "momento": "trimestre_5" },
-        { "id": "nota_final", "nombre": "Nota Final", "momento": "trimestre_6" }
+        { "id": "icaip_diciembre", "nombre": "ICAIP Diciembre", "momento": "trimestre_3" },
+        { "id": "icaip_febrero", "nombre": "ICAIP Febrero", "momento": "trimestre_3" },
+        { "id": "calificacion_final", "nombre": "Calificación Final", "momento": "trimestre_3" }
       ],
       "filas": [
         { "id": "lengua_literatura", "nombre": "Lengua y Literatura" },
@@ -110,25 +109,6 @@
       "tipo": "campo_seleccion",
       "momento": "trimestre_3",
       "opciones": ["Promovido/a", "No promovido/a"]
-    },
-    {
-      "id": "consideraciones_conceptuales_recuperacion_diciembre",
-      "titulo": "Consideraciones Conceptuales",
-      "tipo": "campo_texto",
-      "momento": "trimestre_4"
-    },
-    {
-      "id": "consideraciones_conceptuales_recuperacion_febrero",
-      "titulo": "Consideraciones Conceptuales",
-      "tipo": "campo_texto",
-      "momento": "trimestre_5"
-    },
-    {
-      "id": "promedio_materias",
-      "titulo": "Promedio de Materias",
-      "tipo": "campo_calculado",
-      "momento": "trimestre_6",
-      "fuente": { "seccion": "espacios_curriculares", "columna": "nota_final" }
     }
   ]
 }

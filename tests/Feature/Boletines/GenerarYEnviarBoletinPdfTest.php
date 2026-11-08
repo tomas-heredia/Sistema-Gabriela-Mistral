@@ -106,12 +106,13 @@ test('al reenviar una correccion el mail aclara que lo es y se apaga el flag de 
     });
 });
 
-test('el boletin sigue en curso al enviar el 3er trimestre -- completo recien cuando se envia la libreta final', function () {
+test('primaria: el boletin sigue en curso al enviar el 3er trimestre -- completo recien cuando se envia la libreta final', function () {
     Storage::fake('local');
     Mail::fake();
 
+    $alumno = Alumno::factory()->primario()->create();
     $plantilla = PlantillaBoletin::factory()->create(['estructura_campos' => ['secciones' => []]]);
-    $boletin = Boletin::factory()->create(['plantilla_id' => $plantilla->id, 'estado' => EstadoBoletin::EnCurso]);
+    $boletin = Boletin::factory()->create(['alumno_id' => $alumno->id, 'plantilla_id' => $plantilla->id, 'estado' => EstadoBoletin::EnCurso]);
     BoletinTrimestre::factory()->create(['boletin_id' => $boletin->id, 'trimestre' => 1, 'estado' => EstadoTrimestre::Enviado]);
     BoletinTrimestre::factory()->create(['boletin_id' => $boletin->id, 'trimestre' => 2, 'estado' => EstadoTrimestre::Enviado]);
     $trimestre3 = BoletinTrimestre::factory()->create(['boletin_id' => $boletin->id, 'trimestre' => 3, 'estado' => EstadoTrimestre::Cargado, 'datos' => []]);
@@ -131,4 +132,22 @@ test('el boletin sigue en curso al enviar el 3er trimestre -- completo recien cu
     $libretaFinal->confirmarYEnviar($usuario);
 
     expect($boletin->fresh()->estado)->toBe(EstadoBoletin::Completo);
+});
+
+test('secundaria: el boletin queda completo apenas se envia el 3er trimestre, sin generar ninguna recuperacion', function () {
+    Storage::fake('local');
+    Mail::fake();
+
+    $alumno = Alumno::factory()->secundario()->create();
+    $plantilla = PlantillaBoletin::factory()->create(['estructura_campos' => ['secciones' => []]]);
+    $boletin = Boletin::factory()->create(['alumno_id' => $alumno->id, 'plantilla_id' => $plantilla->id, 'estado' => EstadoBoletin::EnCurso]);
+    BoletinTrimestre::factory()->create(['boletin_id' => $boletin->id, 'trimestre' => 1, 'estado' => EstadoTrimestre::Enviado]);
+    BoletinTrimestre::factory()->create(['boletin_id' => $boletin->id, 'trimestre' => 2, 'estado' => EstadoTrimestre::Enviado]);
+    $trimestre3 = BoletinTrimestre::factory()->create(['boletin_id' => $boletin->id, 'trimestre' => 3, 'estado' => EstadoTrimestre::Cargado, 'datos' => []]);
+
+    $trimestre3->confirmarYEnviar(User::factory()->create());
+
+    expect($boletin->fresh()->estado)->toBe(EstadoBoletin::Completo)
+        ->and($boletin->trimestres()->where('trimestre', BoletinTrimestre::TRIMESTRE_RECUPERACION_DICIEMBRE)->exists())->toBeFalse()
+        ->and($boletin->trimestres()->where('trimestre', BoletinTrimestre::TRIMESTRE_LIBRETA_FINAL)->exists())->toBeFalse();
 });

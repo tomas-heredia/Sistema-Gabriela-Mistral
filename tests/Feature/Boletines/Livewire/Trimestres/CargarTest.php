@@ -11,6 +11,53 @@ use Database\Seeders\RoleSeeder;
 use Illuminate\Support\Facades\Queue;
 use Livewire\Livewire;
 
+/**
+ * Plantilla con la forma real de secundaria post-ICAIP: trimestre_1/2/3
+ * en sus propios momentos, e ICAIP Diciembre/Febrero/Calificación Final
+ * como columnas comunes del 3er trimestre (ver database/seeders/data/
+ * plantillas_boletin/secundaria_1.json), más Espacios Pendientes de
+ * Acreditación para los tests de persistencia entre trimestres.
+ */
+function plantillaConIcaip(): PlantillaBoletin
+{
+    return PlantillaBoletin::factory()->create([
+        'estructura_campos' => [
+            'secciones' => [
+                [
+                    'id' => 'espacios_curriculares',
+                    'titulo' => 'Espacios Curriculares',
+                    'tipo' => 'tabla_materias',
+                    'escala' => ['tipo' => 'numerica', 'min' => 1, 'max' => 10],
+                    'columnas' => [
+                        ['id' => 'trimestre_1', 'nombre' => 'Trimestre 1°', 'momento' => 'trimestre_1'],
+                        ['id' => 'trimestre_2', 'nombre' => 'Trimestre 2°', 'momento' => 'trimestre_2'],
+                        ['id' => 'trimestre_3', 'nombre' => 'Trimestre 3°', 'momento' => 'trimestre_3'],
+                        ['id' => 'icaip_diciembre', 'nombre' => 'ICAIP Diciembre', 'momento' => 'trimestre_3'],
+                        ['id' => 'icaip_febrero', 'nombre' => 'ICAIP Febrero', 'momento' => 'trimestre_3'],
+                        ['id' => 'calificacion_final', 'nombre' => 'Calificación Final', 'momento' => 'trimestre_3'],
+                    ],
+                    'filas' => [
+                        ['id' => 'lengua', 'nombre' => 'Lengua'],
+                        ['id' => 'matematica', 'nombre' => 'Matemática'],
+                    ],
+                ],
+                [
+                    'id' => 'espacios_pendientes_acreditacion',
+                    'titulo' => 'Espacios Pendientes de Acreditación',
+                    'tipo' => 'tabla_materias_libre',
+                    'etiqueta_nombre' => 'Número de Orden',
+                    'tipo_nombre' => 'numero',
+                    'columnas' => [
+                        ['id' => 'espacio_curricular', 'nombre' => 'Espacio Curricular', 'tipo' => 'texto'],
+                        ['id' => 'calificacion', 'nombre' => 'Calificación', 'tipo' => 'numero'],
+                    ],
+                    'filas_libres' => true,
+                ],
+            ],
+        ],
+    ]);
+}
+
 beforeEach(function () {
     $this->seed(RoleSeeder::class);
 
@@ -482,4 +529,152 @@ test('una recuperacion filtrada a solo las materias desaprobadas se carga, guard
         ->call('confirmarYEnviar');
 
     Queue::assertPushed(GenerarYEnviarBoletinPdf::class);
+});
+
+test('ICAIP Diciembre, ICAIP Febrero y Calificacion Final solo se muestran en la pantalla del 3er trimestre', function () {
+    $cobrador = User::factory()->create()->assignRole('cobrador');
+    $boletin = Boletin::factory()->create(['plantilla_id' => plantillaConIcaip()->id]);
+    $trimestre1 = BoletinTrimestre::factory()->create(['boletin_id' => $boletin->id, 'trimestre' => 1]);
+    $trimestre3 = BoletinTrimestre::factory()->create(['boletin_id' => $boletin->id, 'trimestre' => 3]);
+
+    Livewire::actingAs($cobrador)->test(Cargar::class, ['boletinTrimestre' => $trimestre1])
+        ->assertDontSee('ICAIP Diciembre')
+        ->assertDontSee('ICAIP Febrero')
+        ->assertDontSee('Calificación Final');
+
+    Livewire::actingAs($cobrador)->test(Cargar::class, ['boletinTrimestre' => $trimestre3])
+        ->assertSee('ICAIP Diciembre')
+        ->assertSee('ICAIP Febrero')
+        ->assertSee('Calificación Final');
+});
+
+test('cualquier fila de Espacios Curriculares puede completar ICAIP, sin que el sistema decida cuales lo necesitan', function () {
+    $cobrador = User::factory()->create()->assignRole('cobrador');
+    $boletin = Boletin::factory()->create(['plantilla_id' => plantillaConIcaip()->id]);
+    $trimestre3 = BoletinTrimestre::factory()->create([
+        'boletin_id' => $boletin->id,
+        'trimestre' => 3,
+        'datos' => ['espacios_curriculares' => [
+            ['nombre' => 'Lengua', 'trimestre_3' => '9', 'icaip_diciembre' => '', 'icaip_febrero' => '', 'calificacion_final' => ''],
+            ['nombre' => 'Matemática', 'trimestre_3' => '8', 'icaip_diciembre' => '', 'icaip_febrero' => '', 'calificacion_final' => ''],
+        ]],
+    ]);
+
+    // "Lengua" aprobó el 3er trimestre igual -- se le completa ICAIP a mano.
+    Livewire::actingAs($cobrador)->test(Cargar::class, ['boletinTrimestre' => $trimestre3])
+        ->set('datos.espacios_curriculares.0.icaip_diciembre', '7')
+        ->call('guardarBorrador');
+
+    expect($trimestre3->refresh()->datos['espacios_curriculares'][0]['icaip_diciembre'])->toBe('7');
+});
+
+test('Calificacion Final se autocompleta con ICAIP Febrero mientras se escribe, pero sigue siendo editable', function () {
+    $cobrador = User::factory()->create()->assignRole('cobrador');
+    $boletin = Boletin::factory()->create(['plantilla_id' => plantillaConIcaip()->id]);
+    $trimestre3 = BoletinTrimestre::factory()->create(['boletin_id' => $boletin->id, 'trimestre' => 3]);
+
+    Livewire::actingAs($cobrador)->test(Cargar::class, ['boletinTrimestre' => $trimestre3])
+        ->set('datos.espacios_curriculares.0.icaip_febrero', '7')
+        ->assertSet('datos.espacios_curriculares.0.calificacion_final', '7')
+        ->set('datos.espacios_curriculares.0.calificacion_final', '10')
+        ->assertSet('datos.espacios_curriculares.0.calificacion_final', '10');
+});
+
+test('Calificacion Final usa ICAIP Diciembre si no hay ICAIP Febrero', function () {
+    $cobrador = User::factory()->create()->assignRole('cobrador');
+    $boletin = Boletin::factory()->create(['plantilla_id' => plantillaConIcaip()->id]);
+    $trimestre3 = BoletinTrimestre::factory()->create(['boletin_id' => $boletin->id, 'trimestre' => 3]);
+
+    Livewire::actingAs($cobrador)->test(Cargar::class, ['boletinTrimestre' => $trimestre3])
+        ->set('datos.espacios_curriculares.0.icaip_diciembre', '6')
+        ->assertSet('datos.espacios_curriculares.0.calificacion_final', '6');
+});
+
+test('Calificacion Final usa el promedio anual de la materia si no hay ningun ICAIP', function () {
+    $cobrador = User::factory()->create()->assignRole('cobrador');
+    $boletin = Boletin::factory()->create(['plantilla_id' => plantillaConIcaip()->id]);
+    BoletinTrimestre::factory()->create([
+        'boletin_id' => $boletin->id,
+        'trimestre' => 1,
+        'datos' => ['espacios_curriculares' => [['nombre' => 'Lengua', 'trimestre_1' => '6']]],
+    ]);
+    BoletinTrimestre::factory()->create([
+        'boletin_id' => $boletin->id,
+        'trimestre' => 2,
+        'datos' => ['espacios_curriculares' => [['nombre' => 'Lengua', 'trimestre_2' => '7']]],
+    ]);
+    $trimestre3 = BoletinTrimestre::factory()->create([
+        'boletin_id' => $boletin->id,
+        'trimestre' => 3,
+        'datos' => ['espacios_curriculares' => [
+            ['nombre' => 'Lengua', 'trimestre_3' => '', 'icaip_diciembre' => '', 'icaip_febrero' => '', 'calificacion_final' => ''],
+        ]],
+    ]);
+
+    Livewire::actingAs($cobrador)->test(Cargar::class, ['boletinTrimestre' => $trimestre3])
+        ->set('datos.espacios_curriculares.0.trimestre_3', '10')
+        ->assertSet('datos.espacios_curriculares.0.calificacion_final', '7.7'); // promedio de 6, 7 y 10
+});
+
+test('una vez que Calificacion Final se corrige a mano, deja de recalcularse sola', function () {
+    $cobrador = User::factory()->create()->assignRole('cobrador');
+    $boletin = Boletin::factory()->create(['plantilla_id' => plantillaConIcaip()->id]);
+    $trimestre3 = BoletinTrimestre::factory()->create(['boletin_id' => $boletin->id, 'trimestre' => 3]);
+
+    Livewire::actingAs($cobrador)->test(Cargar::class, ['boletinTrimestre' => $trimestre3])
+        ->set('datos.espacios_curriculares.0.icaip_febrero', '7')
+        ->set('datos.espacios_curriculares.0.calificacion_final', '10')
+        ->set('datos.espacios_curriculares.0.icaip_febrero', '4')
+        ->assertSet('datos.espacios_curriculares.0.calificacion_final', '10');
+});
+
+test('al reabrir el trimestre con Calificacion Final ya guardada, no se la recalcula sola', function () {
+    $administrador = User::factory()->create()->assignRole('administrador');
+    $boletin = Boletin::factory()->create(['plantilla_id' => plantillaConIcaip()->id]);
+    $trimestre3 = BoletinTrimestre::factory()->create([
+        'boletin_id' => $boletin->id,
+        'trimestre' => 3,
+        'estado' => EstadoTrimestre::Enviado,
+        'datos' => ['espacios_curriculares' => [
+            ['nombre' => 'Lengua', 'trimestre_3' => '8', 'icaip_diciembre' => '', 'icaip_febrero' => '', 'calificacion_final' => '10'],
+        ]],
+    ]);
+
+    Livewire::actingAs($administrador)->test(Cargar::class, ['boletinTrimestre' => $trimestre3])
+        ->set('datos.espacios_curriculares.0.icaip_febrero', '4')
+        ->assertSet('datos.espacios_curriculares.0.calificacion_final', '10');
+});
+
+test('lo cargado en Espacios Pendientes de Acreditacion en un trimestre se mantiene como punto de partida en el siguiente', function () {
+    $cobrador = User::factory()->create()->assignRole('cobrador');
+    $boletin = Boletin::factory()->create(['plantilla_id' => plantillaConIcaip()->id]);
+    $trimestre1 = BoletinTrimestre::factory()->create(['boletin_id' => $boletin->id, 'trimestre' => 1]);
+    $trimestre2 = BoletinTrimestre::factory()->create(['boletin_id' => $boletin->id, 'trimestre' => 2]);
+
+    Livewire::actingAs($cobrador)->test(Cargar::class, ['boletinTrimestre' => $trimestre1])
+        ->call('agregarFila', 'espacios_pendientes_acreditacion')
+        ->set('datos.espacios_pendientes_acreditacion.0.nombre', '1')
+        ->set('datos.espacios_pendientes_acreditacion.0.espacio_curricular', 'Matemática')
+        ->call('guardarBorrador');
+
+    Livewire::actingAs($cobrador)->test(Cargar::class, ['boletinTrimestre' => $trimestre2])
+        ->assertSet('datos.espacios_pendientes_acreditacion.0.espacio_curricular', 'Matemática');
+});
+
+test('un trimestre con Espacios Pendientes de Acreditacion guardado vacio a proposito no se pisa con lo del trimestre anterior', function () {
+    $cobrador = User::factory()->create()->assignRole('cobrador');
+    $boletin = Boletin::factory()->create(['plantilla_id' => plantillaConIcaip()->id]);
+    BoletinTrimestre::factory()->create([
+        'boletin_id' => $boletin->id,
+        'trimestre' => 1,
+        'datos' => ['espacios_pendientes_acreditacion' => [['nombre' => '1', 'espacio_curricular' => 'Matemática']]],
+    ]);
+    $trimestre2 = BoletinTrimestre::factory()->create([
+        'boletin_id' => $boletin->id,
+        'trimestre' => 2,
+        'datos' => ['espacios_pendientes_acreditacion' => []],
+    ]);
+
+    Livewire::actingAs($cobrador)->test(Cargar::class, ['boletinTrimestre' => $trimestre2])
+        ->assertSet('datos.espacios_pendientes_acreditacion', []);
 });

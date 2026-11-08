@@ -3,6 +3,7 @@
 namespace App\Boletines\Models;
 
 use App\Alumnos\Models\Alumno;
+use App\Alumnos\Models\Enums\Nivel;
 use App\Boletines\Models\Enums\EstadoBoletin;
 use App\Boletines\Models\Enums\EstadoTrimestre;
 use App\Core\Models\PeriodoLectivo;
@@ -53,19 +54,21 @@ class Boletin extends Model
     }
 
     /**
-     * Completo cuando la Libreta Final (trimestre 6) está enviada -- ya no
-     * alcanza con los 3 trimestres regulares, porque un alumno con materias
-     * desaprobadas sigue "en curso" hasta terminar su recuperación
-     * (PAeIP/ICAP) y recibir la Libreta Final, apruebe o no.
+     * Secundaria ya no tiene recuperación/Libreta Final encadenada (ICAIP
+     * Diciembre/Febrero pasaron a ser columnas del propio 3er trimestre,
+     * ver GestorDeRecuperaciones) -- completo apenas se envía ese trimestre.
+     * Primaria sigue como antes: completo recién cuando la Libreta Final
+     * (trimestre 6) está enviada, porque un alumno con materias desaprobadas
+     * sigue "en curso" hasta terminar su recuperación (PAeIP) y recibirla,
+     * apruebe o no.
      */
     public function recalcularEstado(): void
     {
-        $libretaFinalEnviada = $this->trimestres()
-            ->where('trimestre', BoletinTrimestre::TRIMESTRE_LIBRETA_FINAL)
-            ->where('estado', EstadoTrimestre::Enviado)
-            ->exists();
+        $completo = $this->alumno->nivel === Nivel::Secundario
+            ? $this->trimestres()->where('trimestre', 3)->where('estado', EstadoTrimestre::Enviado)->exists()
+            : $this->trimestres()->where('trimestre', BoletinTrimestre::TRIMESTRE_LIBRETA_FINAL)->where('estado', EstadoTrimestre::Enviado)->exists();
 
-        $this->estado = $libretaFinalEnviada ? EstadoBoletin::Completo : EstadoBoletin::EnCurso;
+        $this->estado = $completo ? EstadoBoletin::Completo : EstadoBoletin::EnCurso;
         $this->save();
     }
 

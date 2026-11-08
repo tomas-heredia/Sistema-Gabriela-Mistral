@@ -8,14 +8,19 @@ use App\Boletines\Models\BoletinTrimestre;
 use App\Boletines\Models\Enums\TipoTrimestre;
 
 /**
- * Encadena automáticamente lo que viene después de un trimestre regular:
- * si al cerrar el 3er trimestre el alumno tiene materias desaprobadas,
- * genera la recuperación de diciembre (PAeIP en primaria, ICAP en
- * secundaria) con solo esas materias; si en diciembre alguna sigue sin
- * llegar a 6, genera la de febrero con el subconjunto que falta; y en
- * cualquier desenlace (aprobó todo en el 3er trimestre, o terminó su paso
- * por diciembre/febrero, apruebe o no) genera la Libreta Final con todas
- * las materias y la nota final de cada una precargada.
+ * Encadena automáticamente lo que viene después de un trimestre regular --
+ * **solo para primaria**: si al cerrar el 3er trimestre el alumno tiene
+ * materias desaprobadas, genera la recuperación de diciembre (PAeIP) con
+ * solo esas materias; si en diciembre alguna sigue sin llegar a 6, genera
+ * la de febrero con el subconjunto que falta; y en cualquier desenlace
+ * (aprobó todo en el 3er trimestre, o terminó su paso por diciembre/
+ * febrero, apruebe o no) genera la Libreta Final con todas las materias y
+ * la nota final de cada una precargada.
+ *
+ * Secundaria ya no pasa por esta cadena: ICAIP Diciembre, ICAIP Febrero y
+ * Calificación Final son columnas comunes del propio 3er trimestre
+ * (completadas a mano, vía corregir(), cuando corresponda), no trimestres
+ * aparte -- ver el guard de nivel al principio de procesarEnvio().
  *
  * Se llama desde GenerarYEnviarBoletinPdf::handle(), después de marcar el
  * trimestre como enviado -- nunca desde Cargar/Livewire, así que crea las
@@ -29,6 +34,14 @@ class GestorDeRecuperaciones
 
     public function procesarEnvio(BoletinTrimestre $trimestre): void
     {
+        // Guard al principio (no solo dentro de procesarRegular): blinda
+        // también contra trimestres 4/5 de secundaria que hayan quedado de
+        // antes de este cambio -- si alguno se termina enviando después,
+        // no debe seguir encadenando hacia generarLibretaFinal().
+        if ($trimestre->boletin->alumno->nivel === Nivel::Secundario) {
+            return;
+        }
+
         match ($trimestre->tipo()) {
             TipoTrimestre::Regular => $this->procesarRegular($trimestre),
             TipoTrimestre::RecuperacionDiciembre => $this->procesarRecuperacionDiciembre($trimestre),

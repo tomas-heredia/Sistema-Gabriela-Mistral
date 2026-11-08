@@ -109,7 +109,7 @@
                                                     @php [$min, $max] = $tipo === 'number' ? $this->limitesNumericos($seccion, $columna) : [null, null]; @endphp
                                                     <input
                                                         type="{{ $tipo }}"
-                                                        wire:model="datos.{{ $seccion['id'] }}.{{ $indice }}.{{ $columna['id'] }}"
+                                                        wire:model{{ $this->disparaRecalculo($seccion, $columna) ? '.live' : '' }}="datos.{{ $seccion['id'] }}.{{ $indice }}.{{ $columna['id'] }}"
                                                         @disabled($soloLectura)
                                                         @if (! is_null($min)) min="{{ $min }}" @endif
                                                         @if (! is_null($max)) max="{{ $max }}" @endif

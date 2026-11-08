@@ -36,7 +36,8 @@
     @foreach ($trimestres as $trimestre)
         <div class="trimestre">
             @php
-                $esCicloOrientado = $alumno->nivel === \App\Alumnos\Models\Enums\Nivel::Secundario && $alumno->anio_secundaria > 3;
+                $esSecundaria = $alumno->nivel === \App\Alumnos\Models\Enums\Nivel::Secundario;
+                $esCicloOrientado = $esSecundaria && $alumno->anio_secundaria > 3;
                 $subtituloNivel = match (true) {
                     $alumno->nivel === \App\Alumnos\Models\Enums\Nivel::Primario => 'NIVEL PRIMARIO',
                     $alumno->nivel === \App\Alumnos\Models\Enums\Nivel::Secundario && $alumno->anio_secundaria <= 3 => 'NIVEL SECUNDARIO CICLO BÁSICO',
@@ -73,10 +74,12 @@
             <p class="meta">
                 DNI: {{ $alumno->dni ?? '—' }} ·
                 Nivel: {{ $alumno->nivel->value }} ·
-                Grado: {{ $alumno->grado }} ·
+                {{ $esSecundaria ? 'Curso' : 'Grado' }}: {{ $alumno->grado }} ·
                 División: {{ $alumno->division ?? '—' }} ·
-                Turno: {{ $alumno->turno === \App\Alumnos\Models\Enums\Turno::Manana ? 'M' : 'T' }} ·
-                Ciclo lectivo: {{ $periodo->nombre }}
+                Turno: {{ $alumno->turno === \App\Alumnos\Models\Enums\Turno::Manana ? 'M' : 'T' }}
+                @if ($loop->first)
+                    · Ciclo lectivo: {{ $periodo->nombre }}
+                @endif
             </p>
 
             <h2>
@@ -108,22 +111,22 @@
                         // Consideraciones Conceptuales y Espacios Pendientes de Acreditación
                         // van siempre que la sección aplique a este trimestre, aunque hayan
                         // quedado vacías -- se manda el recuadro vacío en vez de omitirlo.
+                        // Un campo_seleccion sin elegir (valor '') es la excepción: ahí no
+                        // hay nada que mostrar, a diferencia de los de arriba.
                         $siempreVisible = in_array($tipoSeccion, ['campo_texto', 'tabla_materias_libre'], true);
                         $existe = array_key_exists($seccion['id'], $trimestre->datos ?? []);
-                        $visible = $existe && ($siempreVisible || ($valor !== null && $valor !== []));
+                        $sinElegir = $tipoSeccion === 'campo_seleccion' && $valor === '';
+                        $visible = $existe && ! $sinElegir && ($siempreVisible || ($valor !== null && $valor !== []));
                     }
                 @endphp
 
                 @if ($visible)
                     @if (($seccion['tipo'] ?? null) === 'campo_seleccion' && isset($seccion['opciones']))
                         {{-- Campo de una sola opción elegida (ej. Trayectoria Escolar, Promoción,
-                        Promovido/a): se imprime como leyenda con todas las opciones posibles,
-                        marcando la elegida, igual que en el formulario papel original. --}}
+                        Promovido/a): se imprime solo la opción elegida, nunca las demás. --}}
                         <p class="leyenda-seleccion">
                             <strong>{{ $seccion['titulo'] ?? $seccion['id'] }}:</strong>
-                            @foreach ($seccion['opciones'] as $opcion)
-                                <span @class(['opcion-elegida' => $opcion === $valor])>{{ $opcion }}</span>{{ ! $loop->last ? ' / ' : '' }}
-                            @endforeach
+                            <span class="opcion-elegida">{{ $valor }}</span>
                         </p>
                     @elseif (($seccion['tipo'] ?? null) === 'campo_calculado')
                         <p class="campo-calculado"><strong>{{ $seccion['titulo'] ?? $seccion['id'] }}:</strong> {{ $valor }}</p>

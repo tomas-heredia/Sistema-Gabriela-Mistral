@@ -7,12 +7,11 @@ use App\Boletines\Models\PlantillaBoletin;
 use App\Core\Models\PeriodoLectivo;
 
 /**
- * Un campo_seleccion (Trayectoria Escolar, Promoción, Promovido/a) se
- * imprime como leyenda con todas las opciones posibles, marcando la
- * elegida -- igual que el formulario papel original -- en vez de mostrar
- * solo el valor elegido como el resto de los campos de texto/número.
+ * Un campo_seleccion (Trayectoria Escolar, Promoción, Promovido/a) imprime
+ * solo la opción elegida -- nunca las demás, a diferencia del formulario
+ * papel original que las listaba todas marcando la elegida.
  */
-test('un campo_seleccion se imprime como leyenda con todas las opciones, marcando la elegida', function () {
+test('un campo_seleccion imprime solo la opcion elegida, nunca las demas', function () {
     $alumno = Alumno::factory()->primario()->create();
     $periodo = PeriodoLectivo::factory()->activo()->create();
     $plantilla = PlantillaBoletin::factory()->create([
@@ -42,10 +41,44 @@ test('un campo_seleccion se imprime como leyenda con todas las opciones, marcand
 
     expect($html)
         ->toContain('<strong>Trayectoria Escolar:</strong>')
-        ->toContain('Sostenida')
-        ->toContain('De baja intensidad')
         ->toContain('<span class="opcion-elegida">Intermitente</span>')
-        ->not->toContain('<span class="opcion-elegida">Sostenida</span>');
+        ->not->toContain('Sostenida')
+        ->not->toContain('De baja intensidad');
+});
+
+/**
+ * Si el campo_seleccion quedó sin elegir (valor en blanco), no se imprime
+ * una leyenda vacía -- la sección simplemente no se muestra.
+ */
+test('un campo_seleccion sin elegir no imprime una leyenda vacia', function () {
+    $alumno = Alumno::factory()->primario()->create();
+    $periodo = PeriodoLectivo::factory()->activo()->create();
+    $plantilla = PlantillaBoletin::factory()->create([
+        'estructura_campos' => [
+            'secciones' => [
+                [
+                    'id' => 'trayectoria_escolar',
+                    'titulo' => 'Trayectoria Escolar',
+                    'tipo' => 'campo_seleccion',
+                    'momento' => 'trimestre_3',
+                    'opciones' => ['Sostenida', 'Intermitente', 'De baja intensidad'],
+                ],
+            ],
+        ],
+    ]);
+    $trimestre = BoletinTrimestre::factory()->create([
+        'trimestre' => 3,
+        'datos' => ['trayectoria_escolar' => ''],
+    ]);
+
+    $html = view('boletines.pdf', [
+        'alumno' => $alumno,
+        'plantilla' => $plantilla,
+        'periodo' => $periodo,
+        'trimestres' => collect([$trimestre]),
+    ])->render();
+
+    expect($html)->not->toContain('Trayectoria Escolar');
 });
 
 /**
@@ -283,4 +316,56 @@ test('una celda con escala de letras se imprime con la letra y su significado', 
 
     expect($html)->toContain('AV — A veces')
         ->not->toContain('Pocas veces');
+});
+
+/**
+ * El PDF es acumulativo: cada trimestre `enviado` repite el encabezado
+ * completo en su propia página. "Ciclo lectivo" es el único dato de ese
+ * encabezado que no debe repetirse -- sale solo en la página del primer
+ * trimestre, el resto (DNI, Nivel, Grado/Curso, División, Turno) repite
+ * en cada página como siempre.
+ */
+test('ciclo lectivo solo se imprime en la pagina del primer trimestre del pdf acumulado', function () {
+    $alumno = Alumno::factory()->primario()->create();
+    $periodo = PeriodoLectivo::factory()->activo()->create(['nombre' => '2026']);
+    $plantilla = PlantillaBoletin::factory()->create(['estructura_campos' => ['secciones' => []]]);
+    $trimestre1 = BoletinTrimestre::factory()->create(['trimestre' => 1, 'datos' => []]);
+    $trimestre2 = BoletinTrimestre::factory()->create(['trimestre' => 2, 'datos' => []]);
+
+    $html = view('boletines.pdf', [
+        'alumno' => $alumno,
+        'plantilla' => $plantilla,
+        'periodo' => $periodo,
+        'trimestres' => collect([$trimestre1, $trimestre2]),
+    ])->render();
+
+    expect(substr_count($html, 'Ciclo lectivo: 2026'))->toBe(1)
+        ->and(substr_count($html, 'DNI:'))->toBe(2);
+});
+
+/**
+ * "Curso" para secundaria, "Grado" para primaria -- mismo dato
+ * ($alumno->grado), solo cambia la etiqueta.
+ */
+test('el encabezado dice Curso en secundaria y Grado en primaria', function () {
+    $periodo = PeriodoLectivo::factory()->activo()->create();
+    $plantilla = PlantillaBoletin::factory()->create();
+    $trimestre = BoletinTrimestre::factory()->create(['trimestre' => 1, 'datos' => []]);
+
+    $htmlSecundaria = view('boletines.pdf', [
+        'alumno' => Alumno::factory()->secundario()->create(),
+        'plantilla' => $plantilla,
+        'periodo' => $periodo,
+        'trimestres' => collect([$trimestre]),
+    ])->render();
+
+    $htmlPrimaria = view('boletines.pdf', [
+        'alumno' => Alumno::factory()->primario()->create(),
+        'plantilla' => $plantilla,
+        'periodo' => $periodo,
+        'trimestres' => collect([$trimestre]),
+    ])->render();
+
+    expect($htmlSecundaria)->toContain('Curso:')->not->toContain('Grado:');
+    expect($htmlPrimaria)->toContain('Grado:')->not->toContain('Curso:');
 });
