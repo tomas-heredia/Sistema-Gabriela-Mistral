@@ -34,7 +34,7 @@ function plantillaConIcaip(): PlantillaBoletin
                         ['id' => 'trimestre_3', 'nombre' => 'Trimestre 3°', 'momento' => 'trimestre_3'],
                         ['id' => 'icaip_diciembre', 'nombre' => 'ICAIP Diciembre', 'momento' => 'trimestre_3'],
                         ['id' => 'icaip_febrero', 'nombre' => 'ICAIP Febrero', 'momento' => 'trimestre_3'],
-                        ['id' => 'calificacion_final', 'nombre' => 'Calificación Final', 'momento' => 'trimestre_3'],
+                        ['id' => 'calificacion_final', 'nombre' => 'Calificación Final', 'momento' => 'trimestre_3', 'acepta_coma' => true],
                     ],
                     'filas' => [
                         ['id' => 'lengua', 'nombre' => 'Lengua'],
@@ -129,13 +129,14 @@ beforeEach(function () {
                     'titulo' => 'Promedio Anual',
                     'tipo' => 'campo_numero',
                     'momento' => 'trimestre_3',
+                    'acepta_coma' => true,
                 ],
                 [
                     'id' => 'promedio_materias',
                     'titulo' => 'Promedio de Materias',
-                    'tipo' => 'campo_calculado',
+                    'tipo' => 'campo_numero',
                     'momento' => 'trimestre_6',
-                    'fuente' => ['seccion' => 'espacios_curriculares', 'columna' => 'nota_final'],
+                    'acepta_coma' => true,
                 ],
             ],
         ],
@@ -462,7 +463,7 @@ test('profesor con permiso de cargar boletines puede cargar un borrador y confir
     Queue::assertPushed(GenerarYEnviarBoletinPdf::class);
 });
 
-test('un campo_calculado se muestra como texto, nunca como input, y no queda guardado en datos', function () {
+test('promedio de materias es un campo manual editable, nunca se calcula solo', function () {
     $cobrador = User::factory()->create()->assignRole('cobrador');
     $boletin = Boletin::factory()->create(['plantilla_id' => $this->plantilla->id]);
     $trimestreFinal = BoletinTrimestre::factory()->create([
@@ -474,14 +475,14 @@ test('un campo_calculado se muestra como texto, nunca como input, y no queda gua
         ]],
     ]);
 
-    $componente = Livewire::actingAs($cobrador)->test(Cargar::class, ['boletinTrimestre' => $trimestreFinal])
+    Livewire::actingAs($cobrador)->test(Cargar::class, ['boletinTrimestre' => $trimestreFinal])
         ->assertSee('Promedio de Materias')
-        ->assertSee('9') // promedio de 8 y 10
-        ->assertDontSeeHtml('wire:model="datos.promedio_materias"');
+        ->assertSeeHtml('wire:model="datos.promedio_materias"', false)
+        // Acepta coma decimal (ver clamparNumero()) -- se guarda con punto.
+        ->set('datos.promedio_materias', '8,3')
+        ->call('guardarBorrador');
 
-    $componente->call('guardarBorrador');
-
-    expect(array_key_exists('promedio_materias', $trimestreFinal->refresh()->datos))->toBeFalse();
+    expect($trimestreFinal->refresh()->datos['promedio_materias'])->toBe('8.3');
 });
 
 test('la libreta final llega con la nota final precargada y el cobrador puede corregirla antes de enviar', function () {
@@ -568,81 +569,26 @@ test('cualquier fila de Espacios Curriculares puede completar ICAIP, sin que el 
     expect($trimestre3->refresh()->datos['espacios_curriculares'][0]['icaip_diciembre'])->toBe('7');
 });
 
-test('Calificacion Final se autocompleta con ICAIP Febrero mientras se escribe, pero sigue siendo editable', function () {
+test('Calificacion Final es un campo manual, no se autocompleta al cargar ICAIP', function () {
     $cobrador = User::factory()->create()->assignRole('cobrador');
     $boletin = Boletin::factory()->create(['plantilla_id' => plantillaConIcaip()->id]);
     $trimestre3 = BoletinTrimestre::factory()->create(['boletin_id' => $boletin->id, 'trimestre' => 3]);
 
     Livewire::actingAs($cobrador)->test(Cargar::class, ['boletinTrimestre' => $trimestre3])
         ->set('datos.espacios_curriculares.0.icaip_febrero', '7')
-        ->assertSet('datos.espacios_curriculares.0.calificacion_final', '7')
-        ->set('datos.espacios_curriculares.0.calificacion_final', '10')
-        ->assertSet('datos.espacios_curriculares.0.calificacion_final', '10');
+        ->assertSet('datos.espacios_curriculares.0.calificacion_final', '');
 });
 
-test('Calificacion Final usa ICAIP Diciembre si no hay ICAIP Febrero', function () {
+test('Calificacion Final acepta coma decimal y se guarda con punto', function () {
     $cobrador = User::factory()->create()->assignRole('cobrador');
     $boletin = Boletin::factory()->create(['plantilla_id' => plantillaConIcaip()->id]);
     $trimestre3 = BoletinTrimestre::factory()->create(['boletin_id' => $boletin->id, 'trimestre' => 3]);
 
     Livewire::actingAs($cobrador)->test(Cargar::class, ['boletinTrimestre' => $trimestre3])
-        ->set('datos.espacios_curriculares.0.icaip_diciembre', '6')
-        ->assertSet('datos.espacios_curriculares.0.calificacion_final', '6');
-});
+        ->set('datos.espacios_curriculares.0.calificacion_final', '7,7')
+        ->call('guardarBorrador');
 
-test('Calificacion Final usa el promedio anual de la materia si no hay ningun ICAIP', function () {
-    $cobrador = User::factory()->create()->assignRole('cobrador');
-    $boletin = Boletin::factory()->create(['plantilla_id' => plantillaConIcaip()->id]);
-    BoletinTrimestre::factory()->create([
-        'boletin_id' => $boletin->id,
-        'trimestre' => 1,
-        'datos' => ['espacios_curriculares' => [['nombre' => 'Lengua', 'trimestre_1' => '6']]],
-    ]);
-    BoletinTrimestre::factory()->create([
-        'boletin_id' => $boletin->id,
-        'trimestre' => 2,
-        'datos' => ['espacios_curriculares' => [['nombre' => 'Lengua', 'trimestre_2' => '7']]],
-    ]);
-    $trimestre3 = BoletinTrimestre::factory()->create([
-        'boletin_id' => $boletin->id,
-        'trimestre' => 3,
-        'datos' => ['espacios_curriculares' => [
-            ['nombre' => 'Lengua', 'trimestre_3' => '', 'icaip_diciembre' => '', 'icaip_febrero' => '', 'calificacion_final' => ''],
-        ]],
-    ]);
-
-    Livewire::actingAs($cobrador)->test(Cargar::class, ['boletinTrimestre' => $trimestre3])
-        ->set('datos.espacios_curriculares.0.trimestre_3', '10')
-        ->assertSet('datos.espacios_curriculares.0.calificacion_final', '7.7'); // promedio de 6, 7 y 10
-});
-
-test('una vez que Calificacion Final se corrige a mano, deja de recalcularse sola', function () {
-    $cobrador = User::factory()->create()->assignRole('cobrador');
-    $boletin = Boletin::factory()->create(['plantilla_id' => plantillaConIcaip()->id]);
-    $trimestre3 = BoletinTrimestre::factory()->create(['boletin_id' => $boletin->id, 'trimestre' => 3]);
-
-    Livewire::actingAs($cobrador)->test(Cargar::class, ['boletinTrimestre' => $trimestre3])
-        ->set('datos.espacios_curriculares.0.icaip_febrero', '7')
-        ->set('datos.espacios_curriculares.0.calificacion_final', '10')
-        ->set('datos.espacios_curriculares.0.icaip_febrero', '4')
-        ->assertSet('datos.espacios_curriculares.0.calificacion_final', '10');
-});
-
-test('al reabrir el trimestre con Calificacion Final ya guardada, no se la recalcula sola', function () {
-    $administrador = User::factory()->create()->assignRole('administrador');
-    $boletin = Boletin::factory()->create(['plantilla_id' => plantillaConIcaip()->id]);
-    $trimestre3 = BoletinTrimestre::factory()->create([
-        'boletin_id' => $boletin->id,
-        'trimestre' => 3,
-        'estado' => EstadoTrimestre::Enviado,
-        'datos' => ['espacios_curriculares' => [
-            ['nombre' => 'Lengua', 'trimestre_3' => '8', 'icaip_diciembre' => '', 'icaip_febrero' => '', 'calificacion_final' => '10'],
-        ]],
-    ]);
-
-    Livewire::actingAs($administrador)->test(Cargar::class, ['boletinTrimestre' => $trimestre3])
-        ->set('datos.espacios_curriculares.0.icaip_febrero', '4')
-        ->assertSet('datos.espacios_curriculares.0.calificacion_final', '10');
+    expect($trimestre3->refresh()->datos['espacios_curriculares'][0]['calificacion_final'])->toBe('7.7');
 });
 
 test('lo cargado en Espacios Pendientes de Acreditacion en un trimestre se mantiene como punto de partida en el siguiente', function () {

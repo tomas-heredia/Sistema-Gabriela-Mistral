@@ -109,7 +109,7 @@
                                                     @php [$min, $max] = $tipo === 'number' ? $this->limitesNumericos($seccion, $columna) : [null, null]; @endphp
                                                     <input
                                                         type="{{ $tipo }}"
-                                                        wire:model{{ $this->disparaRecalculo($seccion, $columna) ? '.live' : '' }}="datos.{{ $seccion['id'] }}.{{ $indice }}.{{ $columna['id'] }}"
+                                                        wire:model="datos.{{ $seccion['id'] }}.{{ $indice }}.{{ $columna['id'] }}"
                                                         @disabled($soloLectura)
                                                         @if (! is_null($min)) min="{{ $min }}" @endif
                                                         @if (! is_null($max)) max="{{ $max }}" @endif
@@ -156,14 +156,13 @@
                         rows="3"
                         class="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
                     ></textarea>
-                @elseif ($seccion['tipo'] === 'campo_calculado')
-                    {{-- Nunca es un input: se recalcula siempre a partir de otra sección
-                    (ver Cargar::promedioCalculado()), nunca se guarda en datos. --}}
-                    <p class="text-lg font-semibold text-gray-900">{{ $this->promedioCalculado($seccion) ?? '—' }}</p>
                 @else
-                    @php [$min, $max] = $this->limitesNumericos($seccion); @endphp
+                    @php
+                        $tipo = $this->tipoInput($seccion, []);
+                        [$min, $max] = $tipo === 'number' ? $this->limitesNumericos($seccion) : [null, null];
+                    @endphp
                     <input
-                        type="number"
+                        type="{{ $tipo }}"
                         wire:model="datos.{{ $seccion['id'] }}"
                         @disabled($soloLectura)
                         @if (! is_null($min)) min="{{ $min }}" @endif

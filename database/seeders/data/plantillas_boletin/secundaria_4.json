@@ -14,10 +14,10 @@
         { "id": "trimestre_1", "nombre": "Trimestre 1°", "momento": "trimestre_1" },
         { "id": "trimestre_2", "nombre": "Trimestre 2°", "momento": "trimestre_2" },
         { "id": "trimestre_3", "nombre": "Trimestre 3°", "momento": "trimestre_3" },
-        { "id": "calificacion_anual", "nombre": "Calificación Anual", "momento": "trimestre_3" },
+        { "id": "calificacion_anual", "nombre": "Calificación Anual", "momento": "trimestre_3", "acepta_coma": true },
         { "id": "icaip_diciembre", "nombre": "ICAIP Diciembre", "momento": "trimestre_3" },
         { "id": "icaip_febrero", "nombre": "ICAIP Febrero", "momento": "trimestre_3" },
-        { "id": "calificacion_final", "nombre": "Calificación Final", "momento": "trimestre_3" }
+        { "id": "calificacion_final", "nombre": "Calificación Final", "momento": "trimestre_3", "acepta_coma": true }
       ],
       "filas": [
         { "id": "lengua_literatura", "nombre": "Lengua y Literatura" },
@@ -102,7 +102,8 @@
       "id": "promedio_anual",
       "titulo": "Promedio Anual",
       "tipo": "campo_numero",
-      "momento": "trimestre_3"
+      "momento": "trimestre_3",
+      "acepta_coma": true
     },
     {
       "id": "promovido",

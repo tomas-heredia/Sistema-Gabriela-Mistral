@@ -144,7 +144,7 @@ class Formulario extends Component
                 Rule::when($this->nivel === Nivel::Inicial->value, [Rule::in(self::GRADOS_INICIAL)]),
             ],
             'anio_secundaria' => ['nullable', 'integer', 'min:1', 'max:6', 'required_if:nivel,'.Nivel::Secundario->value],
-            'division' => ['nullable', 'string', 'max:10'],
+            'division' => ['nullable', 'string', 'max:10', 'required_if:nivel,'.Nivel::Secundario->value],
             'turno' => ['required', Rule::enum(Turno::class)],
             'activo' => ['boolean'],
         ];

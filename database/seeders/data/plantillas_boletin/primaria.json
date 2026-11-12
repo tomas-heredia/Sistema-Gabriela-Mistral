@@ -132,9 +132,9 @@
     {
       "id": "promedio_materias",
       "titulo": "Promedio de Materias",
-      "tipo": "campo_calculado",
+      "tipo": "campo_numero",
       "momento": "trimestre_6",
-      "fuente": { "seccion": "espacios_curriculares", "columna": "nota_final" }
+      "acepta_coma": true
     }
   ]
 }

@@ -19,13 +19,14 @@ use Livewire\Component;
  * "momento" (trimestre_1/2/3/4). Al cargar el trimestre N solo se piden las
  * columnas/secciones de ese momento — el resto ni se muestra.
  *
- * Excepciones puntuales y documentadas a ese render genérico (mismo
- * criterio que ya tienen campo_calculado/tabla_materias_libre): las
- * secciones de filas libres recuerdan su valor de un trimestre anterior
- * (ver mount()/valorPrevioDe()), y "Calificación Final" de Espacios
- * Curriculares (secundaria, 3er trimestre) se recalcula sola mientras se
- * completan ICAIP/trimestre_3, sin pisar una que el usuario ya corrigió a
- * mano (ver updated()/recalcularCalificacionFinal()).
+ * Excepción puntual y documentada a ese render genérico (mismo criterio que
+ * ya tiene tabla_materias_libre): las secciones de filas libres recuerdan
+ * su valor de un trimestre anterior (ver mount()/valorPrevioDe()).
+ *
+ * Ningún campo se autocalcula -- ni "Calificación Final" (secundaria) ni
+ * "Promedio de Materias" (primaria, antes campo_calculado): todos los
+ * promedios/calificaciones finales se completan a mano, como cualquier
+ * otro campo numérico.
  */
 #[Layout('layouts.app')]
 class Cargar extends Component
@@ -33,15 +34,6 @@ class Cargar extends Component
     public BoletinTrimestre $boletinTrimestre;
 
     public array $datos = [];
-
-    /**
-     * Por índice de fila de "espacios_curriculares": si el usuario ya tocó
-     * a mano la celda "calificacion_final" de esa fila, updated() deja de
-     * recalcularla sola (ver recalcularCalificacionFinal()). Nunca se
-     * persiste en `datos` -- es solo estado del componente, para no filtrar
-     * una clave de control al render genérico del PDF.
-     */
-    public array $calificacionFinalManual = [];
 
     public function mount(BoletinTrimestre $boletinTrimestre): void
     {
@@ -53,11 +45,6 @@ class Cargar extends Component
 
         foreach ($this->seccionesVisibles() as $entry) {
             $seccion = $entry['seccion'];
-
-            if (($seccion['tipo'] ?? null) === 'campo_calculado') {
-                continue;
-            }
-
             $id = $seccion['id'];
 
             // Espacios Pendientes de Acreditación (y cualquier sección de
@@ -70,14 +57,6 @@ class Cargar extends Component
                 $this->datos[$id] = $this->valorPrevioDe($id) ?? $this->defaultParaSeccion($seccion, $entry['columnas']);
             } else {
                 $this->datos[$id] = $existentes[$id] ?? $this->defaultParaSeccion($seccion, $entry['columnas']);
-            }
-
-            if ($id === 'espacios_curriculares') {
-                foreach ($this->datos[$id] as $indice => $fila) {
-                    if (($fila['calificacion_final'] ?? '') !== '') {
-                        $this->calificacionFinalManual[$indice] = true;
-                    }
-                }
             }
         }
     }
@@ -95,94 +74,6 @@ class Cargar extends Component
             ->get()
             ->map(fn ($t) => $t->datos[$seccionId] ?? null)
             ->first(fn ($valor) => $valor !== null);
-    }
-
-    /**
-     * Livewire 3: se dispara para toda propiedad sincronizada, incluyendo
-     * rutas anidadas como "datos.espacios_curriculares.3.icaip_febrero".
-     * Solo nos importan las celdas de Espacios Curriculares que alimentan
-     * "Calificación Final" (secundaria, 3er trimestre) -- en primaria esas
-     * columnas ni existen en la plantilla, así que esto no hace nada ahí.
-     */
-    public function updated(string $name): void
-    {
-        if (! preg_match('/^datos\.espacios_curriculares\.(\d+)\.([a-z0-9_]+)$/', $name, $m)) {
-            return;
-        }
-
-        $indice = (int) $m[1];
-        $columna = $m[2];
-
-        if ($columna === 'calificacion_final') {
-            $this->calificacionFinalManual[$indice] = true;
-
-            return;
-        }
-
-        if (in_array($columna, ['trimestre_3', 'icaip_diciembre', 'icaip_febrero'], true)
-            && ! ($this->calificacionFinalManual[$indice] ?? false)) {
-            $this->recalcularCalificacionFinal($indice);
-        }
-    }
-
-    /**
-     * "Calificación Final" sugerida mientras se completan ICAIP o la nota
-     * del 3er trimestre, sin pisar una que el usuario ya tocó a mano (ver
-     * calificacionFinalManual). Prioridad: ICAIP Febrero, si no ICAIP
-     * Diciembre, si no el promedio anual de la materia.
-     */
-    private function recalcularCalificacionFinal(int $indice): void
-    {
-        $fila = $this->datos['espacios_curriculares'][$indice] ?? null;
-
-        if (! $fila) {
-            return;
-        }
-
-        $final = match (true) {
-            is_numeric($fila['icaip_febrero'] ?? null) => (float) $fila['icaip_febrero'],
-            is_numeric($fila['icaip_diciembre'] ?? null) => (float) $fila['icaip_diciembre'],
-            default => $this->promedioAnual($fila),
-        };
-
-        $this->datos['espacios_curriculares'][$indice]['calificacion_final'] = $final !== null ? (string) $final : '';
-    }
-
-    /**
-     * Promedio de trimestre_1/2/3 de una materia: trimestre_3 ya está en la
-     * propia fila que se está cargando; trimestre_1/2 viven en los
-     * BoletinTrimestre de esos trimestres, cada uno con su propia fila por
-     * materia (mismo criterio que GestorDeRecuperaciones::notasPorMateria()).
-     */
-    private function promedioAnual(array $fila): ?float
-    {
-        $nombre = $fila['nombre'] ?? null;
-
-        $notas = $this->boletinTrimestre->boletin->trimestres()
-            ->whereIn('trimestre', [1, 2])
-            ->get()
-            ->map(function ($trimestre) use ($nombre) {
-                $materia = collect($trimestre->datos['espacios_curriculares'] ?? [])->firstWhere('nombre', $nombre);
-
-                return $materia["trimestre_{$trimestre->trimestre}"] ?? null;
-            })
-            ->push($fila['trimestre_3'] ?? null)
-            ->filter(fn ($valor) => is_numeric($valor))
-            ->map(fn ($valor) => (float) $valor);
-
-        return $notas->isNotEmpty() ? round($notas->avg(), 1) : null;
-    }
-
-    /**
-     * Solo estas celdas de Espacios Curriculares (secundaria, 3er
-     * trimestre) necesitan ida y vuelta al servidor en cada tecla, para que
-     * Calificación Final se recalcule sola mientras se completan (ver
-     * updated()) -- el resto del formulario sigue diferido como siempre.
-     */
-    public function disparaRecalculo(array $seccion, array $columna): bool
-    {
-        return ($seccion['id'] ?? null) === 'espacios_curriculares'
-            && in_array($columna['id'] ?? null, ['trimestre_3', 'icaip_diciembre', 'icaip_febrero'], true);
     }
 
     /**
@@ -288,8 +179,24 @@ class Cargar extends Component
         }
     }
 
+    /**
+     * Los campos de promedio/calificación final (Promedio Anual,
+     * Calificación Anual, Calificación Final, Promedio de Materias) aceptan
+     * coma como separador decimal (ver clamparNumero()) -- un
+     * `type="number"` nativo no deja tipear una coma en la mayoría de los
+     * navegadores, así que estos van como texto simple. Las notas sueltas
+     * de cada trimestre/ICAIP siguen siendo `type="number"` como antes.
+     */
     public function tipoInput(array $seccion, array $columna): string
     {
+        if ($columna['acepta_coma'] ?? $seccion['acepta_coma'] ?? false) {
+            return 'text';
+        }
+
+        if (($seccion['tipo'] ?? null) === 'campo_numero') {
+            return 'number';
+        }
+
         $tipo = $columna['tipo'] ?? $seccion['escala']['tipo'] ?? 'texto';
 
         return match ($tipo) {
@@ -348,23 +255,6 @@ class Cargar extends Component
         return "{$opcion} — {$significados[$indice]}";
     }
 
-    /**
-     * "Promedio de Materias" (Libreta Final): nunca se guarda en `datos` --
-     * se recalcula siempre a partir de la columna "nota_final" que el
-     * cobrador/director está corrigiendo, así nunca queda desactualizado.
-     */
-    public function promedioCalculado(array $seccion): ?float
-    {
-        $filas = $this->datos[$seccion['fuente']['seccion']] ?? [];
-
-        $numeros = collect($filas)
-            ->pluck($seccion['fuente']['columna'])
-            ->filter(fn ($valor) => is_numeric($valor))
-            ->map(fn ($valor) => (float) $valor);
-
-        return $numeros->isNotEmpty() ? round($numeros->avg(), 1) : null;
-    }
-
     private function esGrilla(array $seccion): bool
     {
         return str_starts_with($seccion['tipo'] ?? '', 'tabla_');
@@ -395,10 +285,6 @@ class Cargar extends Component
             $seccion = $entry['seccion'];
             $seccionId = $seccion['id'];
 
-            if (($seccion['tipo'] ?? null) === 'campo_calculado') {
-                continue;
-            }
-
             if ($this->esGrilla($seccion)) {
                 foreach ($this->datos[$seccionId] ?? [] as $indice => $fila) {
                     foreach ($entry['columnas'] as $columna) {
@@ -419,8 +305,18 @@ class Cargar extends Component
         }
     }
 
+    /**
+     * Acepta "," como separador decimal (ej. "7,5") además de ".", para los
+     * campos marcados `acepta_coma` -- el resto de los campos nunca manda
+     * una coma porque su input es `type="number"`, así que este reemplazo
+     * es inofensivo ahí (no hay coma que reemplazar).
+     */
     private function clamparNumero(mixed $valor, ?float $min, ?float $max): mixed
     {
+        if (is_string($valor)) {
+            $valor = str_replace(',', '.', trim($valor));
+        }
+
         if (($min === null && $max === null) || $valor === '' || $valor === null || ! is_numeric($valor)) {
             return $valor;
         }

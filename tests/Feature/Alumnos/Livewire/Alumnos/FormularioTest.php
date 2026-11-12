@@ -48,7 +48,7 @@ test('crear un alumno primario guarda y redirige a su edicion', function () {
         ->and($alumno->tutores()->where('tutores.id', $tutor->id)->exists())->toBeTrue();
 });
 
-test('crear un alumno secundario exige el anio de secundaria', function () {
+test('crear un alumno secundario exige el anio de secundaria y la division', function () {
     $cobrador = User::factory()->create()->assignRole('cobrador');
 
     Livewire::actingAs($cobrador)->test(Formulario::class)
@@ -57,7 +57,7 @@ test('crear un alumno secundario exige el anio de secundaria', function () {
         ->set('nivel', Nivel::Secundario->value)
         ->set('turno', Turno::Tarde->value)
         ->call('guardar')
-        ->assertHasErrors(['anio_secundaria']);
+        ->assertHasErrors(['anio_secundaria', 'division']);
 });
 
 test('elegir el anio de secundaria completa el grado solo, sin campo de texto libre', function () {
@@ -70,6 +70,7 @@ test('elegir el anio de secundaria completa el grado solo, sin campo de texto li
         ->set('fecha_nacimiento', '2010-03-10')
         ->set('nivel', Nivel::Secundario->value)
         ->set('anio_secundaria', 3)
+        ->set('division', 'A')
         ->set('turno', Turno::Tarde->value)
         ->set('dniTutorBuscado', '30111222')
         ->call('buscarTutor')
@@ -81,7 +82,22 @@ test('elegir el anio de secundaria completa el grado solo, sin campo de texto li
 
     $alumno = Alumno::where('nombre', 'Beto Gómez')->firstOrFail();
     expect($alumno->anio_secundaria)->toBe(3)
-        ->and($alumno->grado)->toBe('3º año');
+        ->and($alumno->grado)->toBe('3º año')
+        ->and($alumno->division)->toBe('A');
+});
+
+test('crear un alumno primario no exige division', function () {
+    $cobrador = User::factory()->create()->assignRole('cobrador');
+
+    Livewire::actingAs($cobrador)->test(Formulario::class)
+        ->set('nombre', 'Ana Pérez')
+        ->set('dni', '40333444')
+        ->set('fecha_nacimiento', '2015-03-10')
+        ->set('nivel', Nivel::Primario->value)
+        ->set('grado', '4to grado')
+        ->set('turno', Turno::Manana->value)
+        ->call('guardar')
+        ->assertHasNoErrors(['division']);
 });
 
 test('rechaza un grado de primaria que no esta en la lista permitida', function () {

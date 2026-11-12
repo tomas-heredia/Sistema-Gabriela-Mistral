@@ -161,11 +161,11 @@ test('el titulo del trimestre usa PAeIP en primaria e ICAP en secundaria para la
 });
 
 /**
- * "Promedio de Materias" (Libreta Final) nunca se guarda en datos -- se
- * imprime como texto simple, recalculado a partir de la columna que
- * declara `fuente`, y solo en el trimestre al que pertenece (momento).
+ * "Promedio de Materias" (Libreta Final) pasó a ser un campo manual --
+ * ya no se calcula solo a partir de las notas finales de cada materia, se
+ * imprime tal cual se cargó a mano.
  */
-test('un campo_calculado se imprime como texto con el promedio, solo en su propio trimestre', function () {
+test('promedio de materias ya no se calcula solo, se imprime el valor cargado a mano', function () {
     $alumno = Alumno::factory()->primario()->create();
     $periodo = PeriodoLectivo::factory()->activo()->create();
     $plantilla = PlantillaBoletin::factory()->create([
@@ -173,33 +173,35 @@ test('un campo_calculado se imprime como texto con el promedio, solo en su propi
             [
                 'id' => 'promedio_materias',
                 'titulo' => 'Promedio de Materias',
-                'tipo' => 'campo_calculado',
+                'tipo' => 'campo_numero',
                 'momento' => 'trimestre_6',
-                'fuente' => ['seccion' => 'espacios_curriculares', 'columna' => 'nota_final'],
+                'acepta_coma' => true,
             ],
         ]],
     ]);
-    $trimestre1 = BoletinTrimestre::factory()->create([
-        'trimestre' => 1,
-        'datos' => ['espacios_curriculares' => [['nombre' => 'Lengua', 'trimestre_1' => '7']]],
-    ]);
     $final = BoletinTrimestre::factory()->create([
         'trimestre' => BoletinTrimestre::TRIMESTRE_LIBRETA_FINAL,
-        'datos' => ['espacios_curriculares' => [
-            ['nombre' => 'Lengua', 'nota_final' => '8'],
-            ['nombre' => 'Matemática', 'nota_final' => '10'],
-        ]],
+        'datos' => [
+            'promedio_materias' => '8.3',
+            // El promedio real de estas dos notas sería 9 -- si el valor
+            // cargado a mano (8.3) aparece tal cual, confirma que no se
+            // está recalculando solo.
+            'espacios_curriculares' => [
+                ['nombre' => 'Lengua', 'nota_final' => '8'],
+                ['nombre' => 'Matemática', 'nota_final' => '10'],
+            ],
+        ],
     ]);
 
     $html = view('boletines.pdf', [
         'alumno' => $alumno,
         'plantilla' => $plantilla,
         'periodo' => $periodo,
-        'trimestres' => collect([$trimestre1, $final]),
+        'trimestres' => collect([$final]),
     ])->render();
 
-    expect($html)->toContain('Promedio de Materias:</strong> 9');
-    expect(substr_count($html, 'Promedio de Materias'))->toBe(1);
+    expect($html)->toContain('Promedio de Materias')
+        ->toContain('<p>8.3</p>');
 });
 
 /**
@@ -368,4 +370,57 @@ test('el encabezado dice Curso en secundaria y Grado en primaria', function () {
 
     expect($htmlSecundaria)->toContain('Curso:')->not->toContain('Grado:');
     expect($htmlPrimaria)->toContain('Grado:')->not->toContain('Curso:');
+});
+
+/**
+ * El orden de las columnas de una tabla (Espacios Curriculares, Espacios
+ * Pendientes de Acreditación) sale de `estructura_campos`, no de cómo haya
+ * quedado guardada cada fila -- antes dependía de `array_keys()` sobre los
+ * datos, así que una fila guardada con las claves en otro orden (ej. una
+ * corrección que tocó una columna antes que otra) podía mostrar las
+ * columnas en un orden distinto al declarado en la plantilla.
+ */
+test('el orden de las columnas de una tabla sigue la plantilla, no el orden en que quedaron guardadas las claves', function () {
+    $alumno = Alumno::factory()->secundario()->create();
+    $periodo = PeriodoLectivo::factory()->activo()->create();
+    $plantilla = PlantillaBoletin::factory()->create([
+        'estructura_campos' => ['secciones' => [
+            [
+                'id' => 'espacios_pendientes_acreditacion',
+                'titulo' => 'Espacios Pendientes de Acreditación',
+                'tipo' => 'tabla_materias_libre',
+                'etiqueta_nombre' => 'Número de Orden',
+                'columnas' => [
+                    ['id' => 'espacio_curricular', 'nombre' => 'Espacio Curricular'],
+                    ['id' => 'calificacion', 'nombre' => 'Calificación'],
+                    ['id' => 'fecha', 'nombre' => 'Fecha'],
+                ],
+                'filas_libres' => true,
+            ],
+        ]],
+    ]);
+    // Fila guardada con las claves en un orden distinto al declarado --
+    // simula una corrección que completó "fecha" antes que "calificacion".
+    $trimestre = BoletinTrimestre::factory()->create([
+        'trimestre' => 1,
+        'datos' => ['espacios_pendientes_acreditacion' => [
+            ['fecha' => '2026-11-01', 'nombre' => '1', 'espacio_curricular' => 'Matemática', 'calificacion' => '5'],
+        ]],
+    ]);
+
+    $html = view('boletines.pdf', [
+        'alumno' => $alumno,
+        'plantilla' => $plantilla,
+        'periodo' => $periodo,
+        'trimestres' => collect([$trimestre]),
+    ])->render();
+
+    $posicionOrden = strpos($html, 'Número de Orden');
+    $posicionEspacio = strpos($html, 'Espacio Curricular');
+    $posicionCalificacion = strpos($html, '>Calificación<');
+    $posicionFecha = strpos($html, '>Fecha<');
+
+    expect($posicionOrden)->toBeLessThan($posicionEspacio)
+        ->and($posicionEspacio)->toBeLessThan($posicionCalificacion)
+        ->and($posicionCalificacion)->toBeLessThan($posicionFecha);
 });

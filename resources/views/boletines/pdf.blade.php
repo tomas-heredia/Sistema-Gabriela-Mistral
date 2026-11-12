@@ -89,35 +89,17 @@
             @foreach (($plantilla->estructura_campos['secciones'] ?? []) as $seccion)
                 @php
                     $tipoSeccion = $seccion['tipo'] ?? null;
+                    $valor = data_get($trimestre->datos, $seccion['id']);
 
-                    // campo_calculado nunca se guarda en datos -- se recalcula siempre a
-                    // partir de otra sección (ej. Promedio de Materias, a partir de las
-                    // notas finales de espacios_curriculares), solo en el trimestre dueño.
-                    if ($tipoSeccion === 'campo_calculado') {
-                        if (($seccion['momento'] ?? null) !== "trimestre_{$trimestre->trimestre}") {
-                            $valor = null;
-                        } else {
-                            $filas = data_get($trimestre->datos, $seccion['fuente']['seccion']) ?? [];
-                            $numeros = collect($filas)
-                                ->pluck($seccion['fuente']['columna'])
-                                ->filter(fn ($v) => is_numeric($v))
-                                ->map(fn ($v) => (float) $v);
-                            $valor = $numeros->isNotEmpty() ? round($numeros->avg(), 1) : null;
-                        }
-                        $visible = $valor !== null;
-                    } else {
-                        $valor = data_get($trimestre->datos, $seccion['id']);
-
-                        // Consideraciones Conceptuales y Espacios Pendientes de Acreditación
-                        // van siempre que la sección aplique a este trimestre, aunque hayan
-                        // quedado vacías -- se manda el recuadro vacío en vez de omitirlo.
-                        // Un campo_seleccion sin elegir (valor '') es la excepción: ahí no
-                        // hay nada que mostrar, a diferencia de los de arriba.
-                        $siempreVisible = in_array($tipoSeccion, ['campo_texto', 'tabla_materias_libre'], true);
-                        $existe = array_key_exists($seccion['id'], $trimestre->datos ?? []);
-                        $sinElegir = $tipoSeccion === 'campo_seleccion' && $valor === '';
-                        $visible = $existe && ! $sinElegir && ($siempreVisible || ($valor !== null && $valor !== []));
-                    }
+                    // Consideraciones Conceptuales y Espacios Pendientes de Acreditación
+                    // van siempre que la sección aplique a este trimestre, aunque hayan
+                    // quedado vacías -- se manda el recuadro vacío en vez de omitirlo.
+                    // Un campo_seleccion sin elegir (valor '') es la excepción: ahí no
+                    // hay nada que mostrar, a diferencia de los de arriba.
+                    $siempreVisible = in_array($tipoSeccion, ['campo_texto', 'tabla_materias_libre'], true);
+                    $existe = array_key_exists($seccion['id'], $trimestre->datos ?? []);
+                    $sinElegir = $tipoSeccion === 'campo_seleccion' && $valor === '';
+                    $visible = $existe && ! $sinElegir && ($siempreVisible || ($valor !== null && $valor !== []));
                 @endphp
 
                 @if ($visible)
@@ -128,8 +110,6 @@
                             <strong>{{ $seccion['titulo'] ?? $seccion['id'] }}:</strong>
                             <span class="opcion-elegida">{{ $valor }}</span>
                         </p>
-                    @elseif (($seccion['tipo'] ?? null) === 'campo_calculado')
-                        <p class="campo-calculado"><strong>{{ $seccion['titulo'] ?? $seccion['id'] }}:</strong> {{ $valor }}</p>
                     @else
                         <h3>{{ $seccion['titulo'] ?? $seccion['id'] }}</h3>
                         @include('boletines.partials.valor-generico', ['valor' => $valor, 'seccion' => $seccion])

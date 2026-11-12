@@ -58,7 +58,20 @@
 @endphp
 
 @if ($esListaDeFilas)
-    @php $columnas = collect($valor)->flatMap(fn ($fila) => array_keys($fila))->unique()->values(); @endphp
+    @php
+        // El orden de las columnas sale de la plantilla, no de cómo haya
+        // quedado guardada cada fila -- `array_keys()` por sí solo dependía
+        // del orden de inserción de los datos, no de lo declarado en
+        // `estructura_campos`, y podía mostrar un orden distinto según cómo
+        // se hubiera cargado cada fila.
+        $clavesPresentes = collect($valor)->flatMap(fn ($fila) => array_keys($fila))->unique()->values();
+        $ordenDeclarado = collect(['nombre'])->merge(collect($seccion['columnas'] ?? [])->pluck('id'));
+
+        $columnas = $ordenDeclarado
+            ->filter(fn ($clave) => $clavesPresentes->contains($clave))
+            ->merge($clavesPresentes->diff($ordenDeclarado))
+            ->values();
+    @endphp
     <table>
         <thead>
             <tr>
