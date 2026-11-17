@@ -1,6 +1,10 @@
 <?php
 
+use App\Alumnos\Models\Alumno;
 use App\Cobranzas\Models\Arancel;
+use App\Cobranzas\Models\Cuota;
+use App\Cobranzas\Models\Enums\DescuentoTipo;
+use App\Cobranzas\Models\Enums\EstadoCuota;
 use App\Cobranzas\Models\Enums\TipoCuota;
 use App\Core\Livewire\PeriodosLectivos\Formulario;
 use App\Core\Models\PeriodoLectivo;
@@ -66,6 +70,53 @@ test('editar un periodo existente precarga sus datos y sus aranceles, y actualiz
     $mensualidadPrimario = Arancel::where('periodo_lectivo_id', $periodo->id)
         ->where('nivel', 'primario')->where('tipo', TipoCuota::Mensualidad)->first();
     expect($mensualidadPrimario->monto)->toBe(110_000);
+});
+
+test('cambiar el monto de un arancel actualiza las cuotas pendientes de ese periodo+nivel+tipo', function () {
+    $administrador = User::factory()->create()->assignRole('administrador');
+    $periodo = PeriodoLectivo::factory()->create(['nombre' => '2026']);
+    Arancel::factory()->matricula()->create(['periodo_lectivo_id' => $periodo->id, 'nivel' => 'inicial']);
+    Arancel::factory()->mensualidad()->create(['periodo_lectivo_id' => $periodo->id, 'nivel' => 'inicial']);
+    Arancel::factory()->matricula()->create(['periodo_lectivo_id' => $periodo->id, 'nivel' => 'primario']);
+    Arancel::factory()->mensualidad()->create(['periodo_lectivo_id' => $periodo->id, 'nivel' => 'primario']);
+    Arancel::factory()->matricula()->create(['periodo_lectivo_id' => $periodo->id, 'nivel' => 'secundario']);
+    Arancel::factory()->mensualidad()->create(['periodo_lectivo_id' => $periodo->id, 'nivel' => 'secundario']);
+
+    $alumnoPrimario = Alumno::factory()->primario()->create();
+    $alumnoSecundario = Alumno::factory()->secundario()->create();
+    $otroPeriodo = PeriodoLectivo::factory()->create();
+
+    $pendientePrimario = Cuota::factory()->create([
+        'alumno_id' => $alumnoPrimario->id, 'periodo_lectivo_id' => $periodo->id, 'mes' => 3,
+        'tipo' => TipoCuota::Mensualidad, 'monto_base' => 100_000, 'monto' => 100_000,
+        'descuento_tipo' => DescuentoTipo::Ninguno, 'estado' => EstadoCuota::Pendiente,
+    ]);
+    $pendienteSecundario = Cuota::factory()->create([
+        'alumno_id' => $alumnoSecundario->id, 'periodo_lectivo_id' => $periodo->id, 'mes' => 3,
+        'tipo' => TipoCuota::Mensualidad, 'monto_base' => 120_000, 'monto' => 120_000,
+        'descuento_tipo' => DescuentoTipo::Ninguno, 'estado' => EstadoCuota::Pendiente,
+    ]);
+    $parcialPrimario = Cuota::factory()->create([
+        'alumno_id' => $alumnoPrimario->id, 'periodo_lectivo_id' => $periodo->id, 'mes' => 4,
+        'tipo' => TipoCuota::Mensualidad, 'monto_base' => 100_000, 'monto' => 100_000,
+        'descuento_tipo' => DescuentoTipo::Ninguno, 'estado' => EstadoCuota::Parcial,
+    ]);
+    $pendienteOtroPeriodo = Cuota::factory()->create([
+        'alumno_id' => $alumnoPrimario->id, 'periodo_lectivo_id' => $otroPeriodo->id, 'mes' => 3,
+        'tipo' => TipoCuota::Mensualidad, 'monto_base' => 100_000, 'monto' => 100_000,
+        'descuento_tipo' => DescuentoTipo::Ninguno, 'estado' => EstadoCuota::Pendiente,
+    ]);
+
+    Livewire::actingAs($administrador)->test(Formulario::class, ['periodoLectivo' => $periodo])
+        ->set('montos.primario_mensualidad', '1100')
+        ->call('guardar')
+        ->assertRedirect(route('periodos.index'));
+
+    expect($pendientePrimario->fresh()->monto)->toBe(110_000)
+        ->and($pendientePrimario->fresh()->monto_base)->toBe(110_000)
+        ->and($pendienteSecundario->fresh()->monto)->toBe(120_000)
+        ->and($parcialPrimario->fresh()->monto)->toBe(100_000)
+        ->and($pendienteOtroPeriodo->fresh()->monto)->toBe(100_000);
 });
 
 test('todos los aranceles son obligatorios', function () {

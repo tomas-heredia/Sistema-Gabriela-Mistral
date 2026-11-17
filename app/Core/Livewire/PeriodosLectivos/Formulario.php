@@ -5,6 +5,7 @@ namespace App\Core\Livewire\PeriodosLectivos;
 use App\Alumnos\Models\Enums\Nivel;
 use App\Cobranzas\Models\Arancel;
 use App\Cobranzas\Models\Enums\TipoCuota;
+use App\Cobranzas\Services\RecalculadorDeCuotas;
 use App\Core\Models\PeriodoLectivo;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
@@ -86,11 +87,11 @@ class Formulario extends Component
         return $atributos;
     }
 
-    public function guardar(): void
+    public function guardar(RecalculadorDeCuotas $recalculador): void
     {
         $datos = $this->validate();
 
-        DB::transaction(function () use ($datos) {
+        DB::transaction(function () use ($datos, $recalculador) {
             if ($this->periodoLectivo) {
                 $this->periodoLectivo->update(Arr::except($datos, 'montos'));
             } else {
@@ -101,10 +102,17 @@ class Formulario extends Component
                 foreach (TipoCuota::cases() as $tipo) {
                     $clave = "{$nivel->value}_{$tipo->value}";
 
-                    Arancel::updateOrCreate(
+                    $arancel = Arancel::updateOrCreate(
                         ['periodo_lectivo_id' => $this->periodoLectivo->id, 'nivel' => $nivel, 'tipo' => $tipo],
                         ['monto' => (int) round(((float) $datos['montos'][$clave]) * 100)]
                     );
+
+                    // Si el monto cambió (no es un arancel recién creado),
+                    // las cuotas pendientes ya generadas con el valor viejo
+                    // se actualizan al nuevo.
+                    if ($arancel->wasChanged('monto')) {
+                        $recalculador->recalcularPorArancel($arancel);
+                    }
                 }
             }
         });

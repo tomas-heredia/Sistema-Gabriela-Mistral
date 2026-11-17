@@ -12,9 +12,12 @@ use App\Boletines\Models\PlantillaBoletin;
 use App\Cobranzas\Models\Arancel;
 use App\Cobranzas\Models\Beca;
 use App\Cobranzas\Models\Cuota;
+use App\Cobranzas\Models\Enums\DescuentoTipo;
+use App\Cobranzas\Models\Enums\EstadoCuota;
 use App\Core\Models\PeriodoLectivo;
 use App\Core\Models\User;
 use Database\Seeders\RoleSeeder;
+use Illuminate\Support\Facades\DB;
 use Livewire\Livewire;
 
 beforeEach(function () {
@@ -140,6 +143,79 @@ test('el dni de un alumno solo acepta digitos', function () {
         ->set('turno', Turno::Manana->value)
         ->call('guardar')
         ->assertHasErrors(['dni']);
+});
+
+test('dar de alta un alumno con el dni de uno inactivo lo reactiva con los datos nuevos en vez de crear un duplicado', function () {
+    $cobrador = User::factory()->create()->assignRole('cobrador');
+    $tutorViejo = Tutor::factory()->create();
+    $alumnoInactivo = Alumno::factory()->primario()->create([
+        'dni' => '40555666', 'nombre' => 'Nombre Viejo', 'activo' => false,
+    ]);
+    $alumnoInactivo->tutores()->attach($tutorViejo, ['vinculo' => 'madre', 'responsable_pago' => true]);
+    $tutorNuevo = Tutor::factory()->create(['dni' => '30777888']);
+
+    Livewire::actingAs($cobrador)->test(Formulario::class)
+        ->set('nombre', 'Nombre Nuevo')
+        ->set('dni', '40555666')
+        ->set('fecha_nacimiento', '2015-03-10')
+        ->set('nivel', Nivel::Primario->value)
+        ->set('grado', '4to grado')
+        ->set('turno', Turno::Manana->value)
+        ->set('dniTutorBuscado', '30777888')
+        ->call('buscarTutor')
+        ->call('vincularTutor')
+        ->call('guardar')
+        ->assertHasNoErrors();
+
+    expect(Alumno::count())->toBe(1);
+
+    $reactivado = $alumnoInactivo->fresh();
+    expect($reactivado->activo)->toBeTrue()
+        ->and($reactivado->nombre)->toBe('Nombre Nuevo')
+        ->and($reactivado->tutores()->where('tutores.id', $tutorViejo->id)->exists())->toBeTrue()
+        ->and($reactivado->tutores()->where('tutores.id', $tutorNuevo->id)->exists())->toBeTrue();
+});
+
+test('reactivar un alumno no duplica el vinculo de un tutor que ya tenia antes de desactivarse', function () {
+    $cobrador = User::factory()->create()->assignRole('cobrador');
+    $tutor = Tutor::factory()->create(['dni' => '30777888']);
+    $alumnoInactivo = Alumno::factory()->primario()->create(['dni' => '40555666', 'activo' => false]);
+    $alumnoInactivo->tutores()->attach($tutor, ['vinculo' => 'madre', 'responsable_pago' => true]);
+
+    Livewire::actingAs($cobrador)->test(Formulario::class)
+        ->set('nombre', 'Nombre Nuevo')
+        ->set('dni', '40555666')
+        ->set('fecha_nacimiento', '2015-03-10')
+        ->set('nivel', Nivel::Primario->value)
+        ->set('grado', '4to grado')
+        ->set('turno', Turno::Manana->value)
+        ->set('dniTutorBuscado', '30777888')
+        ->call('buscarTutor')
+        ->call('vincularTutor')
+        ->call('guardar');
+
+    expect(DB::table('alumno_tutor')->where('alumno_id', $alumnoInactivo->id)->where('tutor_id', $tutor->id)->count())->toBe(1);
+});
+
+test('el dni sigue rechazando duplicados si el alumno existente esta activo', function () {
+    $cobrador = User::factory()->create()->assignRole('cobrador');
+    Tutor::factory()->create(['dni' => '30111222']);
+    Alumno::factory()->primario()->create(['dni' => '40555666', 'activo' => true]);
+
+    Livewire::actingAs($cobrador)->test(Formulario::class)
+        ->set('nombre', 'Otro Nombre')
+        ->set('dni', '40555666')
+        ->set('fecha_nacimiento', '2015-03-10')
+        ->set('nivel', Nivel::Primario->value)
+        ->set('grado', '4to grado')
+        ->set('turno', Turno::Manana->value)
+        ->set('dniTutorBuscado', '30111222')
+        ->call('buscarTutor')
+        ->call('vincularTutor')
+        ->call('guardar')
+        ->assertHasErrors(['dni' => 'unique']);
+
+    expect(Alumno::count())->toBe(1);
 });
 
 test('editar un alumno precarga sus datos', function () {
@@ -474,7 +550,7 @@ test('el motivo es opcional para otorgar una beca', function () {
         ->and($beca->motivo)->toBe('');
 });
 
-test('revocar una beca existente la elimina', function () {
+test('destildar una beca existente abre el panel de confirmacion sin borrarla todavia', function () {
     $cobrador = User::factory()->create()->assignRole('cobrador');
     $periodo = PeriodoLectivo::factory()->activo()->create();
     $alumno = Alumno::factory()->primario()->create();
@@ -483,9 +559,109 @@ test('revocar una beca existente la elimina', function () {
     Livewire::actingAs($cobrador)->test(Formulario::class, ['alumno' => $alumno])
         ->assertSet('becado', true)
         ->set('becado', false)
-        ->call('guardarBeca');
+        ->call('guardarBeca')
+        ->assertSet('confirmandoRevocarBeca', true);
 
-    expect(Beca::where('alumno_id', $alumno->id)->exists())->toBeFalse();
+    expect(Beca::where('alumno_id', $alumno->id)->exists())->toBeTrue();
+});
+
+test('cancelar la revocacion deja la beca intacta y vuelve a tildar el checkbox', function () {
+    $cobrador = User::factory()->create()->assignRole('cobrador');
+    $periodo = PeriodoLectivo::factory()->activo()->create();
+    $alumno = Alumno::factory()->primario()->create();
+    Beca::factory()->create(['alumno_id' => $alumno->id, 'periodo_lectivo_id' => $periodo->id]);
+
+    Livewire::actingAs($cobrador)->test(Formulario::class, ['alumno' => $alumno])
+        ->set('becado', false)
+        ->call('guardarBeca')
+        ->call('cancelarRevocarBeca')
+        ->assertSet('becado', true)
+        ->assertSet('confirmandoRevocarBeca', false);
+
+    expect(Beca::where('alumno_id', $alumno->id)->exists())->toBeTrue();
+});
+
+test('confirmar la revocacion con alcance "periodo" recalcula todas las pendientes', function () {
+    $cobrador = User::factory()->create()->assignRole('cobrador');
+    $periodo = PeriodoLectivo::factory()->activo()->create();
+    $alumno = Alumno::factory()->primario()->create();
+    Beca::factory()->create(['alumno_id' => $alumno->id, 'periodo_lectivo_id' => $periodo->id]);
+
+    $cuotaAbril = Cuota::factory()->create([
+        'alumno_id' => $alumno->id, 'periodo_lectivo_id' => $periodo->id, 'mes' => 4,
+        'monto_base' => 100_000, 'descuento_tipo' => DescuentoTipo::Beca, 'descuento_monto' => 100_000,
+        'monto' => 0, 'estado' => EstadoCuota::Exenta, 'fecha_vencimiento' => '2026-04-10',
+    ]);
+    $cuotaMayo = Cuota::factory()->create([
+        'alumno_id' => $alumno->id, 'periodo_lectivo_id' => $periodo->id, 'mes' => 5,
+        'monto_base' => 100_000, 'descuento_tipo' => DescuentoTipo::Beca, 'descuento_monto' => 100_000,
+        'monto' => 0, 'estado' => EstadoCuota::Exenta, 'fecha_vencimiento' => '2026-05-10',
+    ]);
+
+    Livewire::actingAs($cobrador)->test(Formulario::class, ['alumno' => $alumno])
+        ->set('becado', false)
+        ->call('guardarBeca')
+        ->set('alcanceRevocarBeca', 'periodo')
+        ->call('confirmarRevocarBeca')
+        ->assertSet('confirmandoRevocarBeca', false);
+
+    expect(Beca::where('alumno_id', $alumno->id)->exists())->toBeFalse()
+        ->and($cuotaAbril->fresh()->monto)->toBe(100_000)
+        ->and($cuotaAbril->fresh()->descuento_tipo)->toBe(DescuentoTipo::Ninguno)
+        ->and($cuotaAbril->fresh()->estado)->toBe(EstadoCuota::Pendiente)
+        ->and($cuotaMayo->fresh()->monto)->toBe(100_000);
+});
+
+test('confirmar la revocacion con alcance "desde fecha" solo recalcula las cuotas posteriores', function () {
+    $cobrador = User::factory()->create()->assignRole('cobrador');
+    $periodo = PeriodoLectivo::factory()->activo()->create();
+    $alumno = Alumno::factory()->primario()->create();
+    Beca::factory()->create(['alumno_id' => $alumno->id, 'periodo_lectivo_id' => $periodo->id]);
+
+    $cuotaAbril = Cuota::factory()->create([
+        'alumno_id' => $alumno->id, 'periodo_lectivo_id' => $periodo->id, 'mes' => 4,
+        'monto_base' => 100_000, 'descuento_tipo' => DescuentoTipo::Beca, 'descuento_monto' => 100_000,
+        'monto' => 0, 'estado' => EstadoCuota::Exenta, 'fecha_vencimiento' => '2026-04-10',
+    ]);
+    $cuotaMayo = Cuota::factory()->create([
+        'alumno_id' => $alumno->id, 'periodo_lectivo_id' => $periodo->id, 'mes' => 5,
+        'monto_base' => 100_000, 'descuento_tipo' => DescuentoTipo::Beca, 'descuento_monto' => 100_000,
+        'monto' => 0, 'estado' => EstadoCuota::Exenta, 'fecha_vencimiento' => '2026-05-10',
+    ]);
+
+    Livewire::actingAs($cobrador)->test(Formulario::class, ['alumno' => $alumno])
+        ->set('becado', false)
+        ->call('guardarBeca')
+        ->set('alcanceRevocarBeca', 'desde_fecha')
+        ->set('fechaDesdeRevocarBeca', '2026-05-01')
+        ->call('confirmarRevocarBeca');
+
+    expect($cuotaAbril->fresh()->monto)->toBe(0)
+        ->and($cuotaAbril->fresh()->estado)->toBe(EstadoCuota::Exenta)
+        ->and($cuotaMayo->fresh()->monto)->toBe(100_000)
+        ->and($cuotaMayo->fresh()->estado)->toBe(EstadoCuota::Pendiente);
+});
+
+test('una cuota parcial no se toca al revocar la beca', function () {
+    $cobrador = User::factory()->create()->assignRole('cobrador');
+    $periodo = PeriodoLectivo::factory()->activo()->create();
+    $alumno = Alumno::factory()->primario()->create();
+    Beca::factory()->create(['alumno_id' => $alumno->id, 'periodo_lectivo_id' => $periodo->id]);
+
+    $cuotaParcial = Cuota::factory()->create([
+        'alumno_id' => $alumno->id, 'periodo_lectivo_id' => $periodo->id,
+        'monto_base' => 100_000, 'descuento_tipo' => DescuentoTipo::Beca, 'descuento_monto' => 100_000,
+        'monto' => 0, 'estado' => EstadoCuota::Parcial, 'fecha_vencimiento' => '2026-04-10',
+    ]);
+
+    Livewire::actingAs($cobrador)->test(Formulario::class, ['alumno' => $alumno])
+        ->set('becado', false)
+        ->call('guardarBeca')
+        ->set('alcanceRevocarBeca', 'periodo')
+        ->call('confirmarRevocarBeca');
+
+    expect($cuotaParcial->fresh()->monto)->toBe(0)
+        ->and($cuotaParcial->fresh()->estado)->toBe(EstadoCuota::Parcial);
 });
 
 test('volver a otorgar despues de revocar actualiza el motivo en vez de duplicar', function () {

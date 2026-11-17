@@ -39,6 +39,7 @@ class Listado extends Component
     public function render()
     {
         $tutores = Tutor::query()
+            ->where('activo', true)
             ->when($this->busqueda, function ($query) {
                 $query->where(function ($subquery) {
                     $subquery->where('nombre', 'like', "%{$this->busqueda}%")

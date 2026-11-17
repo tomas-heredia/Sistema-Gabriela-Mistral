@@ -57,6 +57,9 @@
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tutor</th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Monto adeudado</th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Meses</th>
+                            @if (auth()->user()->hasRole('administrador'))
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Acción</th>
+                            @endif
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-100">
@@ -68,6 +71,18 @@
                                 </td>
                                 <td class="px-6 py-3 text-sm text-gray-600">${{ number_format($fila['monto_adeudado'] / 100, 2, ',', '.') }}</td>
                                 <td class="px-6 py-3 text-sm text-gray-600">{{ $fila['meses_adeudados'] }}</td>
+                                @if (auth()->user()->hasRole('administrador'))
+                                    <td class="px-6 py-3 text-sm">
+                                        <button
+                                            type="button"
+                                            wire:click="eliminarDeuda({{ $fila['tutor']->id }})"
+                                            wire:confirm="¿Eliminar toda la deuda vencida de {{ $fila['tutor']->nombre }}? Anula sus cuotas vencidas pendientes/parciales y no se puede deshacer."
+                                            class="text-red-600 hover:text-red-800"
+                                        >
+                                            Eliminar deuda
+                                        </button>
+                                    </td>
+                                @endif
                             </tr>
                         @endforeach
                     </tbody>

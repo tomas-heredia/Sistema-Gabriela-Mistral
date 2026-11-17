@@ -40,3 +40,13 @@ foreach ($modulo as $nombre => $clase) {
             ->and($user->can('create', $clase))->toBeFalse();
     });
 }
+
+test('solo administrador puede anularDeuda sobre Cuota', function () {
+    $administrador = User::factory()->create()->assignRole('administrador');
+    $cobrador = User::factory()->create()->assignRole('cobrador');
+    $profesor = User::factory()->create()->assignRole('profesor');
+
+    expect($administrador->can('anularDeuda', Cuota::class))->toBeTrue()
+        ->and($cobrador->can('anularDeuda', Cuota::class))->toBeFalse()
+        ->and($profesor->can('anularDeuda', Cuota::class))->toBeFalse();
+});

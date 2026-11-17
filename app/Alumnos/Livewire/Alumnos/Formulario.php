@@ -13,6 +13,7 @@ use App\Boletines\Services\CreadorDeBoletines;
 use App\Cobranzas\Models\Beca;
 use App\Cobranzas\Models\Cuota;
 use App\Cobranzas\Services\GeneradorDeCuotas;
+use App\Cobranzas\Services\RecalculadorDeCuotas;
 use App\Core\Models\PeriodoLectivo;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Support\Facades\DB;
@@ -104,6 +105,13 @@ class Formulario extends Component
 
     public string $motivoBeca = '';
 
+    // Confirmación de alcance al revocar una beca (ver guardarBeca()).
+    public bool $confirmandoRevocarBeca = false;
+
+    public string $alcanceRevocarBeca = 'periodo';
+
+    public string $fechaDesdeRevocarBeca = '';
+
     public function mount(?Alumno $alumno = null): void
     {
         if ($alumno?->exists) {
@@ -134,7 +142,7 @@ class Formulario extends Component
     {
         return [
             'nombre' => ['required', 'string', 'max:255'],
-            'dni' => ['required', 'digits_between:1,20', Rule::unique('alumnos', 'dni')->ignore($this->alumno?->id)],
+            'dni' => ['required', 'digits_between:1,20', Rule::unique('alumnos', 'dni')->ignore($this->alumnoInactivoConMismoDni()?->id ?? $this->alumno?->id)],
             'fecha_nacimiento' => ['required', 'date'],
             'nivel' => ['required', Rule::enum(Nivel::class)],
             'grado' => [
@@ -178,6 +186,21 @@ class Formulario extends Component
         return $this->anio_secundaria ? "{$this->anio_secundaria}º año" : '';
     }
 
+    /**
+     * Solo tiene sentido en el alta (editando un alumno existente, el DNI
+     * ya es el suyo). Se usa para que la validación unique no rechace un
+     * DNI que coincide con un alumno inactivo -- ver guardar(), que
+     * reactiva ese registro en vez de crear uno nuevo.
+     */
+    private function alumnoInactivoConMismoDni(): ?Alumno
+    {
+        if ($this->alumno) {
+            return null;
+        }
+
+        return Alumno::where('dni', $this->dni)->where('activo', false)->first();
+    }
+
     protected function validationAttributes(): array
     {
         return [
@@ -217,20 +240,34 @@ class Formulario extends Component
             return;
         }
 
-        $nuevo = DB::transaction(function () use ($datos) {
-            $alumno = Alumno::create($datos);
+        $alumnoInactivo = $this->alumnoInactivoConMismoDni();
+
+        $nuevo = DB::transaction(function () use ($datos, $alumnoInactivo) {
+            if ($alumnoInactivo) {
+                $alumnoInactivo->update(array_merge($datos, ['activo' => true]));
+                $alumno = $alumnoInactivo;
+            } else {
+                $alumno = Alumno::create($datos);
+            }
 
             foreach ($this->tutoresPendientes as $pendiente) {
-                $alumno->tutores()->attach($pendiente['tutor_id'], [
-                    'vinculo' => $pendiente['vinculo'],
-                    'responsable_pago' => $pendiente['responsable_pago'],
-                ]);
+                // Si el alumno es un reactivado, puede que ya tuviera este
+                // tutor vinculado de antes de desactivarse -- no duplicar
+                // la fila de la tabla pivote.
+                $yaVinculado = $alumno->tutores()->where('tutores.id', $pendiente['tutor_id'])->exists();
+
+                if (! $yaVinculado) {
+                    $alumno->tutores()->attach($pendiente['tutor_id'], [
+                        'vinculo' => $pendiente['vinculo'],
+                        'responsable_pago' => $pendiente['responsable_pago'],
+                    ]);
+                }
             }
 
             return $alumno;
         });
 
-        session()->flash('mensaje', 'Alumno creado correctamente.');
+        session()->flash('mensaje', $alumnoInactivo ? 'Alumno reactivado correctamente.' : 'Alumno creado correctamente.');
         $this->redirectRoute('alumnos.editar', $nuevo, navigate: true);
     }
 
@@ -461,10 +498,12 @@ class Formulario extends Component
     }
 
     /**
-     * Otorgar y revocar es una sola acción: tildar el checkbox y guardar da
-     * de alta (o actualiza el motivo de) la beca del período activo;
-     * destildarlo y guardar la borra. No recalcula cuotas ya generadas —
-     * `GeneradorDeCuotas` solo evalúa la beca al momento de generar.
+     * Otorgar: tildar el checkbox y guardar da de alta (o actualiza el
+     * motivo de) la beca del período activo -- no recalcula cuotas ya
+     * generadas, `GeneradorDeCuotas` solo evalúa la beca al momento de
+     * generar. Revocar: destildarlo y guardar abre el panel de
+     * confirmación de confirmarRevocarBeca() en vez de borrar directo, para
+     * elegir qué cuotas ya generadas con este descuento se recalculan.
      */
     public function guardarBeca(): void
     {
@@ -496,9 +535,64 @@ class Formulario extends Component
 
         if ($becaExistente) {
             $this->authorize('delete', $becaExistente);
-            $becaExistente->delete();
-            session()->flash('mensaje', 'Beca revocada.');
+            // No se borra todavía: primero hay que elegir qué cuotas ya
+            // generadas con este descuento se recalculan (ver
+            // confirmarRevocarBeca()).
+            $this->confirmandoRevocarBeca = true;
         }
+    }
+
+    /**
+     * Las cuotas pendientes que ya se generaron con esta beca quedaron en
+     * $0 -- al revocarla tienen que volver a cobrarse. El cobrador/admin
+     * elige si eso aplica a todas las pendientes del período, o solo desde
+     * una fecha de vencimiento en adelante (ej. si los meses ya vencidos
+     * se los perdonan, pero los que faltan sí se cobran).
+     */
+    public function confirmarRevocarBeca(RecalculadorDeCuotas $recalculador): void
+    {
+        $periodo = PeriodoLectivo::where('activo', true)->first();
+        $becaExistente = $periodo
+            ? Beca::where('alumno_id', $this->alumno->id)->where('periodo_lectivo_id', $periodo->id)->first()
+            : null;
+
+        if (! $periodo || ! $becaExistente) {
+            $this->confirmandoRevocarBeca = false;
+
+            return;
+        }
+
+        $this->authorize('delete', $becaExistente);
+
+        if ($this->alcanceRevocarBeca === 'desde_fecha') {
+            $this->validate(
+                ['fechaDesdeRevocarBeca' => ['required', 'date']],
+                attributes: ['fechaDesdeRevocarBeca' => 'fecha']
+            );
+        }
+
+        $becaExistente->delete();
+
+        $recalculador->recalcularPorBeca(
+            $this->alumno,
+            $periodo,
+            $this->alcanceRevocarBeca === 'desde_fecha' ? $this->fechaDesdeRevocarBeca : null
+        );
+
+        $this->confirmandoRevocarBeca = false;
+        $this->reset(['alcanceRevocarBeca', 'fechaDesdeRevocarBeca']);
+        session()->flash('mensaje', 'Beca revocada y cuotas pendientes actualizadas.');
+    }
+
+    /**
+     * El checkbox vuelve a tildarse -- si el admin canceló, la beca sigue
+     * vigente, así que la UI no debe quedar mostrando "destildado".
+     */
+    public function cancelarRevocarBeca(): void
+    {
+        $this->confirmandoRevocarBeca = false;
+        $this->becado = true;
+        $this->reset(['alcanceRevocarBeca', 'fechaDesdeRevocarBeca']);
     }
 
     private function becaDelPeriodoActivo(): ?Beca

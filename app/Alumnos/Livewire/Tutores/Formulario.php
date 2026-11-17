@@ -45,12 +45,27 @@ class Formulario extends Component
     {
         return [
             'nombre' => ['required', 'string', 'max:255'],
-            'dni' => ['required', 'digits_between:1,20', Rule::unique('tutores', 'dni')->ignore($this->tutor?->id)],
+            'dni' => ['required', 'digits_between:1,20', Rule::unique('tutores', 'dni')->ignore($this->tutorInactivoConMismoDni()?->id ?? $this->tutor?->id)],
             'domicilio' => ['required', 'string', 'max:255'],
             'telefono' => ['required', 'digits_between:1,30'],
             'correo' => ['required', 'email', 'max:255'],
             'activo' => ['boolean'],
         ];
+    }
+
+    /**
+     * Solo tiene sentido en el alta (editando un tutor existente, el DNI ya
+     * es el suyo). Se usa para que la validación unique no rechace un DNI
+     * que coincide con un tutor inactivo -- ver guardar(), que reactiva ese
+     * registro en vez de crear uno nuevo.
+     */
+    private function tutorInactivoConMismoDni(): ?Tutor
+    {
+        if ($this->tutor) {
+            return null;
+        }
+
+        return Tutor::where('dni', $this->dni)->where('activo', false)->first();
     }
 
     protected function validationAttributes(): array
@@ -70,11 +85,22 @@ class Formulario extends Component
 
         if ($this->tutor) {
             $this->tutor->update($datos);
-        } else {
-            Tutor::create($datos);
+            session()->flash('mensaje', 'Tutor guardado correctamente.');
+            $this->redirectRoute('tutores.index', navigate: true);
+
+            return;
         }
 
-        session()->flash('mensaje', 'Tutor guardado correctamente.');
+        $tutorInactivo = $this->tutorInactivoConMismoDni();
+
+        if ($tutorInactivo) {
+            $tutorInactivo->update(array_merge($datos, ['activo' => true]));
+            session()->flash('mensaje', 'Tutor reactivado correctamente.');
+        } else {
+            Tutor::create($datos);
+            session()->flash('mensaje', 'Tutor guardado correctamente.');
+        }
+
         $this->redirectRoute('tutores.index', navigate: true);
     }
 

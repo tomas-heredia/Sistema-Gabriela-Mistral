@@ -29,6 +29,16 @@ test('el cobrador puede ver el listado y el buscador filtra por nombre', functio
         ->assertDontSee('Pedro López');
 });
 
+test('un tutor inactivo no aparece en el listado', function () {
+    $cobrador = User::factory()->create()->assignRole('cobrador');
+    Tutor::factory()->create(['nombre' => 'Activo Visible', 'activo' => true]);
+    Tutor::factory()->create(['nombre' => 'Inactivo Oculto', 'activo' => false]);
+
+    Livewire::actingAs($cobrador)->test(Listado::class)
+        ->assertSee('Activo Visible')
+        ->assertDontSee('Inactivo Oculto');
+});
+
 test('eliminar desactiva al tutor en vez de borrarlo', function () {
     $cobrador = User::factory()->create()->assignRole('cobrador');
     $tutor = Tutor::factory()->create(['activo' => true]);

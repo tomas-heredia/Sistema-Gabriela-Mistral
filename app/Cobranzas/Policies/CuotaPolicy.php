@@ -31,4 +31,14 @@ class CuotaPolicy
     {
         return $user->hasAnyRole(['administrador', 'cobrador']);
     }
+
+    /**
+     * Anular toda la deuda vencida de un tutor desde la pantalla de Mora --
+     * a diferencia del resto de las acciones sobre cuotas, solo
+     * administrador (pedido explícito del cliente).
+     */
+    public function anularDeuda(User $user): bool
+    {
+        return $user->hasRole('administrador');
+    }
 }

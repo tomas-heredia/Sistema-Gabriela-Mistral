@@ -35,7 +35,9 @@ class Listado extends Component
     /**
      * "Eliminar" desactiva, no borra -- un alumno tiene cuotas, pagos y
      * libretas que son registros históricos del colegio, no algo que deba
-     * desaparecer porque se fue. Se puede reactivar editándolo.
+     * desaparecer porque se fue. Queda oculto de este listado (ver
+     * render()); se reactiva solo volviendo a dar de alta un alumno con su
+     * mismo DNI (Alumnos\Formulario::guardar()).
      */
     public function eliminar(Alumno $alumno): void
     {
@@ -48,6 +50,7 @@ class Listado extends Component
     public function render()
     {
         $alumnos = Alumno::query()
+            ->where('activo', true)
             ->when($this->busqueda, function ($query) {
                 $query->where(function ($subquery) {
                     $subquery->where('nombre', 'like', "%{$this->busqueda}%")

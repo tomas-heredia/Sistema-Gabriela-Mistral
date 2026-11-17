@@ -29,6 +29,16 @@ test('eliminar desactiva al alumno en vez de borrarlo', function () {
         ->and(Alumno::find($alumno->id))->not->toBeNull();
 });
 
+test('un alumno inactivo no aparece en el listado', function () {
+    $cobrador = User::factory()->create()->assignRole('cobrador');
+    Alumno::factory()->primario()->create(['nombre' => 'Activo Visible', 'activo' => true]);
+    Alumno::factory()->primario()->create(['nombre' => 'Inactivo Oculto', 'activo' => false]);
+
+    Livewire::actingAs($cobrador)->test(Listado::class)
+        ->assertSee('Activo Visible')
+        ->assertDontSee('Inactivo Oculto');
+});
+
 test('el cobrador puede ver el listado y filtrar por nivel', function () {
     $cobrador = User::factory()->create()->assignRole('cobrador');
     $primario = Alumno::factory()->primario()->create(['nombre' => 'Ana Primaria']);

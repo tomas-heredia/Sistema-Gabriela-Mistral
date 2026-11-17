@@ -357,6 +357,34 @@
             <div class="bg-white shadow-sm rounded-lg p-6">
                 @if (! $periodoActivo)
                     <p class="text-sm text-gray-500">No hay ningún período lectivo activo — no se puede gestionar la beca.</p>
+                @elseif ($confirmandoRevocarBeca)
+                    <p class="text-sm text-gray-900 mb-3">
+                        Este alumno tiene cuotas pendientes ya generadas con esta beca (en $0). ¿Qué cuotas pendientes querés recalcular al revocarla?
+                    </p>
+
+                    <div class="space-y-2 mb-4">
+                        <label class="flex items-center gap-2">
+                            <input type="radio" wire:model.live="alcanceRevocarBeca" value="periodo" class="text-indigo-600 focus:ring-indigo-500">
+                            <span class="text-sm text-gray-700">Todas las pendientes del período {{ $periodoActivo->nombre }}</span>
+                        </label>
+                        <label class="flex items-center gap-2">
+                            <input type="radio" wire:model.live="alcanceRevocarBeca" value="desde_fecha" class="text-indigo-600 focus:ring-indigo-500">
+                            <span class="text-sm text-gray-700">Solo las que vencen desde una fecha en adelante (incluida)</span>
+                        </label>
+
+                        @if ($alcanceRevocarBeca === 'desde_fecha')
+                            <div class="max-w-xs ml-6">
+                                <x-input-label for="fechaDesdeRevocarBeca" value="Fecha de vencimiento desde" />
+                                <input type="date" id="fechaDesdeRevocarBeca" wire:model="fechaDesdeRevocarBeca" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                                <x-input-error :messages="$errors->get('fechaDesdeRevocarBeca')" class="mt-1" />
+                            </div>
+                        @endif
+                    </div>
+
+                    <div class="flex gap-3">
+                        <x-primary-button type="button" wire:click="confirmarRevocarBeca">Confirmar y revocar</x-primary-button>
+                        <x-secondary-button type="button" wire:click="cancelarRevocarBeca">Cancelar</x-secondary-button>
+                    </div>
                 @else
                     <label class="flex items-center gap-2 mb-3">
                         <input type="checkbox" wire:model.live="becado" class="rounded border-gray-300 text-indigo-600 shadow-sm focus:ring-indigo-500">
@@ -376,7 +404,7 @@
                     @endif
 
                     @if ($cuotas->isNotEmpty())
-                        <p class="text-xs text-amber-700 mb-3">Este alumno ya tiene cuotas generadas para este período — otorgar o revocar la beca no las modifica retroactivamente.</p>
+                        <p class="text-xs text-amber-700 mb-3">Otorgar la beca no modifica retroactivamente las cuotas ya generadas. Revocarla sí — vas a poder elegir qué pendientes se recalculan.</p>
                     @endif
 
                     <x-primary-button type="button" wire:click="guardarBeca">Guardar</x-primary-button>

@@ -70,6 +70,44 @@ test('dni y telefono solo aceptan digitos', function () {
         ->assertHasErrors(['dni', 'telefono']);
 });
 
+test('dar de alta un tutor con el dni de uno inactivo lo reactiva con los datos nuevos en vez de crear un duplicado', function () {
+    $cobrador = User::factory()->create()->assignRole('cobrador');
+    $tutorInactivo = Tutor::factory()->create(['dni' => '30111222', 'nombre' => 'Nombre Viejo', 'activo' => false]);
+
+    Livewire::actingAs($cobrador)->test(Formulario::class)
+        ->set('nombre', 'Nombre Nuevo')
+        ->set('dni', '30111222')
+        ->set('domicilio', 'Nueva Dirección 456')
+        ->set('telefono', '3834999999')
+        ->set('correo', 'nuevo@example.com')
+        ->call('guardar')
+        ->assertHasNoErrors()
+        ->assertRedirect(route('tutores.index'));
+
+    expect(Tutor::count())->toBe(1);
+
+    $reactivado = $tutorInactivo->fresh();
+    expect($reactivado->activo)->toBeTrue()
+        ->and($reactivado->nombre)->toBe('Nombre Nuevo')
+        ->and($reactivado->domicilio)->toBe('Nueva Dirección 456');
+});
+
+test('el dni sigue rechazando duplicados si el tutor existente esta activo', function () {
+    $cobrador = User::factory()->create()->assignRole('cobrador');
+    Tutor::factory()->create(['dni' => '30111222', 'activo' => true]);
+
+    Livewire::actingAs($cobrador)->test(Formulario::class)
+        ->set('nombre', 'Otro Nombre')
+        ->set('dni', '30111222')
+        ->set('domicilio', 'Calle 1')
+        ->set('telefono', '123')
+        ->set('correo', 'otro@example.com')
+        ->call('guardar')
+        ->assertHasErrors(['dni' => 'unique']);
+
+    expect(Tutor::count())->toBe(1);
+});
+
 test('editar un tutor precarga sus datos', function () {
     $cobrador = User::factory()->create()->assignRole('cobrador');
     $tutor = Tutor::factory()->create(['nombre' => 'Marta Gómez']);

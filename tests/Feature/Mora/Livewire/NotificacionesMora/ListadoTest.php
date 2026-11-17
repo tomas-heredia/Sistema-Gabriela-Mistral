@@ -8,6 +8,8 @@ use App\Cobranzas\Models\Enums\TipoCuota;
 use App\Core\Models\PeriodoLectivo;
 use App\Core\Models\User;
 use App\Mora\Livewire\NotificacionesMora\Listado;
+use App\Mora\Models\Enums\EstadoNotificacion;
+use App\Mora\Models\NotificacionMora;
 use Database\Seeders\RoleSeeder;
 use Livewire\Livewire;
 
@@ -92,4 +94,63 @@ test('un profesor no puede montar el componente', function () {
     $profesor = User::factory()->create()->assignRole('profesor');
 
     Livewire::actingAs($profesor)->test(Listado::class)->assertForbidden();
+});
+
+test('administrador elimina la deuda de un tutor: anula sus cuotas vencidas y el tutor desaparece de mora', function () {
+    $administrador = User::factory()->create()->assignRole('administrador');
+    $tutor = tutorEnMora('Marta Gómez', 100_000);
+
+    Livewire::actingAs($administrador)->test(Listado::class)
+        ->assertSee('Marta Gómez')
+        ->assertSee('Eliminar deuda')
+        ->call('eliminarDeuda', $tutor->id)
+        ->assertDontSee('Marta Gómez');
+
+    $cuota = Cuota::where('alumno_id', $tutor->alumnos()->first()->id)->first();
+    expect($cuota->estado)->toBe(EstadoCuota::Anulada);
+});
+
+test('eliminar deuda no anula cuotas futuras aun no vencidas', function () {
+    $administrador = User::factory()->create()->assignRole('administrador');
+    $periodo = PeriodoLectivo::factory()->activo()->create();
+    $tutor = tutorEnMora('Marta Gómez', 100_000, $periodo, now()->subMonth()->format('Y-m-d'));
+    $alumno = $tutor->alumnos()->first();
+
+    $cuotaFutura = Cuota::factory()->create([
+        'alumno_id' => $alumno->id,
+        'periodo_lectivo_id' => $periodo->id,
+        'tipo' => TipoCuota::Mensualidad,
+        'mes' => 1, // fuera del rango 3-12 que usa tutorEnMora() -- evita chocar con su cuota al azar.
+        'estado' => EstadoCuota::Pendiente,
+        'fecha_vencimiento' => now()->addMonth(),
+    ]);
+
+    Livewire::actingAs($administrador)->test(Listado::class)
+        ->call('eliminarDeuda', $tutor->id);
+
+    expect($cuotaFutura->fresh()->estado)->toBe(EstadoCuota::Pendiente);
+});
+
+test('eliminar deuda cancela cualquier aviso de mora ya en cola para ese tutor', function () {
+    $administrador = User::factory()->create()->assignRole('administrador');
+    $tutor = tutorEnMora('Marta Gómez', 100_000);
+    $notificacion = NotificacionMora::factory()->create([
+        'tutor_id' => $tutor->id,
+        'estado' => EstadoNotificacion::Pendiente,
+    ]);
+
+    Livewire::actingAs($administrador)->test(Listado::class)
+        ->call('eliminarDeuda', $tutor->id);
+
+    expect($notificacion->fresh()->estado)->toBe(EstadoNotificacion::Cancelado);
+});
+
+test('un cobrador no ve el boton de eliminar deuda ni puede ejecutarlo', function () {
+    $cobrador = User::factory()->create()->assignRole('cobrador');
+    $tutor = tutorEnMora('Marta Gómez', 100_000);
+
+    Livewire::actingAs($cobrador)->test(Listado::class)
+        ->assertDontSee('Eliminar deuda')
+        ->call('eliminarDeuda', $tutor->id)
+        ->assertForbidden();
 });
