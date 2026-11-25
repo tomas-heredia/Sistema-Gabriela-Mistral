@@ -147,6 +147,37 @@ test('un cobrador puede cargarle un recibo a otro empleado', function () {
     expect(ReciboSueldo::where('profesor_id', $profesor->id)->where('periodo', '2026-03')->exists())->toBeTrue();
 });
 
+test('el selector de empleados incluye a profesores, cobradores y directores/secretarios', function () {
+    $administrador = User::factory()->create()->assignRole('administrador');
+    $profesor = User::factory()->create()->assignRole('profesor');
+    $cobrador = User::factory()->create()->assignRole('cobrador');
+    $director = User::factory()->create()->assignRole('director_secretario');
+
+    $profesores = Livewire::actingAs($administrador)->test(Formulario::class)
+        ->viewData('profesores');
+
+    expect($profesores->pluck('id'))
+        ->toContain($profesor->id)
+        ->toContain($cobrador->id)
+        ->toContain($director->id);
+});
+
+test('se le puede cargar un recibo a un director o secretario', function () {
+    Storage::fake('local');
+
+    $administrador = User::factory()->create()->assignRole('administrador');
+    $director = User::factory()->create()->assignRole('director_secretario');
+
+    Livewire::actingAs($administrador)->test(Formulario::class)
+        ->set('profesor_id', (string) $director->id)
+        ->set('periodo', '2026-03')
+        ->set('archivos', [UploadedFile::fake()->create('recibo.pdf', 100, 'application/pdf')])
+        ->call('guardar')
+        ->assertRedirect(route('recibos-sueldo.index'));
+
+    expect(ReciboSueldo::where('profesor_id', $director->id)->where('periodo', '2026-03')->exists())->toBeTrue();
+});
+
 test('se le puede cargar un recibo a un cobrador', function () {
     Storage::fake('local');
 

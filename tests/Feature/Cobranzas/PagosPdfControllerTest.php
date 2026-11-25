@@ -69,3 +69,13 @@ test('sin pagos que coincidan con los filtros, redirige con un error en vez de g
     $response->assertRedirect(route('pagos.index'));
     expect(session('error'))->not->toBeNull();
 });
+
+test('un pago anulado no cuenta para el pdf', function () {
+    $cobrador = User::factory()->create()->assignRole('cobrador');
+    pagoConAlumno('000001', 100_000, '2026-03-10', anulado: true);
+
+    $response = $this->actingAs($cobrador)->get(route('pagos.pdf'));
+
+    $response->assertRedirect(route('pagos.index'));
+    expect(session('error'))->not->toBeNull();
+});
